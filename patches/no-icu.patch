@@ -1,0 +1,28 @@
+--- a/src/binding.cc
++++ b/src/binding.cc
+@@ -9,7 +9,9 @@
+ 
+ #include "cppgc/platform.h"
+ #include "support.h"
++#ifdef V8_INTL_SUPPORT
+ #include "unicode/locid.h"
++#endif
+ #include "v8-callbacks.h"
+ #include "v8/include/cppgc/persistent.h"
+ #include "v8/include/libplatform/libplatform.h"
+@@ -3736,6 +3738,7 @@
+ 
+ // icu
+ 
++#ifdef V8_INTL_SUPPORT
+ extern "C" {
+ 
+ size_t icu_get_default_locale(char* output, size_t output_len) {
+@@ -3754,6 +3757,7 @@
+ }
+ 
+ }  // extern "C"
++#endif  // V8_INTL_SUPPORT
+ 
+ // v8::PropertyDescriptor
+ 
