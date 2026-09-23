@@ -1,4 +1,5 @@
 {
+  "release": "v0.106.0-no-icu.1",
   "rusty_v8": {
     "repository": "https://github.com/denoland/rusty_v8.git",
     "version": "0.106.0",
