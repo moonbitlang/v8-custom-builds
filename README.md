@@ -1,79 +1,69 @@
 # V8 builds for Moonrun
 
-Build recipes, patches, and downloadable native archives for Moonrun's V8 backend.
-Downstream projects keep using the upstream Rust crate. They can download our
-trimmed native archive or build the same recipe from source, then select that
-archive through `RUSTY_V8_ARCHIVE`.
+A thin patch layer over [rusty_v8](https://github.com/denoland/rusty_v8). Git pins
+rusty_v8 as a submodule; rusty_v8 pins V8 and its other dependencies. Our patches
+and GN settings remove ICU while keeping Moonrun's existing Rust interface.
 
-The first recipe pins rusty_v8 0.106.0 and V8 12.9.202.13 and removes ICU. Its
-output contains both V8 and rusty_v8's matching C++ adapter: `librusty_v8.a` on
-Unix, or `rusty_v8.lib` on Windows. Rust bindings remain in the upstream crate.
-Source revisions are fetched into an ignored directory, not vendored here.
+The output is `librusty_v8.a` (`rusty_v8.lib` on Windows): V8 plus rusty_v8's C++
+adapter. Downstream projects use the matching upstream Rust crate and select our
+archive through `RUSTY_V8_ARCHIVE`. They can build it from source or download it.
 
-Builds and release publishing are manual. This repository has no CI/CD workflows,
-and GitHub Actions is disabled. Each platform needs a validated build before its
-artifacts are published; the scripts alone do not establish runtime compatibility.
+## Build
 
-## Build from source
-
-Install Python 3.11 or later, Git, Rust/Cargo, and the
-[pinned rusty_v8 source-build prerequisites](https://github.com/denoland/rusty_v8/blob/v0.106.0/README.md#build-v8-from-source).
-Then run from this repository:
+Install Python 3.11+, Git, Rust/Cargo, and the
+[upstream source-build prerequisites](https://github.com/denoland/rusty_v8/blob/v0.106.0/README.md#build-v8-from-source),
+then run:
 
 ```sh
-python3 build.py --dry-run
+gh repo clone moonbitlang/v8-custom-builds
+cd v8-custom-builds
 python3 build.py --jobs 8
 ```
 
-The script fetches the exact commits in `versions.json`, initializes submodules,
-verifies the V8 revision, applies patches in manifest order, and invokes Cargo's
-source-build path. Cargo runs GN and Ninja and generates the Rust layout bindings.
-`--jobs` limits compilation concurrency; `--prepare-only` stops before compilation.
-
-The recipe preserves rusty_v8's default Cargo features, including its bundled C++
-runtime. Its GN overrides are:
+`build.py` initializes the pinned submodules, applies `patches/*.patch` in filename
+order, and invokes upstream's `V8_FROM_SOURCE=1 cargo build --release --locked`.
+Upstream owns GN, Ninja, compiler setup, and binding generation. We retain its
+default Cargo features and use these GN settings:
 
 ```gn
 v8_enable_i18n_support=false
 icu_use_data_file=false
 ```
 
-The build script recognizes native builds for `aarch64-apple-darwin`,
-`x86_64-apple-darwin`, `aarch64-unknown-linux-gnu`, `x86_64-unknown-linux-gnu`, and
-`x86_64-pc-windows-msvc`. Cross-compilation is not configured here.
+The script builds for the Rust host target. Upstream toolchain settings such as
+`CLANG_BASE_PATH`, `GN`, `NINJA`, and `SCCACHE` remain available. It uses one
+`build/` directory and recognizes patches already applied to `rusty_v8/`.
+The patched submodule appearing dirty in `git status` is expected.
 
-Sources and Cargo/GN outputs live under `build/<recipe-hash>/<target>/`. Changing
-the manifest, patches, or build script selects a fresh directory. The script
-rejects edits to its prepared sources and conflicting build overrides. If source
-preparation is interrupted, retry; if it reports an incomplete or edited checkout,
-move that recipe's build directory aside and retry. Packaging never overwrites
-an existing release/target directory.
+For a changed upstream revision or patch, start from a fresh checkout. When GN
+settings or the compiler change, clean the build first: upstream can otherwise
+reuse its old GN configuration.
 
-Outputs are written under `dist/<release>/<target>/`:
+```sh
+cargo clean --manifest-path rusty_v8/Cargo.toml --target-dir build
+```
 
-| Artifact | Contents |
-| --- | --- |
-| `librusty_v8_release_<target>.a.gz` | Complete native archive; Windows uses `rusty_v8_release_<target>.lib.gz` |
-| `src_binding_release_<target>.rs` | Matching generated Rust layout bindings |
-| `licenses_<target>.tar.gz` | Upstream license and notice files |
-| `manifest_<target>.json` | Source pins, recipe input hashes, GN overrides, and artifact hashes |
-| `SHA256SUMS_<target>` | SHA-256 checksums for all four artifacts |
+Move an existing `dist/<target>/` aside before rebuilding; the script does not
+overwrite it. Failed packaging may leave an incomplete directory. A successful
+run writes `SHA256SUMS_<target>` last.
 
-Source and configuration inputs are pinned; this is not a claim of identical
-machine code across different compiler or SDK installations. Compression and
-notice packaging omit timestamps so packaging itself does not add that variation.
+## Artifacts and downstream use
 
-Running `V8_FROM_SOURCE=1` against an unmodified upstream dependency does not apply
-our patches. For a trimmed source build, run this recipe and consume its output
-using the same downstream settings as a downloaded archive.
+`dist/<target>/` contains four files:
 
-## Download and consume an archive
+- `librusty_v8_release_<target>.a.gz` (Windows: `rusty_v8_release_<target>.lib.gz`)
+- `src_binding_release_<target>.rs`
+- `licenses_<target>.tar.gz`
+- `SHA256SUMS_<target>`
 
-The repository is private, so downloads require access. rusty_v8's ordinary URL
-downloader does not authenticate with GitHub. Use an authenticated GitHub CLI to
-download a published release, then give Cargo local file paths. These Unix shell
-examples assume the recipe's native target and a matching `v8 = "=0.106.0"`
-dependency with its default features enabled:
+Archive and binding names follow
+[rusty_v8's packaging convention](https://github.com/denoland/rusty_v8/blob/v0.106.0/.github/workflows/ci.yml).
+The release tag identifies this repository's source, patches, settings, and
+upstream submodule pin. There is no separate version manifest or custom cache.
+
+For a published release, download with an authenticated GitHub CLI: this
+repository is private, and rusty_v8's URL downloader does not authenticate with
+GitHub. Example for a Unix host:
 
 ```sh
 release=v0.106.0-no-icu.1
@@ -83,8 +73,8 @@ gh release download "$release" --repo moonbitlang/v8-custom-builds \
 (cd v8-artifacts && shasum -a 256 -c "SHA256SUMS_${target}")
 ```
 
-After downloading, or after copying this recipe's source-build outputs into
-`v8-artifacts`, run from the downstream project:
+From the downstream project, point Cargo at those files, or at the corresponding
+source-build outputs:
 
 ```sh
 artifact_dir=$(cd v8-artifacts && pwd)
@@ -95,21 +85,20 @@ RUSTY_V8_SRC_BINDING_PATH="$artifact_dir/src_binding_release_${target}.rs" \
   cargo build --release -p moonrun
 ```
 
-On Windows, select the `.lib.gz` asset instead and set the same environment
-variables using the shell's syntax. Keep the crate version, target, feature
-configuration, archive, and generated bindings matched. A bare V8 or `wee8`
-archive cannot satisfy the current rusty_v8 adapter symbols.
+On Windows, use the `.lib.gz` asset and the shell's environment-variable syntax.
+Keep the Rust crate version, native target, default features, archive, and
+bindings matched. The initial upstream version is `v8 = "=0.106.0"`. Simply setting
+`V8_FROM_SOURCE=1` in an unmodified downstream dependency does not apply our patch.
 
-## Publish manually
+## Manual releases
 
-Before adopting or publishing a target's artifacts, inspect the native archive
-for remaining ICU implementations and run Moonrun's compatibility suite against
-it. Compare size with an ICU-enabled build using the same source revisions,
-compiler, and other flags. Keep generated bindings and notices with the archive.
+Build from a committed recipe on each intended platform. Check that ICU is absent
+and run Moonrun's compatibility tests against the resulting archives before
+publishing. The script tests (`python3 -m unittest -v`) simulate compilation and
+do not replace native builds or downstream validation.
 
-Commit the recipe and select a new `release` in `versions.json` for each changed
-configuration. Build from that committed recipe on each intended platform. After
-validation, tag that commit and create a draft release with the resulting assets:
+After validation, tag the recipe commit and collect each target's outputs under
+`dist/`. For example:
 
 ```sh
 release=v0.106.0-no-icu.1
@@ -117,51 +106,20 @@ git tag "$release"
 git push origin "$release"
 gh release create "$release" --repo moonbitlang/v8-custom-builds \
   --verify-tag --draft --title "$release" \
-  --notes "ICU-free V8 archives. See asset manifests for source pins and configuration." \
-  dist/"$release"/*/*
+  --notes "ICU-free rusty_v8 archives built from the tagged recipe." dist/*/*
 ```
 
-Review the draft's assets and record the validated targets and compatibility
-results in its notes, then publish it manually. Do not replace assets under an
-existing release: issue a new recipe release instead. No release is created by
-`build.py`.
+Review the draft assets, record the validated targets, and publish manually.
+Use a new tag for changed artifacts. There is no CI/CD; GitHub Actions is disabled.
+Retain the included upstream license notices when distributing derived artifacts.
 
-## ICU patch and remaining scope
+## Scope
 
-`patches/no-icu.patch` guards the ICU locale header and its two C++ locale helpers
-with `V8_INTL_SUPPORT`. V8's own build option removes its ICU dependency;
-`icu_use_data_file=false` also avoids the ICU data-file dependency during snapshot
-creation. V8's non-ICU date/time-zone fallback remains in place.
+The ICU patch guards rusty_v8's ICU header and two locale helpers. Its Rust ICU
+APIs remain unchanged and must not be called with this archive. V8's non-ICU
+date/time-zone fallback remains. Other engine cuts and upgrades are separate work.
 
-The Rust ICU APIs are unchanged. Moonrun does not call them; the ICU-free archive
-does not provide their implementations. Calling them would fail to link. Other
-engine cuts and a V8 version upgrade remain separate work.
-
-A future Rust interface over V8's Wasm C API will follow the same distribution
-model: build the pinned, patched native library from source or download a matching
-archive. That migration and any C API extensions are not implemented here yet.
-Debugger access is a requirement of that interface; MoonBit host behavior stays
-in Moonrun.
-
-TODO: add proper WasmGC host-reference support. In the pinned C API, legacy
-`ANYREF` denotes `externref`; expose that as `ExternRef` in Rust. Reserve `AnyRef`
-for actual WasmGC references. Guest-internal WasmGC execution and host access to
-WasmGC values are separate capabilities.
-
-## Script checks
-
-```sh
-python3 -m unittest -v
-```
-
-These tests exercise source pinning, patching, cache validation, and packaging
-using temporary Git repositories and fixture archives. They do not compile V8 or
-replace downstream compatibility tests.
-
-## Upstream sources
-
-- [rusty_v8](https://github.com/denoland/rusty_v8) provides Rust bindings, a C++ adapter,
-  and Cargo integration for the native build.
-- [V8](https://v8.dev/) provides the engine and its Wasm C API implementation.
-
-Upstream source and binary license obligations apply to derived artifacts.
+A future Rust interface over V8's Wasm C API will keep the same source-or-prebuilt
+model. Debugger access remains a requirement. TODO: provide WasmGC host-reference
+support; the pinned C API's legacy `ANYREF` means `externref`, so expose it as
+`ExternRef` and reserve `AnyRef` for actual WasmGC references.
