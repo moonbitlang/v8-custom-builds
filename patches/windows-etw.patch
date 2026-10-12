@@ -1,3 +1,43 @@
+Subject: Carry the Windows ETW library dependency in the native archive
+
+Base: rusty_v8 v0.106.0 (e9f20a2493883b53cb58b19a2fe761358dd57996),
+with V8 at 245ce17ed8483e6bc3de7f668635f46c5bfdd8a0.
+
+V8 enables ETW (Event Tracing for Windows) support on Windows and declares
+Advapi32.lib in GN. rusty_v8's print_link_flags() does not forward that
+dependency to Cargo consumers. Static archive creation can succeed while
+the final executable fails to link EventRegister, EventSetInformation,
+EventUnregister, and EventWriteTransfer from etw-jit-win.obj. Do not rely
+on incidental linkage from Rust's standard library or another archive
+member to supply this dependency.
+
+The Cargo declaration logically belongs in rusty_v8's consumer build.rs:
+    println!("cargo:rustc-link-lib=dylib=advapi32");
+However, this repository distributes archives for the unmodified crates.io
+v8 0.106.0 crate. Patching only our build submodule's build.rs would not
+change the script downstream consumers run: Cargo link metadata does not
+travel inside the archive.
+
+Instead, put a Windows-only pragma in the C++ adapter. It emits a COFF
+/DEFAULTLIB:advapi32.lib directive in the adapter object, which the linker
+reads when it selects that object from the archive for rusty_v8's API.
+The consumer therefore needs no extra link flag. This does not bundle the
+Windows library, disable ETW, or change V8's runtime behavior. Non-Windows
+compilation is unaffected by the guarded pragma.
+
+Validation: link and run the standalone crates.io rusty_v8 consumer against
+the packaged Windows archive without adding Advapi32 in consumer flags or
+build scripts. Native compilation alone is not sufficient. The ICU/WasmGC
+smoke test validates linking and execution, not ETW event collection.
+Remove the patch when the supported downstream crate itself declares the
+dependency, or when the archive no longer contains ETW references. An
+upstream version bump alone is not evidence that this has been fixed.
+
+Dependency and consumer-link ownership:
+https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/BUILD.gn#L6722
+https://github.com/denoland/rusty_v8/blob/v0.106.0/build.rs#L669
+https://learn.microsoft.com/en-us/windows/win32/api/evntprov/nf-evntprov-eventregister
+
 diff --git a/src/binding.cc b/src/binding.cc
 --- a/src/binding.cc
 +++ b/src/binding.cc

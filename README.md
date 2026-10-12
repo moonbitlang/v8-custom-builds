@@ -69,9 +69,12 @@ upstream dependency with `V8_FROM_SOURCE=1` does not apply our patch.
 
 ## Scope
 
-Rust's ICU APIs remain present but must not be called with this archive. V8's
-non-ICU date/time-zone fallback remains. Other engine cuts and upgrades are
-separate work.
+Rust's ICU APIs remain present but are unsupported with this archive. Calling
+`get_language_tag` or `set_default_locale` aborts with a diagnostic; calling
+`set_common_data_73` fails to link. The two locale entry points remain in the
+archive so ordinary Windows consumers can link without requiring Rust LTO.
+V8's non-ICU date/time-zone fallback remains. Other engine cuts and upgrades
+are separate work.
 
 The future Wasm C API interface will keep source builds and prebuilt downloads,
 with debugger access retained. TODO: add WasmGC host-reference support; the pinned
@@ -109,8 +112,9 @@ Use GitHub's **Re-run failed jobs** to retry a partially failed matrix. Successf
 artifacts are retained for 30 days; publish before they expire.
 
 Validation checks packaged checksums and builds a small Rust consumer using
-the matching generated bindings. It checks that `Intl` is absent and WasmGC
-executes. Linux x86_64 additionally links this consumer through Zig against
+the matching generated bindings. It checks that unsupported ICU locale calls
+fail explicitly in child processes, `Intl` is absent and WasmGC executes.
+Linux x86_64 additionally links this consumer through Zig against
 glibc 2.23 and checks the resulting executable's symbol-version requirements.
 Moonrun integration tests belong in the downstream Moon repository.
 
