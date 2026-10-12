@@ -1,0 +1,66 @@
+name: Publish tested archives
+
+# Select a successful six-platform run. Publishing never recompiles V8.
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Build and test run containing all six platforms
+        required: true
+        type: string
+      tag:
+        description: Existing tag pointing to the tested recipe commit (v0.106.0-moonbit.N)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ inputs.run_id }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Validate source run and tag
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$RELEASE_TAG" =~ ^v0\.106\.0-moonbit\.[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/run.json"
+          jq -e '.conclusion == "success" and .event == "workflow_dispatch" and .head_branch == "main" and .path == ".github/workflows/build.yml"' "$RUNNER_TEMP/run.json"
+          revision=$(jq -r .head_sha "$RUNNER_TEMP/run.json")
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$revision"
+          echo "TESTED_REVISION=$revision" >> "$GITHUB_ENV"
+          git show "$revision:ci/targets.json" > "$RUNNER_TEMP/targets.json"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          pattern: native-*
+          path: artifacts
+      - name: Verify all six validated archives
+        run: |
+          test "$(jq length "$RUNNER_TEMP/targets.json")" = 6
+          while read -r target; do
+            dir="artifacts/native-$target"
+            (cd "$dir" && sha256sum -c "SHA256SUMS_$target")
+            jq -e --arg recipe "$TESTED_REVISION" --arg target "$target" --arg run "$RUN_ID" \
+              '.recipe == $recipe and .target == $target and .run == $run' "$dir/validation_$target.json"
+          done < <(jq -r '.[].target' "$RUNNER_TEMP/targets.json")
+      - name: Publish release
+        run: |
+          gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
+            --notes "ICU-free rusty_v8 0.106.0 archives. All six platforms passed Moonrun validation: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
+            artifacts/native-*/*

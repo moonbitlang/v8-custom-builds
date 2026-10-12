@@ -1,0 +1,33 @@
+diff --git a/build.rs b/build.rs
+index 4aead47..9025204 100644
+--- a/build.rs
++++ b/build.rs
+@@ -241,8 +241,10 @@ fn build_v8(is_asan: bool) {
+   if target_arch == "aarch64" {
+     gn_args.push(r#"target_cpu="arm64""#.to_string());
+     gn_args.push("use_sysroot=true".to_string());
+-    maybe_install_sysroot("arm64");
+-    maybe_install_sysroot("amd64");
++    if target_os == "linux" {
++      maybe_install_sysroot("arm64");
++      maybe_install_sysroot("amd64");
++    }
+   }
+   if target_arch == "arm" {
+     gn_args.push(r#"target_cpu="arm""#.to_string());
+diff --git a/tools/ninja_gn_binaries.py b/tools/ninja_gn_binaries.py
+index 029be98..98e6427 100755
+--- a/tools/ninja_gn_binaries.py
++++ b/tools/ninja_gn_binaries.py
+@@ -27,6 +27,11 @@ def get_platform():
+     machine = platform.machine().lower()
+     if machine == 'x86_64':
+         machine = 'amd64'
++    elif machine == 'aarch64':
++        machine = 'arm64'
++    # The pinned Windows GN/Ninja packages are x64; Windows ARM64 can run them.
++    if system == 'windows':
++        machine = 'amd64'
+ 
+     return f'{system}-{machine}'
+ 

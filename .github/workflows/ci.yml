@@ -1,0 +1,36 @@
+name: Check recipe
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths: ['**.sh', '.github/**', 'ci/**', 'patches/**', '.gitmodules', 'rusty_v8']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check shell scripts and patches
+        run: |
+          shellcheck build.sh ci/*.sh
+          bash -n build.sh
+          git submodule update --init --depth=1 rusty_v8
+          for patch in patches/*.patch; do
+            git -C rusty_v8 apply "../$patch"
+          done
+      - name: Check workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1.7.12 --repo rhysd/actionlint --pattern 'actionlint_*_linux_amd64.tar.gz' --dir "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP"/actionlint_*_linux_amd64.tar.gz -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint"

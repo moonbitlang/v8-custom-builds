@@ -41,11 +41,10 @@ bindings, `NOTICES_<target>.txt`, and `SHA256SUMS_<target>`. Names follow upstre
 [archive convention](https://github.com/denoland/rusty_v8/blob/v0.106.0/.github/workflows/ci.yml).
 The release tag identifies the source pin, patch, and build settings.
 
-This repository is private. Download a published release with an authenticated
-GitHub CLI, then give rusty_v8 local paths. Example for a Unix host:
+Download a published release with the GitHub CLI, then give rusty_v8 local paths. Example for a Unix host:
 
 ```sh
-release=v0.106.0-no-icu.1
+release=v0.106.0-moonbit.1
 target=$(rustc -vV | sed -n 's/^host: //p')
 gh release download "$release" --repo moonbitlang/v8-custom-builds \
   --pattern "*${target}*" --dir v8-artifacts
@@ -67,14 +66,6 @@ On Windows, the archive is `rusty_v8_release_<target>.lib.gz`. Keep the crate,
 target, default features, archive, and bindings matched. Building an unmodified
 upstream dependency with `V8_FROM_SOURCE=1` does not apply our patch.
 
-## Release manually
-
-Build from a committed recipe on each intended platform. Verify ICU is absent
-and run Moonrun's compatibility tests against those archives. Tag the recipe
-commit, then upload all files from each `dist/<target>/` to that GitHub release.
-Use a new tag for changed artifacts and retain the bundled license notices.
-There is no CI/CD; GitHub Actions is disabled.
-
 ## Scope
 
 Rust's ICU APIs remain present but must not be called with this archive. V8's
@@ -85,3 +76,39 @@ The future Wasm C API interface will keep source builds and prebuilt downloads,
 with debugger access retained. TODO: add WasmGC host-reference support; the pinned
 C API's legacy `ANYREF` means `externref`, so expose it as `ExternRef` and reserve
 `AnyRef` for actual WasmGC references.
+
+## CI and releases
+
+The workflows separate cheap checks, expensive builds, and publication:
+
+- **Check recipe** runs ShellCheck, actionlint and patch-application checks for
+  PRs and recipe changes on main. It does not compile V8.
+- **Build and test** runs only when manually dispatched. Select `all` for the
+  six-platform matrix, or one target while developing a platform fix. Native
+  builds are never triggered by an ordinary push or a release tag.
+- **Publish tested archives** takes a successful build run ID and an existing
+  `v0.106.0-moonbit.N` tag pointing to that run's commit. It requires validated
+  artifacts for all six platforms and publishes those exact files without
+  rebuilding. Tags are immutable; use a new tag for each release.
+
+Targets are Linux, macOS and Windows, each on x86_64 and ARM64. Builds use
+standard GitHub-hosted runners with a five-hour per-platform limit. Only release
+native libraries are built. The Rust toolchain and Moon validation revision are
+pinned in the build workflow; the MoonBit compiler uses nightly and its version
+is recorded with each successful validation.
+
+Completed native archives are cached **before** Moonrun tests. A failed test can
+therefore be retried without rebuilding V8. Cache keys include the target,
+runner image, Rust version, upstream pin and build recipe. Use GitHub's
+**Re-run failed jobs** to retry a partially failed matrix. Successful validated
+artifacts are retained for 30 days; publish before they expire.
+
+Validation checks packaged checksums, uses the matching generated bindings,
+checks that `Intl` is absent and WasmGC executes, and runs the default Moonrun
+release test suite. Linux x86_64 additionally links through Zig against glibc
+2.23 and checks the resulting executable's symbol-version requirements.
+
+`patches/host-tools.patch` adapts upstream's tool bootstrap for native ARM64
+runners: Linux's `aarch64` name maps to the `arm64` download, Windows ARM64 uses
+the pinned x64 GN/Ninja tools under emulation, and non-Linux ARM64 builds skip
+Linux sysroot downloads. It does not change V8's runtime features.
