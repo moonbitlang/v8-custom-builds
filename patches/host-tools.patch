@@ -52,22 +52,23 @@ index 029be98..98e6427 100755
      return f'{system}-{machine}'
  
 diff --git a/build/config/clang/BUILD.gn b/build/config/clang/BUILD.gn
-index fcca59b..2ef867a 100644
+index fcca59b..e08c417 100644
 --- a/build/config/clang/BUILD.gn
 +++ b/build/config/clang/BUILD.gn
-@@ -230,7 +230,11 @@ template("clang_lib") {
- 
-       _clang_lib_dir = "$clang_base_path/lib/clang/$clang_version/lib"
-       _lib_file = "${_prefix}clang_rt.${_libname}${_suffix}.${_ext}"
--      libs = [ "$_clang_lib_dir/$_dir/$_lib_file" ]
-+      if (target_name == "compiler_builtins" && clang_builtin_library != "") {
-+        libs = [ clang_builtin_library ]
-+      } else {
-+        libs = [ "$_clang_lib_dir/$_dir/$_lib_file" ]
-+      }
-     }
-   }
+@@ -163,7 +163,12 @@ group("llvm-symbolizer_data") {
  }
+ 
+ template("clang_lib") {
+-  if (!defined(invoker.libname)) {
++  if (target_name == "compiler_builtins" && clang_builtin_library != "") {
++    not_needed(invoker, "*")
++    config(target_name) {
++      libs = [ clang_builtin_library ]
++    }
++  } else if (!defined(invoker.libname)) {
+     not_needed(invoker, "*")
+     config(target_name) {
+     }
 diff --git a/build/config/clang/clang.gni b/build/config/clang/clang.gni
 index 9928fc3..c5556b0 100644
 --- a/build/config/clang/clang.gni

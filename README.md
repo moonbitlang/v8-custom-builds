@@ -86,7 +86,8 @@ The workflows separate cheap checks, expensive builds, and publication:
   PRs and recipe changes on main. It does not compile V8.
 - **Build and test** runs only when manually dispatched. Select `all` for the
   six-platform matrix, or one target while developing a platform fix. Native
-  builds are never triggered by an ordinary push or a release tag.
+  builds are never triggered by an ordinary push or a release tag. Full and
+  targeted runs share a per-platform concurrency group to avoid duplicate builds.
 - **Publish tested archives** takes a successful build run ID and an existing
   `v0.106.0-moonbit.N` tag pointing to that run's commit. It requires validated
   artifacts for all six platforms and publishes those exact files without

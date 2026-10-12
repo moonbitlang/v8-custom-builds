@@ -21,10 +21,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: build-${{ github.ref }}-${{ inputs.target }}
-  cancel-in-progress: false
-
 env:
   RUST_VERSION: 1.95.0
   PYTHON_VERSION: '3.11'
@@ -50,6 +46,10 @@ jobs:
     name: ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 300
+    # A full matrix and a targeted retry must not compile the same platform twice.
+    concurrency:
+      group: native-${{ github.ref }}-${{ matrix.target }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.platforms.outputs.matrix) }}
