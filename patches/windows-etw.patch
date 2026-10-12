@@ -1,0 +1,16 @@
+diff --git a/src/binding.cc b/src/binding.cc
+--- a/src/binding.cc
++++ b/src/binding.cc
+@@ -33,6 +33,12 @@
+ #include "v8/src/objects/objects.h"
+ #include "v8/src/objects/smi.h"
+ 
++#ifdef _WIN32
++// GN's system libraries do not propagate through a static archive to Cargo.
++// Keep V8's ETW dependency with the adapter instead of relying on Rust's std.
++#pragma comment(lib, "advapi32.lib")
++#endif
++
+ using namespace support;
+ 
+ template <typename T>

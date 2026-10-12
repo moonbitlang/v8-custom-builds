@@ -85,17 +85,18 @@ The workflows separate cheap checks, expensive builds, and publication:
 - **Check recipe** runs ShellCheck, actionlint and patch-application checks for
   PRs and recipe changes on main. It does not compile V8.
 - **Build and test** runs only when manually dispatched. Select `all` for the
-  six-platform matrix, or one target while developing a platform fix. Native
+  five-platform matrix, or one target while developing a platform fix. Native
   builds are never triggered by an ordinary push or a release tag. Full and
   targeted runs share a per-platform concurrency group to avoid duplicate builds.
 - **Publish tested archives** takes a successful build run ID and an existing
   `v0.106.0-moonbit.N` tag pointing to that run's commit. It requires validated
-  artifacts for all six platforms and publishes those exact files without
+  artifacts for all five platforms and publishes those exact files without
   rebuilding. Tags are immutable; use a new tag for each release.
 
-Targets are Linux, macOS and Windows, each on x86_64 and ARM64. Builds use
-standard GitHub-hosted runners with a five-hour per-platform limit. Only release
-native libraries are built. The Rust toolchain is pinned in the build workflow.
+Targets are Linux and macOS on x86_64 and ARM64, plus Windows x86_64. Windows
+ARM64 is deferred until the rusty_v8 145 upgrade; engine trimming comes first.
+Builds use standard GitHub-hosted runners with a five-hour per-platform limit.
+Only release native libraries are built. The Rust toolchain is pinned in the build workflow.
 Validation uses the standalone `ci` Cargo package with a locked dependency on rusty_v8 0.106.0; it does not
 install MoonBit or check out Moonrun.
 
@@ -125,3 +126,8 @@ Clang. These adaptations do not change V8's runtime features.
 `patches/bindgen-constants.patch` spells out the typed-array constant declarations
 so bindgen 0.69.4 can read them with newer libclang. Values still come from V8
 headers; this does not change the Rust API or the native runtime.
+
+`patches/windows-etw.patch` records V8's `Advapi32.lib` dependency in the Windows
+archive. Upstream's Cargo build script does not propagate this GN dependency;
+newer Rust toolchains no longer link it implicitly through the standard library.
+Consumers therefore need no additional linker flags to use the archive.

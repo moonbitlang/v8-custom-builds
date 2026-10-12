@@ -19,7 +19,7 @@ cd rusty_v8
 unset DOCS_RS DENO_TRYBUILD V8_FORCE_DEBUG EXTRA_GN_ARGS
 export V8_FROM_SOURCE=1
 export GN_ARGS='v8_enable_i18n_support=false icu_use_data_file=false'
-cargo build --release --locked --target "$target" --target-dir "$root/build" -p v8
+cargo build -vv --release --locked --target "$target" --target-dir "$root/build" -p v8
 
 case "$target" in
   *-windows-msvc) lib=rusty_v8; ext=lib ;;
