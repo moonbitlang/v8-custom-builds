@@ -1,0 +1,27 @@
+diff --git a/src/binding.hpp b/src/binding.hpp
+--- a/src/binding.hpp
++++ b/src/binding.hpp
+@@ -24,10 +24,19 @@
+ 
+ static size_t v8__TypedArray__kMaxByteLength = v8::TypedArray::kMaxByteLength;
+ 
+-#define TYPED_ARRAY_MAX_LENGTH(name) \
+-  static size_t v8__##name##__kMaxLength = v8::name::kMaxLength;
+-EACH_TYPED_ARRAY(TYPED_ARRAY_MAX_LENGTH)
+-#undef TYPED_ARRAY_MAX_LENGTH
++// Keep these declarations explicit: bindgen 0.69.4 with newer libclang can
++// omit variables whose names are produced by macro token concatenation.
++static size_t v8__Uint8Array__kMaxLength = v8::Uint8Array::kMaxLength;
++static size_t v8__Uint8ClampedArray__kMaxLength = v8::Uint8ClampedArray::kMaxLength;
++static size_t v8__Int8Array__kMaxLength = v8::Int8Array::kMaxLength;
++static size_t v8__Uint16Array__kMaxLength = v8::Uint16Array::kMaxLength;
++static size_t v8__Int16Array__kMaxLength = v8::Int16Array::kMaxLength;
++static size_t v8__Uint32Array__kMaxLength = v8::Uint32Array::kMaxLength;
++static size_t v8__Int32Array__kMaxLength = v8::Int32Array::kMaxLength;
++static size_t v8__Float32Array__kMaxLength = v8::Float32Array::kMaxLength;
++static size_t v8__Float64Array__kMaxLength = v8::Float64Array::kMaxLength;
++static size_t v8__BigUint64Array__kMaxLength = v8::BigUint64Array::kMaxLength;
++static size_t v8__BigInt64Array__kMaxLength = v8::BigInt64Array::kMaxLength;
+ 
+ using v8__CFunction = v8::CFunction;
+ using v8__CFunctionInfo = v8::CFunctionInfo;

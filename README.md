@@ -120,3 +120,7 @@ archive and recognizes VS 2026's installation directory and VC145 runtime (as
 [current Chromium does](https://chromium.googlesource.com/chromium/src/+/main/build/vs_toolchain.py)).
 Linux ARM64 requires the matching compiler-rt development package alongside
 Clang. These adaptations do not change V8's runtime features.
+
+`patches/bindgen-constants.patch` spells out the typed-array constant declarations
+so bindgen 0.69.4 can read them with newer libclang. Values still come from V8
+headers; this does not change the Rust API or the native runtime.
