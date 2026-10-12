@@ -27,6 +27,8 @@ concurrency:
 
 env:
   RUST_VERSION: 1.95.0
+  PYTHON_VERSION: '3.11'
+  ARM64_CLANG_VERSION: 18
   MOON_REVISION: 3f8b984d4d35cf78e9a3d51543a8df415a505987
   CARGO_TERM_COLOR: always
   CARGO_BUILD_JOBS: 3
@@ -71,20 +73,20 @@ jobs:
           test "$(rustc -vV | sed -n 's/^host: //p' | tr -d '\r')" = "$TARGET"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
           architecture: ${{ matrix.python }}
       - name: Native Linux ARM64 compiler
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-18 libclang-18-dev lld-18
-          echo "CLANG_BASE_PATH=/usr/lib/llvm-18" >> "$GITHUB_ENV"
-          echo "LIBCLANG_PATH=/usr/lib/llvm-18/lib" >> "$GITHUB_ENV"
+          sudo apt-get install -y "clang-$ARM64_CLANG_VERSION" "libclang-$ARM64_CLANG_VERSION-dev" "lld-$ARM64_CLANG_VERSION"
+          echo "CLANG_BASE_PATH=/usr/lib/llvm-$ARM64_CLANG_VERSION" >> "$GITHUB_ENV"
+          echo "LIBCLANG_PATH=/usr/lib/llvm-$ARM64_CLANG_VERSION/lib" >> "$GITHUB_ENV"
       - name: Native cache key
         id: native-key
         env:
-          RECIPE: ${{ hashFiles('build.sh', 'patches/*.patch', '.github/workflows/build.yml') }}
-        run: echo "key=native-$TARGET-$RUST_VERSION-${ImageVersion}-$(git rev-parse HEAD:rusty_v8)-$RECIPE" >> "$GITHUB_OUTPUT"
+          RECIPE: ${{ hashFiles('build.sh', 'patches/*.patch') }}
+        run: echo "key=native-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$(git rev-parse HEAD:rusty_v8)-$RECIPE" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: native
         with:
@@ -109,7 +111,7 @@ jobs:
       - uses: Swatinem/rust-cache@401aff9a7a08acb9d27b64936a90db81024cff97 # v2.8.2
         with:
           workspaces: moon
-          shared-key: moon-${{ matrix.target }}
+          shared-key: moon-${{ steps.native-key.outputs.key }}
       - name: Install MoonBit (Unix)
         if: runner.os != 'Windows'
         run: |

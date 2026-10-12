@@ -41,7 +41,8 @@ bindings, `NOTICES_<target>.txt`, and `SHA256SUMS_<target>`. Names follow upstre
 [archive convention](https://github.com/denoland/rusty_v8/blob/v0.106.0/.github/workflows/ci.yml).
 The release tag identifies the source pin, patch, and build settings.
 
-Download a published release with the GitHub CLI, then give rusty_v8 local paths. Example for a Unix host:
+Download a published release with the GitHub CLI, then give rusty_v8 local paths.
+Example for a Unix host:
 
 ```sh
 release=v0.106.0-moonbit.1
@@ -99,7 +100,9 @@ is recorded with each successful validation.
 
 Completed native archives are cached **before** Moonrun tests. A failed test can
 therefore be retried without rebuilding V8. Cache keys include the target,
-runner image, Rust version, upstream pin and build recipe. Use GitHub's
+runner image, toolchain versions, upstream pin and native build recipe. Test-only
+changes do not invalidate this cache. Rust compilation caches also include the
+native key so a changed library cannot reuse stale downstream link outputs. Use GitHub's
 **Re-run failed jobs** to retry a partially failed matrix. Successful validated
 artifacts are retained for 30 days; publish before they expire.
 
