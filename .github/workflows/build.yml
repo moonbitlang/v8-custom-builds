@@ -16,6 +16,10 @@ on:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
+      rebuild:
+        description: Rebuild from source, reusing the compiler cache
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,7 +29,6 @@ env:
   PYTHON_VERSION: '3.11'
   ARM64_CLANG_VERSION: 18
   CARGO_TERM_COLOR: always
-  CARGO_BUILD_JOBS: 3
 
 jobs:
   platforms:
@@ -56,6 +59,9 @@ jobs:
         shell: bash
     env:
       TARGET: ${{ matrix.target }}
+      CARGO_BUILD_JOBS: ${{ matrix.target == 'x86_64-pc-windows-msvc' && 4 || 3 }}
+      SCCACHE_GHA_ENABLED: 'true'
+      SCCACHE_IDLE_TIMEOUT: '0'
       # This also overrides rusty_v8's older rust-toolchain.toml.
       RUSTUP_TOOLCHAIN: 1.95.0-${{ matrix.target }}
     steps:
@@ -90,8 +96,14 @@ jobs:
         with:
           path: dist/${{ matrix.target }}
           key: ${{ steps.native-key.outputs.key }}
+          lookup-only: ${{ inputs.rebuild }}
+      - name: Install C++ compiler cache
+        if: inputs.rebuild || steps.native.outputs.cache-hit != 'true'
+        uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+        with:
+          version: v0.18.0
       - name: Build native archive
-        if: steps.native.outputs.cache-hit != 'true'
+        if: inputs.rebuild || steps.native.outputs.cache-hit != 'true'
         run: bash build.sh
       # Save before validation, so a test failure does not discard hours of work.
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -102,7 +114,10 @@ jobs:
       - uses: Swatinem/rust-cache@401aff9a7a08acb9d27b64936a90db81024cff97 # v2.8.2
         with:
           workspaces: ci -> ../target
-          shared-key: smoke-${{ steps.native-key.outputs.key }}
+          # rusty_v8 stores its native library outside Cargo's build outputs,
+          # which rust-cache prunes. Rebuild the consumer against this run's archive.
+          cache-targets: false
+          shared-key: smoke-registry-${{ steps.native-key.outputs.key }}
       - name: Test packaged archive with rusty_v8
         run: bash ci/test.sh
       - name: Install Zig for Linux compatibility check

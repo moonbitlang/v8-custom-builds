@@ -99,6 +99,7 @@ The workflows separate cheap checks, expensive builds, and publication:
 Targets are Linux and macOS on x86_64 and ARM64, plus Windows x86_64. Windows
 ARM64 is deferred until the rusty_v8 145 upgrade; engine trimming comes first.
 Builds use standard GitHub-hosted runners with a five-hour per-platform limit.
+Windows uses four parallel build jobs; the other platforms use three.
 Only release native libraries are built. The Rust toolchain is pinned in the build workflow.
 Validation uses the standalone `ci` Cargo package with a locked dependency on rusty_v8 0.106.0; it does not
 install MoonBit or check out Moonrun.
@@ -106,8 +107,17 @@ install MoonBit or check out Moonrun.
 Completed native archives are cached **before** archive validation. A failed
 test can therefore be retried without rebuilding V8. Cache keys include the target,
 runner image, toolchain versions, upstream pin and native build recipe. Test-only
-changes do not invalidate this cache. Rust compilation caches also include the
-native key so a changed library cannot reuse stale smoke-test link outputs.
+changes do not invalidate this cache. The consumer caches Rust dependency downloads
+and installed tools, but compiles afresh against each archive: rusty_v8 stores its
+native library outside Cargo's build outputs, which the Rust cache action prunes.
+When native compilation is needed, rusty_v8 detects `sccache` and passes it to
+GN. Compiler results are stored in GitHub's cache service independently of the
+finished-archive cache, so a source patch can reuse unchanged compilations.
+Compiler options and inputs determine reuse; changing global feature flags can
+still cause many misses. The workflow reports cache hits, misses and write errors.
+Select `rebuild` to exercise a source build even when its finished archive is
+cached; compiler caching remains enabled. This is also useful for measuring warm
+builds without changing the engine configuration.
 Use GitHub's **Re-run failed jobs** to retry a partially failed matrix. Successful validated
 artifacts are retained for 30 days; publish before they expire.
 
