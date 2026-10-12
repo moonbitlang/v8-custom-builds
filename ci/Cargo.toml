@@ -1,0 +1,13 @@
+[package]
+name = "v8-smoke"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "v8-smoke"
+path = "probe.rs"
+
+[dependencies]
+v8 = "=0.106.0"
+wat = "1.258.0"

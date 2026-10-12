@@ -25,7 +25,6 @@ env:
   RUST_VERSION: 1.95.0
   PYTHON_VERSION: '3.11'
   ARM64_CLANG_VERSION: 18
-  MOON_REVISION: 3f8b984d4d35cf78e9a3d51543a8df415a505987
   CARGO_TERM_COLOR: always
   CARGO_BUILD_JOBS: 3
 
@@ -95,36 +94,17 @@ jobs:
       - name: Build native archive
         if: steps.native.outputs.cache-hit != 'true'
         run: bash build.sh
-      # Save before the downstream tests, so a test failure does not discard hours of work.
+      # Save before validation, so a test failure does not discard hours of work.
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: steps.native.outputs.cache-hit != 'true'
         with:
           path: dist/${{ matrix.target }}
           key: ${{ steps.native-key.outputs.key }}
-      - name: Checkout Moonrun validation revision
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: moonbitlang/moon
-          ref: ${{ env.MOON_REVISION }}
-          path: moon
-          submodules: recursive
       - uses: Swatinem/rust-cache@401aff9a7a08acb9d27b64936a90db81024cff97 # v2.8.2
         with:
-          workspaces: moon
-          shared-key: moon-${{ steps.native-key.outputs.key }}
-      - name: Install MoonBit (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-      - name: Install MoonBit (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $env:MOONBIT_INSTALL_VERSION = 'nightly'
-          irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
-          "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
-      - name: Test packaged archive with Moonrun
+          workspaces: ci -> ../target
+          shared-key: smoke-${{ steps.native-key.outputs.key }}
+      - name: Test packaged archive with rusty_v8
         run: bash ci/test.sh
       - name: Install Zig for Linux compatibility check
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -138,9 +118,9 @@ jobs:
           bash ci/check-glibc.sh
       - name: Record validation provenance
         run: |
-          jq -n --arg revision "$GITHUB_SHA" --arg moon "$MOON_REVISION" --arg target "$TARGET" \
-            --arg run "$GITHUB_RUN_ID" --arg rust "$(rustc --version)" --arg compiler "$(moonc -v)" \
-            '{recipe:$revision,moon:$moon,target:$target,run:$run,rust:$rust,moonc:$compiler}' \
+          jq -n --arg revision "$GITHUB_SHA" --arg target "$TARGET" \
+            --arg run "$GITHUB_RUN_ID" --arg rust "$(rustc --version)" \
+            '{recipe:$revision,target:$target,run:$run,rust:$rust}' \
             > "dist/$TARGET/validation_$TARGET.json"
           (cd "dist/$TARGET"
            if command -v sha256sum >/dev/null; then

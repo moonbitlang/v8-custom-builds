@@ -62,5 +62,5 @@ jobs:
       - name: Publish release
         run: |
           gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
-            --notes "ICU-free rusty_v8 0.106.0 archives. All six platforms passed Moonrun validation: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
+            --notes "ICU-free rusty_v8 0.106.0 archives. All six platforms passed archive smoke tests: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
             artifacts/native-*/*

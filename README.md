@@ -95,22 +95,23 @@ The workflows separate cheap checks, expensive builds, and publication:
 
 Targets are Linux, macOS and Windows, each on x86_64 and ARM64. Builds use
 standard GitHub-hosted runners with a five-hour per-platform limit. Only release
-native libraries are built. The Rust toolchain and Moon validation revision are
-pinned in the build workflow; the MoonBit compiler uses nightly and its version
-is recorded with each successful validation.
+native libraries are built. The Rust toolchain is pinned in the build workflow.
+Validation uses the standalone `ci` Cargo package with a locked dependency on rusty_v8 0.106.0; it does not
+install MoonBit or check out Moonrun.
 
-Completed native archives are cached **before** Moonrun tests. A failed test can
-therefore be retried without rebuilding V8. Cache keys include the target,
+Completed native archives are cached **before** archive validation. A failed
+test can therefore be retried without rebuilding V8. Cache keys include the target,
 runner image, toolchain versions, upstream pin and native build recipe. Test-only
 changes do not invalidate this cache. Rust compilation caches also include the
-native key so a changed library cannot reuse stale downstream link outputs. Use GitHub's
-**Re-run failed jobs** to retry a partially failed matrix. Successful validated
+native key so a changed library cannot reuse stale smoke-test link outputs.
+Use GitHub's **Re-run failed jobs** to retry a partially failed matrix. Successful validated
 artifacts are retained for 30 days; publish before they expire.
 
-Validation checks packaged checksums, uses the matching generated bindings,
-checks that `Intl` is absent and WasmGC executes, and runs the default Moonrun
-release test suite. Linux x86_64 additionally links through Zig against glibc
-2.23 and checks the resulting executable's symbol-version requirements.
+Validation checks packaged checksums and builds a small Rust consumer using
+the matching generated bindings. It checks that `Intl` is absent and WasmGC
+executes. Linux x86_64 additionally links this consumer through Zig against
+glibc 2.23 and checks the resulting executable's symbol-version requirements.
+Moonrun integration tests belong in the downstream Moon repository.
 
 `patches/host-tools.patch` adapts upstream's tool bootstrap for native ARM64
 runners: Linux's `aarch64` name maps to the `arm64` download, Windows ARM64 uses
