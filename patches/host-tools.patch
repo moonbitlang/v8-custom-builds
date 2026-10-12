@@ -1,8 +1,28 @@
 diff --git a/build.rs b/build.rs
-index 4aead47..9025204 100644
+index 4aead47..19a215a 100644
 --- a/build.rs
 +++ b/build.rs
-@@ -241,8 +241,10 @@ fn build_v8(is_asan: bool) {
+@@ -210,6 +210,19 @@ fn build_v8(is_asan: bool) {
+     println!("clang_base_path (system): {}", clang_base_path.display());
+     gn_args.push(format!("clang_base_path={:?}", clang_base_path));
+     gn_args.push("treat_warnings_as_errors=false".to_string());
++    if target_os == "linux" {
++      // Distribution Clang packages do not use Chromium's compiler-rt layout.
++      let output = Command::new(clang_base_path.join("bin/clang"))
++        .arg(format!("--target={}", env::var("TARGET").unwrap()))
++        .args(["--rtlib=compiler-rt", "--print-libgcc-file-name"])
++        .output()
++        .expect("query Clang's builtins library");
++      assert!(output.status.success());
++      let library = String::from_utf8(output.stdout).unwrap();
++      let library = library.trim();
++      assert!(Path::new(library).is_file(), "missing compiler-rt: {library}");
++      gn_args.push(format!("clang_builtin_library={library:?}"));
++    }
+   } else {
+     println!("using Chromium's clang");
+     let clang_base_path = clang_download();
+@@ -241,8 +254,10 @@ fn build_v8(is_asan: bool) {
    if target_arch == "aarch64" {
      gn_args.push(r#"target_cpu="arm64""#.to_string());
      gn_args.push("use_sysroot=true".to_string());
@@ -30,4 +50,106 @@ index 029be98..98e6427 100755
 +        machine = 'amd64'
  
      return f'{system}-{machine}'
+ 
+diff --git a/build/config/clang/BUILD.gn b/build/config/clang/BUILD.gn
+index fcca59b..2ef867a 100644
+--- a/build/config/clang/BUILD.gn
++++ b/build/config/clang/BUILD.gn
+@@ -230,7 +230,11 @@ template("clang_lib") {
+ 
+       _clang_lib_dir = "$clang_base_path/lib/clang/$clang_version/lib"
+       _lib_file = "${_prefix}clang_rt.${_libname}${_suffix}.${_ext}"
+-      libs = [ "$_clang_lib_dir/$_dir/$_lib_file" ]
++      if (target_name == "compiler_builtins" && clang_builtin_library != "") {
++        libs = [ clang_builtin_library ]
++      } else {
++        libs = [ "$_clang_lib_dir/$_dir/$_lib_file" ]
++      }
+     }
+   }
+ }
+diff --git a/build/config/clang/clang.gni b/build/config/clang/clang.gni
+index 9928fc3..c5556b0 100644
+--- a/build/config/clang/clang.gni
++++ b/build/config/clang/clang.gni
+@@ -32,6 +32,9 @@ declare_args() {
+ 
+   clang_base_path = default_clang_base_path
+ 
++  # Optional builtins archive for distribution-provided Clang toolchains.
++  clang_builtin_library = ""
++
+   # Specifies whether or not bitcode should be embedded during compilation.
+   # This is used for creating a MLGO corpus from Chromium in the non-ThinLTO case.
+   clang_embed_bitcode = false
+diff --git a/build/vs_toolchain.py b/build/vs_toolchain.py
+index f3a6fc7..a8e1f59 100755
+--- a/build/vs_toolchain.py
++++ b/build/vs_toolchain.py
+@@ -49,7 +49,8 @@ json_data_file = os.path.join(script_dir, 'win_toolchain.json')
+ # The first version is assumed by this script to be the one that is packaged,
+ # which makes a difference for the arm64 runtime.
+ MSVS_VERSIONS = collections.OrderedDict([
+-    ('2022', '17.0'),  # Default and packaged version of Visual Studio.
++    ('2026', '18.0'),
++    ('2022', '17.0'),
+     ('2019', '16.0'),
+     ('2017', '15.0'),
+ ])
+@@ -57,6 +58,7 @@ MSVS_VERSIONS = collections.OrderedDict([
+ # List of preferred VC toolset version based on MSVS
+ # Order is not relevant for this dictionary.
+ MSVC_TOOLSET_VERSION = {
++    '2026': 'VC145',
+     '2022': 'VC143',
+     '2019': 'VC142',
+     '2017': 'VC141',
+@@ -179,7 +181,7 @@ def GetVisualStudioVersion():
+     # Checking vs%s_install environment variables.
+     # For example, vs2019_install could have the value
+     # "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community".
+-    # Only vs2017_install, vs2019_install and vs2022_install are supported.
++    # Overrides are supported for every year listed in MSVS_VERSIONS.
+     path = os.environ.get('vs%s_install' % version)
+     if path and os.path.exists(path):
+       available_versions.append(version)
+@@ -189,8 +191,9 @@ def GetVisualStudioVersion():
+       program_files_path_variable = '%ProgramFiles%'
+     else:
+       program_files_path_variable = '%ProgramFiles(x86)%'
++    directory = '18' if version == '2026' else version
+     path = os.path.expandvars(program_files_path_variable +
+-                              '/Microsoft Visual Studio/%s' % version)
++                              '/Microsoft Visual Studio/%s' % directory)
+     if path and any(
+         os.path.exists(os.path.join(path, edition))
+         for edition in ('Enterprise', 'Professional', 'Community', 'Preview',
+@@ -220,22 +223,23 @@ def DetectVisualStudioPath():
+     program_files_path_variable = '%ProgramFiles%'
+   else:
+     program_files_path_variable = '%ProgramFiles(x86)%'
++  directory = '18' if version_as_year == '2026' else version_as_year
+   for path in (os.environ.get('vs%s_install' % version_as_year),
+                os.path.expandvars(program_files_path_variable +
+                                   '/Microsoft Visual Studio/%s/Enterprise' %
+-                                  version_as_year),
++                                  directory),
+                os.path.expandvars(program_files_path_variable +
+                                   '/Microsoft Visual Studio/%s/Professional' %
+-                                  version_as_year),
++                                  directory),
+                os.path.expandvars(program_files_path_variable +
+                                   '/Microsoft Visual Studio/%s/Community' %
+-                                  version_as_year),
++                                  directory),
+                os.path.expandvars(program_files_path_variable +
+                                   '/Microsoft Visual Studio/%s/Preview' %
+-                                  version_as_year),
++                                  directory),
+                os.path.expandvars(program_files_path_variable +
+                                   '/Microsoft Visual Studio/%s/BuildTools' %
+-                                  version_as_year)):
++                                  directory)):
+     if path and os.path.exists(path):
+       return path
  

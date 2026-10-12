@@ -79,7 +79,7 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -y "clang-$ARM64_CLANG_VERSION" "libclang-$ARM64_CLANG_VERSION-dev" "lld-$ARM64_CLANG_VERSION"
+          sudo apt-get install -y "clang-$ARM64_CLANG_VERSION" "libclang-$ARM64_CLANG_VERSION-dev" "libclang-rt-$ARM64_CLANG_VERSION-dev" "lld-$ARM64_CLANG_VERSION"
           echo "CLANG_BASE_PATH=/usr/lib/llvm-$ARM64_CLANG_VERSION" >> "$GITHUB_ENV"
           echo "LIBCLANG_PATH=/usr/lib/llvm-$ARM64_CLANG_VERSION/lib" >> "$GITHUB_ENV"
       - name: Native cache key

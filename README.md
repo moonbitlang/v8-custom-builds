@@ -114,4 +114,8 @@ release test suite. Linux x86_64 additionally links through Zig against glibc
 `patches/host-tools.patch` adapts upstream's tool bootstrap for native ARM64
 runners: Linux's `aarch64` name maps to the `arm64` download, Windows ARM64 uses
 the pinned x64 GN/Ninja tools under emulation, and non-Linux ARM64 builds skip
-Linux sysroot downloads. It does not change V8's runtime features.
+Linux sysroot downloads. It also discovers distribution Clang's compiler-rt
+archive and recognizes VS 2026's installation directory and VC145 runtime (as
+[current Chromium does](https://chromium.googlesource.com/chromium/src/+/main/build/vs_toolchain.py)).
+Linux ARM64 requires the matching compiler-rt development package alongside
+Clang. These adaptations do not change V8's runtime features.
