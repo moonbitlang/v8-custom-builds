@@ -21,7 +21,10 @@ In GitHub Actions, use `shell: bash` on Linux, macOS, or Windows.
 The script initializes submodules, applies patches, builds for the Rust host, and
 packages upstream's outputs. Cargo controls parallelism through `CARGO_BUILD_JOBS`;
 upstream toolchain settings such as `CLANG_BASE_PATH`, `GN`, and `NINJA` still work.
-The only GN overrides are `v8_enable_i18n_support=false` and `icu_use_data_file=false`.
+The GN overrides disable ICU (`v8_enable_i18n_support=false`,
+`icu_use_data_file=false`) and the JavaScript compilation tiers Maglev and
+Sparkplug (`v8_enable_maglev=false`, `v8_enable_sparkplug=false`). These are
+upstream build flags; disabling the two compilation tiers needs no source patch.
 
 For changed revisions or patches, start with a fresh checkout. For changed GN
 settings or compilers, clean first because upstream can reuse old GN configuration:
@@ -73,8 +76,12 @@ Rust's ICU APIs remain present but are unsupported with this archive. Calling
 `get_language_tag` or `set_default_locale` aborts with a diagnostic; calling
 `set_common_data_73` fails to link. The two locale entry points remain in the
 archive so ordinary Windows consumers can link without requiring Rust LTO.
-V8's non-ICU date/time-zone fallback remains. Other engine cuts and upgrades
-are separate work.
+V8's non-ICU date/time-zone fallback remains.
+
+Maglev and Sparkplug compile JavaScript, so disabling them retains Wasm's
+Liftoff and optimizing compiler. JavaScript parsing, Ignition, TurboFan and the
+inspector remain enabled. Removing further JavaScript machinery and upgrading
+V8 are separate work.
 
 The future Wasm C API interface will keep source builds and prebuilt downloads,
 with debugger access retained. TODO: add WasmGC host-reference support; the pinned
