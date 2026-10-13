@@ -24,7 +24,7 @@ jobs:
           shellcheck build.sh ci/*.sh
           bash -n build.sh
           git submodule update --init --depth=1 rusty_v8
-          git -C rusty_v8 submodule update --init --depth=1 build
+          git -C rusty_v8 submodule update --init --depth=1 build v8
           for patch in patches/*.patch; do
             git -C rusty_v8 apply "../$patch"
           done
