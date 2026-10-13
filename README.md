@@ -1,7 +1,7 @@
 # V8 builds for Moonrun
 
-Pinned [rusty_v8](https://github.com/denoland/rusty_v8) plus our ICU patch. The
-submodule pins V8 and its dependencies; upstream Cargo/GN/Ninja scripts do the
+Pinned [rusty_v8](https://github.com/denoland/rusty_v8) plus documented runtime
+patches. The submodule pins V8 and its dependencies; upstream Cargo/GN/Ninja scripts do the
 build. The output includes V8 and rusty_v8's C++ adapter, so Moonrun keeps using
 `v8 = "=0.106.0"` with default features.
 
@@ -78,10 +78,19 @@ Rust's ICU APIs remain present but are unsupported with this archive. Calling
 archive so ordinary Windows consumers can link without requiring Rust LTO.
 V8's non-ICU date/time-zone fallback remains.
 
-Maglev and Sparkplug compile JavaScript, so disabling them retains Wasm's
-Liftoff and optimizing compiler. JavaScript parsing, Ignition, TurboFan and the
-inspector remain enabled. Removing further JavaScript machinery and upgrading
-V8 are separate work.
+`patches/no-js-optimizer.patch` makes JavaScript's `turbofan`, `opt` and
+`turboshaft_from_maglev` flags compile-time constants set to false. This lets
+ordinary C++ optimization remove the JS optimizing entry path and final-link
+dead stripping discard its unreachable compiler code. The compiler source
+files and implementations remain intact; unused code may stay in the archive,
+and compiling it still takes time. Consumers need dead stripping enabled in
+their final link; C++ LTO is not required by this approach.
+
+JavaScript still runs in Ignition; requesting an optimizing JS tier is
+unsupported. The shared TurboFan build capability remains enabled for Wasm and
+snapshot generation, together with Wasm's Liftoff and Turboshaft paths. RegExp,
+JavaScript parsing and Inspector remain available. Each patch contains its
+rationale, compatibility constraints and upgrade notes.
 
 The future Wasm C API interface will keep source builds and prebuilt downloads,
 with debugger access retained. TODO: add WasmGC host-reference support; the pinned
@@ -130,7 +139,11 @@ artifacts are retained for 30 days; publish before they expire.
 
 Validation checks packaged checksums and builds a small Rust consumer using
 the matching generated bindings. It checks that unsupported ICU locale calls
-fail explicitly in child processes, `Intl` is absent and WasmGC executes.
+fail explicitly in child processes, `Intl` is absent and all three JavaScript
+JIT tiers are disabled. Two child processes exercise baseline and optimizing
+Wasm compilation with a numeric result and WasmGC references surviving a native
+host-triggered collection. This is a small archive smoke test; it does not cover
+debugger protocol operations or every alternative compiler configuration.
 Linux x86_64 additionally links this consumer through Zig against
 glibc 2.23 and checks the resulting executable's symbol-version requirements.
 Moonrun integration tests belong in the downstream Moon repository.
