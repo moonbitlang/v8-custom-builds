@@ -19,10 +19,4 @@ esac
 export RUSTY_V8_SRC_BINDING_PATH="$out/src_binding_release_$TARGET.rs"
 unset V8_FROM_SOURCE GN_ARGS EXTRA_GN_ARGS V8_FORCE_DEBUG
 
-# Run the probe as a temporary Moonrun example to use the exact downstream crate and features.
-mkdir -p moon/crates/moonrun/examples
-cp ci/probe.rs moon/crates/moonrun/examples/v8_no_icu.rs
-cd moon
-moon version --all
-cargo run --release --locked -p moonrun --example v8_no_icu
-cargo test --release --locked -p moonrun
+cargo run --release --locked --manifest-path ci/Cargo.toml --target-dir target

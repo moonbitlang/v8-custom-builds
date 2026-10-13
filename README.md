@@ -69,9 +69,12 @@ upstream dependency with `V8_FROM_SOURCE=1` does not apply our patch.
 
 ## Scope
 
-Rust's ICU APIs remain present but must not be called with this archive. V8's
-non-ICU date/time-zone fallback remains. Other engine cuts and upgrades are
-separate work.
+Rust's ICU APIs remain present but are unsupported with this archive. Calling
+`get_language_tag` or `set_default_locale` aborts with a diagnostic; calling
+`set_common_data_73` fails to link. The two locale entry points remain in the
+archive so ordinary Windows consumers can link without requiring Rust LTO.
+V8's non-ICU date/time-zone fallback remains. Other engine cuts and upgrades
+are separate work.
 
 The future Wasm C API interface will keep source builds and prebuilt downloads,
 with debugger access retained. TODO: add WasmGC host-reference support; the pinned
@@ -85,32 +88,45 @@ The workflows separate cheap checks, expensive builds, and publication:
 - **Check recipe** runs ShellCheck, actionlint and patch-application checks for
   PRs and recipe changes on main. It does not compile V8.
 - **Build and test** runs only when manually dispatched. Select `all` for the
-  six-platform matrix, or one target while developing a platform fix. Native
+  five-platform matrix, or one target while developing a platform fix. Native
   builds are never triggered by an ordinary push or a release tag. Full and
   targeted runs share a per-platform concurrency group to avoid duplicate builds.
 - **Publish tested archives** takes a successful build run ID and an existing
   `v0.106.0-moonbit.N` tag pointing to that run's commit. It requires validated
-  artifacts for all six platforms and publishes those exact files without
+  artifacts for all five platforms and publishes those exact files without
   rebuilding. Tags are immutable; use a new tag for each release.
 
-Targets are Linux, macOS and Windows, each on x86_64 and ARM64. Builds use
-standard GitHub-hosted runners with a five-hour per-platform limit. Only release
-native libraries are built. The Rust toolchain and Moon validation revision are
-pinned in the build workflow; the MoonBit compiler uses nightly and its version
-is recorded with each successful validation.
+Targets are Linux and macOS on x86_64 and ARM64, plus Windows x86_64. Windows
+ARM64 is deferred until the rusty_v8 145 upgrade; engine trimming comes first.
+Builds use standard GitHub-hosted runners with a five-hour per-platform limit.
+Windows uses four parallel build jobs; the other platforms use three.
+Only release native libraries are built. The Rust toolchain is pinned in the build workflow.
+Validation uses the standalone `ci` Cargo package with a locked dependency on rusty_v8 0.106.0; it does not
+install MoonBit or check out Moonrun.
 
-Completed native archives are cached **before** Moonrun tests. A failed test can
-therefore be retried without rebuilding V8. Cache keys include the target,
+Completed native archives are cached **before** archive validation. A failed
+test can therefore be retried without rebuilding V8. Cache keys include the target,
 runner image, toolchain versions, upstream pin and native build recipe. Test-only
-changes do not invalidate this cache. Rust compilation caches also include the
-native key so a changed library cannot reuse stale downstream link outputs. Use GitHub's
-**Re-run failed jobs** to retry a partially failed matrix. Successful validated
+changes do not invalidate this cache. The consumer caches Rust dependency downloads
+and installed tools, but compiles afresh against each archive: rusty_v8 stores its
+native library outside Cargo's build outputs, which the Rust cache action prunes.
+When native compilation is needed, rusty_v8 detects `sccache` and passes it to
+GN. Compiler results are stored in GitHub's cache service independently of the
+finished-archive cache, so a source patch can reuse unchanged compilations.
+Compiler options and inputs determine reuse; changing global feature flags can
+still cause many misses. The workflow reports cache hits, misses and write errors.
+Select `rebuild` to exercise a source build even when its finished archive is
+cached; compiler caching remains enabled. This is also useful for measuring warm
+builds without changing the engine configuration.
+Use GitHub's **Re-run failed jobs** to retry a partially failed matrix. Successful validated
 artifacts are retained for 30 days; publish before they expire.
 
-Validation checks packaged checksums, uses the matching generated bindings,
-checks that `Intl` is absent and WasmGC executes, and runs the default Moonrun
-release test suite. Linux x86_64 additionally links through Zig against glibc
-2.23 and checks the resulting executable's symbol-version requirements.
+Validation checks packaged checksums and builds a small Rust consumer using
+the matching generated bindings. It checks that unsupported ICU locale calls
+fail explicitly in child processes, `Intl` is absent and WasmGC executes.
+Linux x86_64 additionally links this consumer through Zig against
+glibc 2.23 and checks the resulting executable's symbol-version requirements.
+Moonrun integration tests belong in the downstream Moon repository.
 
 `patches/host-tools.patch` adapts upstream's tool bootstrap for native ARM64
 runners: Linux's `aarch64` name maps to the `arm64` download, Windows ARM64 uses
@@ -120,3 +136,12 @@ archive and recognizes VS 2026's installation directory and VC145 runtime (as
 [current Chromium does](https://chromium.googlesource.com/chromium/src/+/main/build/vs_toolchain.py)).
 Linux ARM64 requires the matching compiler-rt development package alongside
 Clang. These adaptations do not change V8's runtime features.
+
+`patches/bindgen-constants.patch` spells out the typed-array constant declarations
+so bindgen 0.69.4 can read them with newer libclang. Values still come from V8
+headers; this does not change the Rust API or the native runtime.
+
+`patches/windows-etw.patch` records V8's `Advapi32.lib` dependency in the Windows
+archive. Upstream's Cargo build script does not propagate this GN dependency;
+newer Rust toolchains no longer link it implicitly through the standard library.
+Consumers therefore need no additional linker flags to use the archive.
