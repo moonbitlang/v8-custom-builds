@@ -27,13 +27,16 @@ export GN_ARGS='
 cargo build -vv --release --locked --target "$target" --target-dir "$root/build" -p v8
 
 case "$target" in
-  *-windows-msvc) lib=rusty_v8; ext=lib ;;
-  *) lib=librusty_v8; ext=a ;;
+  *-windows-msvc) lib=rusty_v8; c_api=wee8; ext=lib ;;
+  *) lib=librusty_v8; c_api=libwee8; ext=a ;;
 esac
 gn_out="$root/build/$target/release/gn_out"
 mkdir -p "$out"
 gzip -9nc "$gn_out/obj/$lib.$ext" > "$out/${lib}_release_$target.$ext.gz"
+gzip -9nc "$gn_out/obj/v8/$c_api.$ext" > "$out/${c_api}_release_$target.$ext.gz"
 cp "$gn_out/src_binding.rs" "$out/src_binding_release_$target.rs"
+cp v8/third_party/wasm-api/wasm.h "$out/wasm_c_api_$target.h"
+cp "$root/licenses/wasm-c-api.txt" "$out/WASM_API_LICENSE_$target.txt"
 
 # Keep notices from the complete source tree without archive metadata.
 git ls-files --recurse-submodules -z -- \
@@ -45,7 +48,7 @@ git ls-files --recurse-submodules -z -- \
 
 cd "$out"
 if command -v sha256sum >/dev/null; then
-  sha256sum ./*.gz ./*.rs ./*.txt
+  sha256sum ./*.gz ./*.rs ./*.h ./*.txt
 else
-  shasum -a 256 ./*.gz ./*.rs ./*.txt
+  shasum -a 256 ./*.gz ./*.rs ./*.h ./*.txt
 fi > "SHA256SUMS_$target"
