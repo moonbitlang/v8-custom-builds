@@ -83,6 +83,26 @@ fn main() {
     );
     assert!(evaluate(scope, "typeof Intl === 'undefined'").is_true());
     assert_eq!(evaluate(scope, "40 + 2").int32_value(scope), Some(42));
+    // Valid asm.js must retain its JavaScript behavior without specialization.
+    assert!(
+        evaluate(
+            scope,
+            r#"
+            function asmModule() {
+                "use asm";
+                function add(a, b) {
+                    a = a | 0;
+                    b = b | 0;
+                    return (a + b) | 0;
+                }
+                return {add: add};
+            }
+            asmModule().add(20, 22) === 42 && !%IsAsmWasmCode(asmModule)
+            "#
+        )
+        .is_true(),
+        "asm.js must execute as ordinary JavaScript"
+    );
 
     let collect = v8::Function::new(
         scope,
@@ -128,7 +148,7 @@ fn main() {
         );
     }
     println!(
-        "JS JIT tiers and ICU are disabled; numeric Wasm and WasmGC passed ({})",
+        "JS JIT tiers, asm.js translation and ICU are disabled; numeric Wasm and WasmGC passed ({})",
         mode.unwrap()
     );
 }

@@ -125,6 +125,13 @@ snapshot generation, together with Wasm's Liftoff and Turboshaft paths. RegExp,
 JavaScript parsing and Inspector remain available. Each patch contains its
 rationale, compatibility constraints and upgrade notes.
 
+`patches/no-asmjs.patch` makes `validate_asm` compile-time false. JavaScript with
+a `"use asm"` directive runs as ordinary JavaScript; its specialized translation
+to Wasm is disabled. This lets final-link dead stripping discard the asm.js
+parser and scanner while preserving ordinary Wasm execution. Source files,
+the `InstantiateAsmJs` builtin and related metadata remain, so this is a partial
+cut that does not reduce compilation work.
+
 The experimental Wasm C API interface keeps source builds and prebuilt downloads.
 It does not yet expose a debugger interface. TODO: add WasmGC host-reference support; the pinned
 C API's legacy `ANYREF` means `externref`, so expose it as `ExternRef` and reserve
@@ -174,7 +181,8 @@ artifacts are retained for 30 days; publish before they expire.
 Validation checks packaged checksums and builds a small Rust consumer using
 the matching generated bindings. It checks that unsupported ICU locale calls
 fail explicitly in child processes, `Intl` is absent and all three JavaScript
-JIT tiers are disabled. Two child processes exercise baseline and optimizing
+JIT tiers are disabled. Valid asm.js executes as ordinary JavaScript without
+specialization. Two child processes exercise baseline and optimizing
 Wasm compilation with a numeric result and WasmGC references surviving a native
 host-triggered collection. This is a small archive smoke test; it does not cover
 debugger protocol operations or every alternative compiler configuration.
