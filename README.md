@@ -2,8 +2,9 @@
 
 Pinned [rusty_v8](https://github.com/denoland/rusty_v8) plus documented runtime
 patches. The submodule pins V8 and its dependencies; upstream Cargo/GN/Ninja scripts do the
-build. The output includes V8 and rusty_v8's C++ adapter, so Moonrun keeps using
-`v8 = "=0.106.0"` with default features.
+build. The default archive includes V8 and rusty_v8's C++ adapter, so Moonrun keeps
+using `v8 = "=0.106.0"` with default features. A separate experimental `wee8`
+archive exposes V8's Wasm C API for the next Moonrun backend.
 
 ## Build
 
@@ -39,7 +40,7 @@ partial output. Checksums are written last.
 
 ## Download and use
 
-Each `dist/<target>/` contains the compressed native archive, generated Rust
+Each `dist/<target>/` contains the compressed native archives, generated Rust
 bindings, `NOTICES_<target>.txt`, and `SHA256SUMS_<target>`. Names follow upstream's
 [archive convention](https://github.com/denoland/rusty_v8/blob/v0.106.0/.github/workflows/ci.yml).
 The release tag identifies the source pin, patch, and build settings.
@@ -70,6 +71,38 @@ On Windows, the archive is `rusty_v8_release_<target>.lib.gz`. Keep the crate,
 target, default features, archive, and bindings matched. Building an unmodified
 upstream dependency with `V8_FROM_SOURCE=1` does not apply our patch.
 
+## Experimental Wasm C API archive
+
+The same build also produces `libwee8_release_<target>.a.gz` (Windows:
+`wee8_release_<target>.lib.gz`), `wasm_c_api_<target>.h`, and
+`WASM_API_LICENSE_<target>.txt`. Decompress the archive and include the matching
+header as `wasm.h`; define `LIBWASM_STATIC` when compiling a Windows consumer.
+Choose one archive per executable. The wee8 archive includes V8 and its C adapter,
+but not rusty_v8's `binding.cc`; it is not a replacement for `RUSTY_V8_ARCHIVE`.
+
+`patches/wasm-c-api.patch` updates the pinned V8 C adapter to the unmodified
+[Wasm C API header at 9d6b937](https://github.com/WebAssembly/wasm-c-api/blob/9d6b93764ac96cdd9db51081c363e09d2d488b4d/include/wasm.h).
+Calls, callbacks and instance imports use sized vectors. The patch checks vector
+lengths, retains callback arities and finalizers, and fixes reversed value-copy
+arguments in the older adapter. Start-function exceptions are returned as traps
+without unsolicited host output. The Windows object records the ETW dependency
+and leaves CRT selection to the consumer. The C++ Wasm interface remains pinned.
+
+A GN data dependency builds the existing `wee8` target alongside `rusty_v8`,
+without linking the two adapters together. Both targets reuse the same V8 object
+files, toolchain, sysroot, trimming configuration and compiler cache. This adds
+the C adapter compilation and a separate archive step, not another engine build.
+The complete wee8 archive explicitly includes the same configured C++ runtime
+dependencies as rusty_v8. Consumers do not need a separate Chromium libc++
+archive to resolve V8's internal `std::__Cr` symbols.
+
+This is an experimental embedding interface with a Wasm 1.0 smoke test. Header
+declarations are not a conformance claim: tag APIs and WasmGC values crossing the
+host interface remain unsupported, and additional modern types can reach
+unimplemented V8 conversions. Consumers must validate their supported scope.
+The entry point still uses V8's internal JavaScript objects and context; this
+patch does not remove that machinery or promise a stable cross-engine C ABI.
+
 ## Scope
 
 Rust's ICU APIs remain present but are unsupported with this archive. Calling
@@ -92,8 +125,8 @@ snapshot generation, together with Wasm's Liftoff and Turboshaft paths. RegExp,
 JavaScript parsing and Inspector remain available. Each patch contains its
 rationale, compatibility constraints and upgrade notes.
 
-The future Wasm C API interface will keep source builds and prebuilt downloads,
-with debugger access retained. TODO: add WasmGC host-reference support; the pinned
+The experimental Wasm C API interface keeps source builds and prebuilt downloads.
+It does not yet expose a debugger interface. TODO: add WasmGC host-reference support; the pinned
 C API's legacy `ANYREF` means `externref`, so expose it as `ExternRef` and reserve
 `AnyRef` for actual WasmGC references.
 
@@ -117,8 +150,9 @@ ARM64 is deferred until the rusty_v8 145 upgrade; engine trimming comes first.
 Builds use standard GitHub-hosted runners with a five-hour per-platform limit.
 Windows uses four parallel build jobs; the other platforms use three.
 Only release native libraries are built. The Rust toolchain is pinned in the build workflow.
-Validation uses the standalone `ci` Cargo package with a locked dependency on rusty_v8 0.106.0; it does not
-install MoonBit or check out Moonrun.
+Validation uses the standalone `ci` Cargo package with a locked dependency on
+rusty_v8 0.106.0 and a separate `ci/c-api` consumer of the packaged wee8 archive.
+Neither installs MoonBit or checks out Moonrun.
 
 Completed native archives are cached **before** archive validation. A failed
 test can therefore be retried without rebuilding V8. Cache keys include the target,
@@ -146,6 +180,12 @@ host-triggered collection. This is a small archive smoke test; it does not cover
 debugger protocol operations or every alternative compiler configuration.
 Linux x86_64 additionally links this consumer through Zig against
 glibc 2.23 and checks the resulting executable's symbol-version requirements.
+The C API consumer compiles against the packaged header and links only wee8. It
+checks numeric calls, both callback forms, callback finalization, arity/import
+count failures, traps (including silent instantiation failures), value copying
+and memory growth. The existing glibc 2.23
+check covers the rusty_v8 consumer; the wee8 consumer still needs its own check
+before adopting that compatibility guarantee.
 Moonrun integration tests belong in the downstream Moon repository.
 
 `patches/host-tools.patch` adapts upstream's tool bootstrap for native ARM64

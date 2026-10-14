@@ -89,7 +89,7 @@ jobs:
       - name: Native cache key
         id: native-key
         env:
-          RECIPE: ${{ hashFiles('build.sh', 'patches/*.patch') }}
+          RECIPE: ${{ hashFiles('build.sh', 'patches/*.patch', 'licenses/*') }}
         run: echo "key=native-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$(git rev-parse HEAD:rusty_v8)-$RECIPE" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: native
@@ -111,15 +111,19 @@ jobs:
         with:
           path: dist/${{ matrix.target }}
           key: ${{ steps.native-key.outputs.key }}
-      - uses: Swatinem/rust-cache@401aff9a7a08acb9d27b64936a90db81024cff97 # v2.8.2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          workspaces: ci -> ../target
+          workspaces: |
+            ci -> ../target
+            ci/c-api -> ../../target/c-api
           # rusty_v8 stores its native library outside Cargo's build outputs,
           # which rust-cache prunes. Rebuild the consumer against this run's archive.
           cache-targets: false
           shared-key: smoke-registry-${{ steps.native-key.outputs.key }}
       - name: Test packaged archive with rusty_v8
         run: bash ci/test.sh
+      - name: Test packaged Wasm C API archive
+        run: bash ci/test-c-api.sh
       - name: Install Zig for Linux compatibility check
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         uses: mlugg/setup-zig@8d6198c65fb0feaa111df26e6b467fea8345e46f # v2.0.5
@@ -138,9 +142,9 @@ jobs:
             > "dist/$TARGET/validation_$TARGET.json"
           (cd "dist/$TARGET"
            if command -v sha256sum >/dev/null; then
-             sha256sum ./*.gz ./*.rs ./*.txt ./*.json
+             sha256sum ./*.gz ./*.rs ./*.h ./*.txt ./*.json
            else
-             shasum -a 256 ./*.gz ./*.rs ./*.txt ./*.json
+             shasum -a 256 ./*.gz ./*.rs ./*.h ./*.txt ./*.json
            fi > "SHA256SUMS_$TARGET")
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
