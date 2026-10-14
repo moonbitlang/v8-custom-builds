@@ -92,6 +92,9 @@ A GN data dependency builds the existing `wee8` target alongside `rusty_v8`,
 without linking the two adapters together. Both targets reuse the same V8 object
 files, toolchain, sysroot, trimming configuration and compiler cache. This adds
 the C adapter compilation and a separate archive step, not another engine build.
+The complete wee8 archive explicitly includes the same configured C++ runtime
+dependencies as rusty_v8. Consumers do not need a separate Chromium libc++
+archive to resolve V8's internal `std::__Cr` symbols.
 
 This is an experimental embedding interface with a Wasm 1.0 smoke test. Header
 declarations are not a conformance claim: tag APIs and WasmGC values crossing the

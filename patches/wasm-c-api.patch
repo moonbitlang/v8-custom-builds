@@ -19,6 +19,11 @@ Windows archives carry their ETW library dependency as the rusty_v8 adapter does
 The wee8 object omits default CRT directives, as rusty_v8 does, so the consumer
 chooses its CRT. A GN data dependency builds wee8 beside rusty_v8 without linking
 its C entry points into the rusty_v8 archive; all engine objects are reused.
+Like rusty_v8, wee8 explicitly depends on build/config:shared_library_deps.
+This includes the configured target libc++/libc++abi objects in the complete
+archive. A static-library target does not acquire that dependency automatically;
+without it, consumers cannot resolve Chromium's std::__Cr symbols by linking
+their system C++ library. Host-tool libc++ dependencies do not fill that gap.
 
 This is a core-interface MVP, not full implementation of every header declaration:
 new tag APIs and WasmGC values crossing the host boundary remain unsupported.
@@ -219,7 +224,7 @@ Review/remove this adapter on a V8 upgrade that implements the same header ABI.
      "//build/config:shared_library_deps",
 --- a/v8/BUILD.gn
 +++ b/v8/BUILD.gn
-@@ -7246,6 +7246,10 @@
+@@ -7246,6 +7246,13 @@
  
  if (v8_enable_webassembly) {
    v8_static_library("wee8") {
@@ -228,6 +233,9 @@ Review/remove this adapter on a V8 upgrade that implements the same header ABI.
 +      cflags = [ "/Zl" ]
 +    }
      deps = [
++      # Include the configured C++ runtime in the complete archive, as rusty_v8 does.
++      # Static libraries do not receive these final-link dependencies automatically.
++      "//build/config:shared_library_deps",
        ":v8_base",
        ":v8_libbase",
 --- a/v8/third_party/wasm-api/wasm.h
