@@ -3,3 +3,5 @@
 /target/
 __pycache__/
 /ci/target/
+
+/crates/wee8/target/

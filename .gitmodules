@@ -1,3 +1,5 @@
 [submodule "rusty_v8"]
 	path = rusty_v8
 	url = https://github.com/denoland/rusty_v8.git
+	# Cargo consumers use the released archive and must not fetch the V8 source tree.
+	update = none

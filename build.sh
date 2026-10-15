@@ -9,7 +9,8 @@ if [[ -e "$out" ]]; then
   exit 1
 fi
 
-git submodule update --init --recursive --depth=1
+# Native builds explicitly opt into source checkout; Cargo consumers skip it.
+git submodule update --init --recursive --checkout --depth=1
 for patch in "$root"/patches/*.patch; do
   git -C rusty_v8 apply --reverse --check "$patch" 2>/dev/null ||
     git -C rusty_v8 apply "$patch"

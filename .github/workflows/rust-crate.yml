@@ -1,0 +1,46 @@
+name: Rust crate
+
+# These are consumers of the published archive, not native V8 builds.
+on:
+  pull_request:
+    paths: ['crates/wee8/**', '.github/workflows/rust-crate.yml']
+  push:
+    branches: [main]
+    paths: ['crates/wee8/**', '.github/workflows/rust-crate.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-crate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: wee8 / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: crates/wee8
+    steps:
+      - name: Configure Git
+        working-directory: .
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        run: rustup toolchain install 1.95.0 --profile minimal --component clippy,rustfmt --no-self-update
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: crates/wee8
+          shared-key: wee8-crate
+          cache-targets: false
+      - name: Check and test the published archive
+        run: |
+          cargo +1.95.0 fmt --check
+          cargo +1.95.0 clippy --locked --all-targets -- -D warnings
+          cargo +1.95.0 test --locked
