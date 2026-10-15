@@ -71,6 +71,15 @@ On Windows, the archive is `rusty_v8_release_<target>.lib.gz`. Keep the crate,
 target, default features, archive, and bindings matched. Building an unmodified
 upstream dependency with `V8_FROM_SOURCE=1` does not apply our patch.
 
+## Rust embedding crate
+
+[`crates/wee8`](crates/wee8) provides the experimental Rust ownership wrapper
+for the published Wasm C API archive. Consumers use a pinned Git dependency;
+the crate downloads and verifies the matching native archive and header,
+generates bindings, and links the library. Host services such as WASI remain
+with the embedder. The Rust-crate CI tests the existing release on three OSes
+without rebuilding V8.
+
 ## Experimental Wasm C API archive
 
 The same build also produces `libwee8_release_<target>.a.gz` (Windows:

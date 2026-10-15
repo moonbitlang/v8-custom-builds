@@ -1,0 +1,24 @@
+[package]
+name = "wee8"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+description = "Rust ownership wrapper for MoonBit's V8 Wasm C API archives"
+repository = "https://github.com/moonbitlang/v8-custom-builds"
+links = "wee8"
+publish = false
+
+[dependencies]
+thiserror = "1.0"
+wasmparser = { version = "=0.258.0", default-features = false, features = ["std", "validate", "features"] }
+
+[build-dependencies]
+bindgen = "=0.72.1"
+dunce = "1.0.4"
+flate2 = "1.0.30"
+reqwest = { version = "0.12.28", default-features = false, features = ["blocking", "rustls-tls", "rustls-tls-native-roots", "http2", "system-proxy"] }
+sha2 = "0.10.8"
+
+[dev-dependencies]
+wat = "1.255.0"
