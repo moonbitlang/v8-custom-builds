@@ -19,6 +19,45 @@
 use wee8::{Store, Value};
 
 #[test]
+fn store_and_caller_share_reference_creation_through_context() {
+    use wee8::{ExternRef, Kind, StoreContext};
+
+    fn make_reference(context: StoreContext<'_, u32>) -> wee8::Result<ExternRef<'_>> {
+        let value = context.with_data(|value| *value);
+        ExternRef::new(context, value)
+    }
+
+    let store = Store::new(42_u32).unwrap();
+    // The root borrows the store, not the temporary StoreContext value.
+    let host_reference = make_reference(store.as_context()).unwrap();
+    assert_eq!(host_reference.data::<u32>(), Some(&42));
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+        (import "host" "new" (func $new (result externref)))
+        (func (export "run") (result externref) call $new))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let create = store
+        .host_func(&[], &[Kind::ExternRef], |caller, _| {
+            Ok(vec![Value::ExternRef(Some(make_reference(
+                caller.as_context(),
+            )?))])
+        })
+        .unwrap();
+    let mut instance = module.instantiate(&[&create]).unwrap();
+    let result = instance.call("run", &[]).unwrap();
+    let Value::ExternRef(Some(reference)) = &result[0] else {
+        panic!("missing reference")
+    };
+    assert_eq!(reference.data::<u32>(), host_reference.data::<u32>());
+    assert_ne!(reference, &host_reference);
+}
+
+#[test]
 fn gc_values_stay_internal_across_calls_and_serialization() {
     let store = Store::new(()).unwrap();
     let module = store

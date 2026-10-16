@@ -34,12 +34,25 @@ boundary are rejected before native introspection, which would otherwise abort.
 The Rust call interface supports scalar numbers and nullable `externref`, with
 at most one result; callable `funcref` handles are not exposed yet.
 
-`Store::extern_ref` and `Caller::extern_ref` root host-owned Rust values.
+`Store::as_context` and `Caller::as_context` provide the same borrowed
+`StoreContext` interface for host data and reference creation. Shared host code
+can take a context and call `ExternRef::new(context, value)` from either place.
+The root borrows the underlying store, so it may outlive the temporary context
+but cannot outlive the store or escape a callback's store borrow.
+`Store::extern_ref` and `Caller::extern_ref` remain convenience methods.
+
 `ExternRef::data` downcasts their payloads without exposing a native pointer.
 Cloning a reference keeps the same object alive; guest globals, tables and GC
 objects can retain it after the Rust handle is dropped. Handles borrow their
 store, and calls reject references from a different store. Host payloads are
 released by native finalizers, including during store teardown.
+
+Internally, the store separates host data `T` from a non-generic `StoreOpaque`
+holding native identity and execution state, following Wasmtime's store/context
+organization. `Store` owns native teardown; callback environments retain Rust
+state until their native finalizers run. `ExternRef` owns a V8 root and borrows
+the non-generic store state for lifetime and cross-store checks. Root creation,
+copying and deletion use V8's C API; there is no additional Rust root registry.
 
 `extern.convert_any` remains rejected in function bodies and constant
 expressions. This pinned V8 C API represents reference values with `JSReceiver`
@@ -70,7 +83,8 @@ using another engine's native Rust API.
 
 `cargo test` exercises native ownership, callbacks, memory borrowing, numeric
 execution, internal GC/typed function references, host-reference ownership and
-rejection of unsupported boundary types, checksum parsing, and public API examples using the published archive.
+shared store/callback contexts, rejection of unsupported boundary types, checksum
+parsing, and public API examples using the published archive.
 The Rust-crate workflow runs these checks on Linux, macOS, and Windows without
 building V8. Native archive production remains in the separately dispatched
 build workflow.

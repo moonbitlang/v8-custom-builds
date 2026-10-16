@@ -18,7 +18,7 @@
 
 //! Native roots and host payloads. Every root borrows the store that owns it.
 
-use crate::{Result, ffi};
+use crate::{Result, StoreContext, StoreOpaque, ffi};
 use std::{
     any::Any,
     ffi::c_void,
@@ -26,8 +26,6 @@ use std::{
     panic::{AssertUnwindSafe, catch_unwind},
     ptr::NonNull,
 };
-
-pub(crate) struct ReferenceStore(pub(crate) NonNull<ffi::wasm_store_t>);
 
 /// An owned native root tied to one store. Cloning retains the same guest object;
 /// dropping a root releases it, while guest references may keep its payload alive.
@@ -39,14 +37,30 @@ pub(crate) struct ReferenceStore(pub(crate) NonNull<ffi::wasm_store_t>);
 /// };
 /// reference.data::<String>();
 /// ```
+///
+/// Creating through a store context preserves the same lifetime constraint:
+///
+/// ```compile_fail
+/// let reference = {
+///     let store = wee8::Store::new(()).unwrap();
+///     wee8::ExternRef::new(store.as_context(), String::from("hello")).unwrap()
+/// };
+/// reference.data::<String>();
+/// ```
 pub struct ExternRef<'store> {
     pub(crate) raw: NonNull<ffi::wasm_ref_t>,
-    pub(crate) store: &'store ReferenceStore,
+    // Borrow the non-generic store state to enforce lifetime and store identity,
+    // without tying the reference type to the embedder's host-data type T.
+    pub(crate) store: &'store StoreOpaque,
 }
 
-impl ReferenceStore {
-    pub(crate) fn create(&self, data: impl Any) -> Result<ExternRef<'_>> {
-        let foreign = NonNull::new(unsafe { ffi::wasm_foreign_new(self.0.as_ptr()) })
+impl<'store> ExternRef<'store> {
+    /// Root a host value using a context from either a store or a host callback.
+    /// The root borrows the store, not the temporary context value. V8 owns the
+    /// object and invokes its payload finalizer when it is no longer retained.
+    pub fn new<T>(context: StoreContext<'store, T>, data: impl Any) -> Result<Self> {
+        let store = &context.0.inner;
+        let foreign = NonNull::new(unsafe { ffi::wasm_foreign_new(store.raw.as_ptr()) })
             .ok_or("failed to create externref")?;
         let raw = unsafe { NonNull::new_unchecked(ffi::wasm_foreign_as_ref(foreign.as_ptr())) };
         // Only this crate installs host_info. The extra Box makes the Any trait
@@ -55,7 +69,7 @@ impl ReferenceStore {
         unsafe {
             ffi::wasm_ref_set_host_info_with_finalizer(raw.as_ptr(), data.cast(), Some(finalize))
         };
-        Ok(ExternRef { raw, store: self })
+        Ok(Self { raw, store })
     }
 }
 
@@ -93,7 +107,7 @@ impl Clone for ExternRef<'_> {
 
 impl PartialEq for ExternRef<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.store.0 == other.store.0
+        self.store.raw == other.store.raw
             && unsafe { ffi::wasm_ref_same(self.raw.as_ptr(), other.raw.as_ptr()) }
     }
 }

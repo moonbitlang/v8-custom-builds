@@ -52,7 +52,6 @@
 mod ffi;
 mod references;
 pub use references::ExternRef;
-use references::ReferenceStore;
 use std::{
     cell::{Cell, RefCell},
     ffi::c_void,
@@ -144,9 +143,9 @@ impl<'store> Value<'store> {
         }
     }
 
-    fn check_store(&self, store: &ReferenceStore) -> Result<()> {
+    fn check_store(&self, store: &StoreOpaque) -> Result<()> {
         if let Self::ExternRef(Some(reference)) = self
-            && reference.store.0 != store.0
+            && reference.store.raw != store.raw
         {
             return Err("externref belongs to a different store".into());
         }
@@ -179,7 +178,7 @@ impl<'store> Value<'store> {
 
     // C arguments are borrowed; C results are released separately. Both need
     // their own root before becoming an independently owned Rust value.
-    unsafe fn from_raw(value: &ffi::wasm_val_t, store: &'store ReferenceStore) -> Result<Self> {
+    unsafe fn from_raw(value: &ffi::wasm_val_t, store: &'store StoreOpaque) -> Result<Self> {
         unsafe {
             match Kind::from_raw(value.kind)? {
                 Kind::I32 => Ok(Self::I32(value.of.i32_)),
@@ -234,8 +233,17 @@ fn process_engine() -> Result<&'static ProcessEngine> {
 }
 
 struct State<T> {
-    references: ReferenceStore,
+    inner: StoreOpaque,
     data: RefCell<T>,
+}
+
+// Like Wasmtime's StoreOpaque, this is the part of the store independent of T.
+// It holds native identity and execution state, not a second reference store.
+// Store<T> deletes the native store while callback-owned Rc<State<T>> values
+// still keep this state alive for finalization. Dropping State must not delete
+// the native store: native callbacks themselves retain State until teardown.
+struct StoreOpaque {
+    raw: NonNull<ffi::wasm_store_t>,
     executing: Cell<bool>,
     memory: Cell<*mut ffi::wasm_memory_t>,
     host_error: RefCell<Option<String>>,
@@ -244,10 +252,10 @@ struct State<T> {
 // Both instantiation (which can run a start function) and exported calls enter
 // guest code. Reject re-entry through another instance in the same store too:
 // it could otherwise grow a memory while a host callback holds its Rust view.
-struct Execution<'a, T>(&'a State<T>);
+struct Execution<'a>(&'a StoreOpaque);
 
-impl<T> State<T> {
-    fn enter(&self) -> Result<Execution<'_, T>> {
+impl StoreOpaque {
+    fn enter(&self) -> Result<Execution<'_>> {
         if self.executing.replace(true) {
             return Err("wee8 does not support guest re-entry from a host callback yet".into());
         }
@@ -255,7 +263,7 @@ impl<T> State<T> {
     }
 }
 
-impl<T> Drop for Execution<'_, T> {
+impl Drop for Execution<'_> {
     fn drop(&mut self) {
         self.0.memory.set(ptr::null_mut());
         self.0.executing.set(false);
@@ -319,8 +327,24 @@ fn validate_reference_conversions(bytes: &[u8]) -> Result<()> {
 
 /// Native store and host state. Native handles borrow it and cannot cross threads.
 pub struct Store<T> {
-    raw: NonNull<ffi::wasm_store_t>,
     state: Rc<State<T>>,
+}
+
+/// Borrowed access to one store, obtained from either [`Store::as_context`] or
+/// [`Caller::as_context`]. This follows Wasmtime's store-context separation;
+/// native rooting remains owned by V8, with no Rust reference registry.
+///
+/// A context exposes host data and creates store-bound references. Guest memory
+/// access remains on [`Caller`], where the current instance is known. Unlike
+/// Wasmtime's mutable context, this wrapper uses checked interior borrows and
+/// rejects guest re-entry; the context does not grant exclusive store access.
+pub struct StoreContext<'a, T>(&'a State<T>);
+
+impl<T> StoreContext<'_, T> {
+    /// Borrow the embedder's host state for the duration of the operation.
+    pub fn with_data<R>(&self, operation: impl FnOnce(&T) -> R) -> R {
+        operation(&self.0.data.borrow())
+    }
 }
 
 impl<T> Store<T> {
@@ -329,26 +353,32 @@ impl<T> Store<T> {
         let raw = NonNull::new(unsafe { ffi::wasm_store_new(process_engine()?.0.as_ptr()) })
             .ok_or("failed to create wee8 store")?;
         Ok(Self {
-            raw,
             state: Rc::new(State {
-                references: ReferenceStore(raw),
+                inner: StoreOpaque {
+                    raw,
+                    executing: Cell::new(false),
+                    memory: Cell::new(ptr::null_mut()),
+                    host_error: RefCell::new(None),
+                },
                 data: RefCell::new(data),
-                executing: Cell::new(false),
-                memory: Cell::new(ptr::null_mut()),
-                host_error: RefCell::new(None),
             }),
         })
+    }
+
+    /// Borrow this store through the same interface available to host callbacks.
+    pub fn as_context(&self) -> StoreContext<'_, T> {
+        StoreContext(&self.state)
     }
 
     /// Root a host value in this store. The guest may retain the object after
     /// the Rust root is dropped; its payload is finalized when no roots remain.
     pub fn extern_ref(&self, data: impl std::any::Any) -> Result<ExternRef<'_>> {
-        self.state.references.create(data)
+        ExternRef::new(self.as_context(), data)
     }
 
     fn take_trap(&self, trap: *mut ffi::wasm_trap_t) -> Error {
         let message = unsafe { take_trap(trap) };
-        match self.state.host_error.borrow_mut().take() {
+        match self.state.inner.host_error.borrow_mut().take() {
             Some(error) => Error::Host(error),
             None => Error::Trap(message),
         }
@@ -358,7 +388,7 @@ impl<T> Store<T> {
 impl<T> Drop for Store<T> {
     fn drop(&mut self) {
         // Native finalizers still have their own Rc to Rust state during teardown.
-        unsafe { ffi::wasm_store_delete(self.raw.as_ptr()) }
+        unsafe { ffi::wasm_store_delete(self.state.inner.raw.as_ptr()) }
     }
 }
 
@@ -367,20 +397,26 @@ impl<T> Drop for Store<T> {
 pub struct Caller<'a, T>(&'a State<T>);
 
 impl<'a, T> Caller<'a, T> {
+    /// Borrow the store for this host call. Returned roots can outlive this
+    /// temporary Caller value, but cannot escape the callback's store borrow.
+    pub fn as_context(&self) -> StoreContext<'a, T> {
+        StoreContext(self.0)
+    }
+
     /// Create a host object during this callback, for example as a return value.
     pub fn extern_ref(&self, data: impl std::any::Any) -> Result<ExternRef<'a>> {
-        self.0.references.create(data)
+        ExternRef::new(self.as_context(), data)
     }
 
     /// Read the store's host state for this callback.
     pub fn with_data<R>(&self, operation: impl FnOnce(&T) -> R) -> R {
-        operation(&self.0.data.borrow())
+        self.as_context().with_data(operation)
     }
 
     /// Borrow the current instance's exported `memory` for one host call.
     /// Fails during start sections, nested memory borrows, or without that export.
     pub fn with_memory<R>(&self, operation: impl FnOnce(&T, &mut [u8]) -> R) -> Result<R> {
-        let memory = self.0.memory.get();
+        let memory = self.0.inner.memory.get();
         if memory.is_null() {
             return Err("wee8 host memory requires an exported `memory` and is unavailable during module start".into());
         }
@@ -405,7 +441,6 @@ type Callback<T> = dyn for<'a> Fn(Caller<'a, T>, &[Value<'a>]) -> Result<Vec<Val
 
 struct CallbackEnvironment<T> {
     state: Rc<State<T>>,
-    store: *mut ffi::wasm_store_t,
     results: Vec<Kind>,
     callback: Box<Callback<T>>,
 }
@@ -439,7 +474,7 @@ unsafe extern "C" fn call_host<T>(
             };
             let values = args
                 .iter()
-                .map(|value| Value::from_raw(value, &env.state.references))
+                .map(|value| Value::from_raw(value, &env.state.inner))
                 .collect::<Result<Vec<_>>>()?;
             let values = (env.callback)(Caller(&env.state), &values)?;
             if values.len() != env.results.len()
@@ -453,7 +488,7 @@ unsafe extern "C" fn call_host<T>(
                 return Err("invalid callback result capacity".into());
             }
             for value in &values {
-                value.check_store(&env.state.references)?;
+                value.check_store(&env.state.inner)?;
             }
             for (index, value) in values.into_iter().enumerate() {
                 (*results).data.add(index).write(value.raw());
@@ -466,13 +501,13 @@ unsafe extern "C" fn call_host<T>(
             Err(_) => "Rust host callback panicked".into(),
         };
         // Wasm C API trap messages include the trailing NUL in their size.
-        *env.state.host_error.borrow_mut() = Some(error.clone());
+        *env.state.inner.host_error.borrow_mut() = Some(error.clone());
         error.push('\0');
         let message = ffi::wasm_byte_vec_t {
             size: error.len(),
             data: error.as_ptr().cast_mut().cast(),
         };
-        ffi::wasm_trap_new(env.store, &message)
+        ffi::wasm_trap_new(env.state.inner.raw.as_ptr(), &message)
     }
 }
 
@@ -552,8 +587,9 @@ impl<T: 'static> Store<T> {
             size: bytes.len(),
             data: bytes.as_ptr().cast_mut().cast(),
         };
-        let raw = NonNull::new(unsafe { ffi::wasm_module_new(self.raw.as_ptr(), &bytes) })
-            .ok_or("module validation or compilation failed")?;
+        let raw =
+            NonNull::new(unsafe { ffi::wasm_module_new(self.state.inner.raw.as_ptr(), &bytes) })
+                .ok_or("module validation or compilation failed")?;
         Ok(Module { raw, store: self })
     }
 
@@ -596,12 +632,11 @@ impl<T: 'static> Store<T> {
             }
             let env = Box::into_raw(Box::new(CallbackEnvironment {
                 state: Rc::clone(&self.state),
-                store: self.raw.as_ptr(),
                 results: results.to_vec(),
                 callback: Box::new(callback),
             }));
             let raw = ffi::wasm_func_new_with_env(
-                self.raw.as_ptr(),
+                self.state.inner.raw.as_ptr(),
                 ty,
                 Some(call_host::<T>),
                 env.cast(),
@@ -647,8 +682,10 @@ impl<T> Store<T> {
             size: compiled.0.len(),
             data: compiled.0.as_ptr().cast_mut().cast(),
         };
-        let raw = NonNull::new(unsafe { ffi::wasm_module_deserialize(self.raw.as_ptr(), &bytes) })
-            .ok_or("failed to obtain compiled module in new store")?;
+        let raw = NonNull::new(unsafe {
+            ffi::wasm_module_deserialize(self.state.inner.raw.as_ptr(), &bytes)
+        })
+        .ok_or("failed to obtain compiled module in new store")?;
         Ok(Module { raw, store: self })
     }
 }
@@ -740,7 +777,7 @@ impl<T> Drop for Module<'_, T> {
 impl<'store, T> Module<'store, T> {
     /// Imports follow module declaration order. The MVP accepts function imports.
     pub fn instantiate(&self, imports: &[&HostFunc<'_, T>]) -> Result<Instance<'store, T>> {
-        let _execution = self.store.state.enter()?;
+        let _execution = self.store.state.inner.enter()?;
         if imports.iter().any(|f| !ptr::eq(f.store, self.store)) {
             return Err("imports must belong to the module's store".into());
         }
@@ -765,7 +802,7 @@ impl<'store, T> Module<'store, T> {
             };
             let mut trap = ptr::null_mut();
             let raw = ffi::wasm_instance_new(
-                self.store.raw.as_ptr(),
+                self.store.state.inner.raw.as_ptr(),
                 self.raw.as_ptr(),
                 &imports,
                 &mut trap,
@@ -843,9 +880,9 @@ impl<'store, T> Instance<'store, T> {
     /// Call an exported function with numeric or externref arguments and at most
     /// one result. Guest traps and host callback failures remain distinct errors.
     pub fn call(&mut self, name: &str, args: &[Value<'_>]) -> Result<Vec<Value<'store>>> {
-        let _execution = self.store.state.enter()?;
+        let _execution = self.store.state.inner.enter()?;
         for value in args {
-            value.check_store(&self.store.state.references)?;
+            value.check_store(&self.store.state.inner)?;
         }
         unsafe {
             let func = ffi::wasm_extern_as_func(self.export(name)?);
@@ -899,7 +936,7 @@ impl<'store, T> Instance<'store, T> {
                 .position(|name| name == b"memory")
                 .map(|index| ffi::wasm_extern_as_memory(*self.exports.data.add(index)))
                 .unwrap_or(ptr::null_mut());
-            self.store.state.memory.set(memory);
+            self.store.state.inner.memory.set(memory);
             let trap = ffi::wasm_func_call(func, &args, &mut results);
             if !trap.is_null() {
                 return Err(self.store.take_trap(trap));
@@ -907,7 +944,7 @@ impl<'store, T> Instance<'store, T> {
             result_raw
                 .0
                 .iter()
-                .map(|v| Value::from_raw(v, &self.store.state.references))
+                .map(|v| Value::from_raw(v, &self.store.state.inner))
                 .collect()
         }
     }
