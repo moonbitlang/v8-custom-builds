@@ -805,7 +805,23 @@
    void InitializeGlobal_sharedarraybuffer();
  #if V8_ENABLE_WEBASSEMBLY
    void InitializeWasmJSPI();
-@@ -2885,10 +2887,12 @@
+@@ -664,6 +666,7 @@
+       .Check();
+ }
+ 
++#if V8_ENABLE_REGEXP
+ void SimpleInstallGetterSetter(Isolate* isolate, Handle<JSObject> base,
+                                const char* name, Builtin call_getter,
+                                Builtin call_setter) {
+@@ -671,6 +674,7 @@
+                             isolate->factory()->InternalizeUtf8String(name),
+                             call_getter, call_setter);
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ V8_NOINLINE Handle<JSFunction> SimpleInstallGetter(Isolate* isolate,
+                                                    Handle<JSObject> base,
+@@ -2885,10 +2889,12 @@
      SimpleInstallFunction(isolate_, prototype, "localeCompare",
                            Builtin::kStringPrototypeLocaleCompare, 1, true);
  #endif  // V8_INTL_SUPPORT
@@ -818,7 +834,7 @@
  #ifdef V8_INTL_SUPPORT
      SimpleInstallFunction(isolate_, prototype, "normalize",
                            Builtin::kStringPrototypeNormalizeIntl, 0, false);
-@@ -2902,18 +2906,22 @@
+@@ -2902,18 +2908,22 @@
                            Builtin::kStringPrototypePadStart, 1, false);
      SimpleInstallFunction(isolate_, prototype, "repeat",
                            Builtin::kStringPrototypeRepeat, 1, true);
@@ -841,7 +857,7 @@
      SimpleInstallFunction(isolate_, prototype, "strike",
                            Builtin::kStringPrototypeStrike, 0, false);
      SimpleInstallFunction(isolate_, prototype, "sub",
-@@ -3259,6 +3267,7 @@
+@@ -3259,6 +3269,7 @@
      DCHECK(promise_fun->HasFastProperties());
    }
  
@@ -849,7 +865,7 @@
    {  // -- R e g E x p
      // Builtin functions for RegExp.prototype.
      Handle<JSFunction> regexp_fun = InstallFunction(
-@@ -3479,6 +3488,7 @@
+@@ -3479,6 +3490,7 @@
      native_context()->set_initial_regexp_string_iterator_prototype_map(
          regexp_string_iterator_function->initial_map());
    }
@@ -857,7 +873,7 @@
  
    // -- E r r o r
    InstallError(isolate_, global, factory->Error_string(),
-@@ -4990,7 +5000,9 @@
+@@ -4990,7 +5002,9 @@
    HARMONY_INPROGRESS(FEATURE_INITIALIZE_GLOBAL)
    JAVASCRIPT_INPROGRESS_FEATURES(FEATURE_INITIALIZE_GLOBAL)
  #undef FEATURE_INITIALIZE_GLOBAL
@@ -867,7 +883,7 @@
    InitializeGlobal_sharedarraybuffer();
  }
  
-@@ -5842,6 +5854,7 @@
+@@ -5842,6 +5856,7 @@
                        Builtin::kAbstractModuleSourceToStringTag, true);
  }
  
@@ -875,7 +891,7 @@
  void Genesis::InitializeGlobal_regexp_linear_flag() {
    if (!v8_flags.enable_experimental_regexp_engine) return;
  
-@@ -5856,6 +5869,7 @@
+@@ -5856,6 +5871,7 @@
    // Store regexp prototype map again after change.
    native_context()->set_regexp_prototype_map(regexp_prototype->map());
  }
