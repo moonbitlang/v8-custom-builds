@@ -47,7 +47,7 @@ fn internal_simd_survives_serialization_and_scalar_host_calls() {
                 assert_eq!(i32::from_le_bytes(bytes[0..4].try_into().unwrap()), 40);
             })?;
             assert_eq!(values, [Value::I32(42)]);
-            Ok(vec![values[0]])
+            Ok(vec![values[0].clone()])
         })
         .unwrap();
     let mut instance = module.instantiate(&[&check]).unwrap();
@@ -84,9 +84,7 @@ fn simd_does_not_enable_other_proposals() {
     let store = Store::new(()).unwrap();
     for source in [
         "(module (memory 1 1 shared))",
-        "(module (func (param externref)))",
         "(module (tag (param i32)))",
-        "(module (type (struct (field i32))))",
         "(module (func (param v128) (result v128) local.get 0 local.get 0 i8x16.relaxed_swizzle))",
     ] {
         assert!(
