@@ -16,40 +16,41 @@ for patch in "$root"/patches/*.patch; do
     git -C rusty_v8 apply "$patch"
 done
 
-cd rusty_v8
+cp ci/runtime/probe.cc rusty_v8/wee8-runtime-check.cc
+cp ci/runtime/gc-bytes.h rusty_v8/gc-bytes.h
 unset DOCS_RS DENO_TRYBUILD V8_FORCE_DEBUG EXTRA_GN_ARGS
-export V8_FROM_SOURCE=1
 export GN_ARGS='
   v8_enable_i18n_support=false
   icu_use_data_file=false
   v8_enable_maglev=false
   v8_enable_sparkplug=false
 '
-cargo build -vv --release --locked --target "$target" --target-dir "$root/build" -p v8
+cargo build -vv --release --locked --manifest-path tools/native/Cargo.toml \
+  --target "$target" --target-dir "$root/build"
 
 case "$target" in
-  *-windows-msvc) lib=rusty_v8; c_api=wee8; ext=lib ;;
-  *) lib=librusty_v8; c_api=libwee8; ext=a ;;
+  *-windows-msvc) c_api=wee8; ext=lib; exe=.exe ;;
+  *) c_api=libwee8; ext=a; exe= ;;
 esac
 gn_out="$root/build/$target/release/gn_out"
 mkdir -p "$out"
-gzip -9nc "$gn_out/obj/$lib.$ext" > "$out/${lib}_release_$target.$ext.gz"
 gzip -9nc "$gn_out/obj/v8/$c_api.$ext" > "$out/${c_api}_release_$target.$ext.gz"
-cp "$gn_out/src_binding.rs" "$out/src_binding_release_$target.rs"
-cp v8/third_party/wasm-api/wasm.h "$out/wasm_c_api_$target.h"
+mkdir -p "$root/target/native-checks/$target"
+cp "$gn_out/wee8-runtime-check$exe" "$root/target/native-checks/$target/"
+cp rusty_v8/v8/third_party/wasm-api/wasm.h "$out/wasm_c_api_$target.h"
 cp "$root/licenses/wasm-c-api.txt" "$out/WASM_API_LICENSE_$target.txt"
 
 # Keep notices from the complete source tree without archive metadata.
-git ls-files --recurse-submodules -z -- \
+git -C rusty_v8 ls-files --recurse-submodules -z -- \
   ':(glob,icase)**/LICENSE*' ':(glob,icase)**/COPYING*' ':(glob,icase)**/NOTICE*' |
   while IFS= read -r -d '' notice; do
     printf '\n===== %s =====\n' "$notice"
-    cat "$notice"
+    cat "rusty_v8/$notice"
   done > "$out/NOTICES_$target.txt"
 
 cd "$out"
 if command -v sha256sum >/dev/null; then
-  sha256sum ./*.gz ./*.rs ./*.h ./*.txt
+  sha256sum ./*.gz ./*.h ./*.txt
 else
-  shasum -a 256 ./*.gz ./*.rs ./*.h ./*.txt
+  shasum -a 256 ./*.gz ./*.h ./*.txt
 fi > "SHA256SUMS_$target"

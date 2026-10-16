@@ -21,3 +21,8 @@ esac
 gzip -dc "$out/${archive}_release_$TARGET.$ext.gz" > "$WEE8_DIR/$archive.$ext"
 cp "$out/wasm_c_api_$TARGET.h" "$WEE8_DIR/wasm.h"
 cargo run --release --locked --manifest-path ci/c-api/Cargo.toml --target-dir target/c-api
+
+# Exercise the Rust ownership wrapper against this run's artifact too.
+export WEE8_ARCHIVE="$WEE8_DIR/$archive.$ext"
+export WEE8_HEADER="$WEE8_DIR/wasm.h"
+cargo test --locked --manifest-path crates/wee8/Cargo.toml --target-dir target/wee8

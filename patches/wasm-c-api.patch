@@ -17,8 +17,7 @@ exception, following V8 WasmEngine::AsyncInstantiate's silent TryCatch pattern.
 The smoke test checks this in a subprocess so native output is observable.
 Windows archives carry their ETW library dependency as the rusty_v8 adapter does.
 The wee8 object omits default CRT directives, as rusty_v8 does, so the consumer
-chooses its CRT. A GN data dependency builds wee8 beside rusty_v8 without linking
-its C entry points into the rusty_v8 archive; all engine objects are reused.
+chooses its CRT. The native producer builds the wee8 target directly.
 Like rusty_v8, wee8 explicitly depends on build/config:shared_library_deps.
 This includes the configured target libc++/libc++abi objects in the complete
 archive. A static-library target does not acquire that dependency automatically;
@@ -211,17 +210,6 @@ Review/remove this adapter on a V8 upgrade that implements the same header ABI.
        &error));
    if (trap) *trap = hide_trap(error.release());
    return instance;
---- a/BUILD.gn
-+++ b/BUILD.gn
-@@ -3,6 +3,8 @@
- 
- static_library("rusty_v8") {
-   complete_static_lib = true
-+  # Build a separate C API archive without including it in rusty_v8.
-+  data_deps = [ "//v8:wee8" ]
-   sources = [ "src/binding.cc" ]
-   deps = [
-     "//build/config:shared_library_deps",
 --- a/v8/BUILD.gn
 +++ b/v8/BUILD.gn
 @@ -7246,6 +7246,13 @@

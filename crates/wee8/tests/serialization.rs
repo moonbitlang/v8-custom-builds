@@ -1,6 +1,7 @@
 use wee8::{Kind, Store, Value};
 
-fn main() {
+#[test]
+fn numeric_calls_survive_serialization_and_fresh_stores() {
     let bytes = wat::parse_str(
         r#"(module
             (import "host" "i32" (func $i32 (param i32) (result i32)))

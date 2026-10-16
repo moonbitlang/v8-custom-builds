@@ -1,0 +1,19 @@
+[package]
+name = "wee8-native-build"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[features]
+default = ["use_custom_libcxx"]
+use_custom_libcxx = []
+
+[build-dependencies]
+bindgen = "0.69"
+fslock = "0.2"
+gzip-header = "1.0.0"
+home = "0"
+miniz_oxide = "0.7.2"
+which = "6"
