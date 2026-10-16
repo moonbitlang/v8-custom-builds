@@ -2,6 +2,7 @@
 // Keep assertions active in release builds: this executable is a smoke test.
 #undef NDEBUG
 #include "wasm.h"
+#include <initializer_list>
 
 struct HostState {
   int calls = 0;
@@ -30,7 +31,8 @@ static wasm_trap_t* increment(const wasm_val_vec_t* args,
 }
 
 extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
-                           const uint8_t* start_bytes, size_t start_len) {
+                           const uint8_t* start_bytes, size_t start_len,
+                           const uint8_t* imported_start_bytes, size_t imported_start_len) {
   wasm_engine_t* engine = wasm_engine_new();
   assert(engine);
   wasm_store_t* store = wasm_store_new(engine);
@@ -75,7 +77,7 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   // The guest retains the callback after its original host handle is deleted.
   wasm_extern_vec_t exports;
   wasm_instance_exports(instance, &exports);
-  assert(exports.size == 3);
+  assert(exports.size == 5);
   wasm_func_t* run = wasm_extern_as_func(exports.data[0]);
   wasm_memory_t* memory = wasm_extern_as_memory(exports.data[1]);
   wasm_func_t* fail = wasm_extern_as_func(exports.data[2]);
@@ -88,6 +90,38 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   assert(result.kind == WASM_I32 && result.of.i32 == 42 && state.calls == 1);
 
   wasm_val_vec_t empty = {0, nullptr};
+  // Imported starts must use the exporting instance's implicit argument.
+  // Check both a successful start/re-export call and a trap across instances.
+  wasm_byte_vec_t imported_binary = {
+      imported_start_len,
+      reinterpret_cast<char*>(const_cast<uint8_t*>(imported_start_bytes))};
+  wasm_module_t* imported_module = wasm_module_new(store, &imported_binary);
+  assert(imported_module);
+  for (int index : {3, 2}) {
+    wasm_extern_t* imported_data[] = {exports.data[index]};
+    wasm_extern_vec_t imported = {1, imported_data};
+    wasm_trap_t* imported_trap = nullptr;
+    wasm_instance_t* started =
+        wasm_instance_new(store, imported_module, &imported, &imported_trap);
+    if (index == 3) {
+      assert(started && !imported_trap);
+      wasm_extern_vec_t started_exports;
+      wasm_instance_exports(started, &started_exports);
+      assert(started_exports.size == 1);
+      assert(!wasm_func_call(wasm_extern_as_func(started_exports.data[0]),
+                            &empty, &empty));
+      assert(!wasm_func_call(wasm_extern_as_func(exports.data[4]),
+                            &empty, &results));
+      assert(result.of.i32 == 2);
+      wasm_extern_vec_delete(&started_exports);
+      wasm_instance_delete(started);
+    } else {
+      assert(!started && imported_trap);
+      wasm_trap_delete(imported_trap);
+    }
+  }
+  wasm_module_delete(imported_module);
+
   trap = wasm_func_call(run, &empty, &results);
   assert(trap);
   wasm_trap_delete(trap);

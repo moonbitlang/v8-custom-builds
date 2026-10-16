@@ -45,7 +45,7 @@ fn numeric_calls_survive_serialization_and_fresh_stores() {
             ("f32", Value::F32(1.25)),
             ("f64", Value::F64(-3.5)),
         ] {
-            assert_eq!(instance.call(name, &[value]).unwrap(), [value]);
+            assert_eq!(instance.call(name, &[value.clone()]).unwrap(), [value]);
         }
         assert_eq!(instance.call("grow", &[]).unwrap(), [Value::I32(1)]);
         assert_eq!(instance.call("fresh", &[]).unwrap(), [Value::I32(0)]);

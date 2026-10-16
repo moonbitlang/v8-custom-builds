@@ -81,6 +81,13 @@ Temporal, JSON and Date require separate dependency analysis. Platform clocks,
 Wasm memory, traps, interrupts and debug machinery are outside this RegExp cut.
 A custom debugger and fuel controls are not implemented yet.
 
+`native-start.patch` invokes Wasm start functions through the native C entry,
+using trusted instance data or an imported function's dispatch argument.
+It removes JS invocation and start-only JS function wrapping, while retaining
+existing instantiation trap handling. The runtime probe forbids JS execution
+during a start call. Context creation, JS-backed exports and error objects remain
+separate follow-up cuts; this change alone does not make the runtime JS-free.
+
 ## C API scope
 
 `wasm-c-api.patch` adapts the pinned V8 implementation to the unmodified

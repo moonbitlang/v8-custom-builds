@@ -1,0 +1,175 @@
+Subject: Enter Wasm start functions through the native C entry
+
+Base: rusty_v8 v0.106.0, V8 12.9.202.13.
+
+The wee8 producer does not need a JS invocation to run a Wasm start function.
+Keep trusted instance data rooted and call the start target with its native
+implicit argument. Imported starts use their dispatch entry, including host
+callbacks and functions from another instance. Leave pending exceptions for
+the existing instantiation trap handling.
+
+The C entry now accepts WasmTrustedInstanceData or WasmImportData directly,
+rather than unwrapping a JS instance object. Update its existing C API caller
+to use the function's implicit argument too. The public C ABI is unchanged.
+This is a JIT wee8 change; it does not remove contexts, exports, JS error
+objects, or JS wrapper compilation elsewhere, and is not a JITless or browser
+embedding compatibility change.
+
+--- a/v8/src/compiler/wasm-compiler.cc
++++ b/v8/src/compiler/wasm-compiler.cc
+@@ -8409,7 +8409,9 @@
+ 
+     int pos = 0;
+     args[pos++] = code_entry;
+-    args[pos++] = gasm_->LoadTrustedDataFromInstanceObject(object_ref);
++    // Accept the same implicit argument as a Wasm dispatch entry, including
++    // WasmImportData for native host imports. No JS instance wrapper is needed.
++    args[pos++] = object_ref;
+ 
+     int offset = 0;
+     for (wasm::ValueType type : sig_->parameters()) {
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -1772,35 +1772,9 @@
+   i::wasm::CWasmArgumentsPacker packer(function_data->packed_args_size());
+   PushArgs(sig, args, &packer, store);
+ 
+-  i::DirectHandle<i::Object> object_ref;
+-  if (function_index < static_cast<int>(module->num_imported_functions)) {
+-    object_ref =
+-        i::handle(instance_data->dispatch_table_for_imports()->implicit_arg(
+-                      function_index),
+-                  isolate);
+-    if (IsWasmImportData(*object_ref)) {
+-      i::Tagged<i::JSFunction> jsfunc = i::Cast<i::JSFunction>(
+-          i::Cast<i::WasmImportData>(*object_ref)->callable());
+-      i::Tagged<i::Object> data = jsfunc->shared()->GetTrustedData(isolate);
+-      if (IsWasmCapiFunctionData(data)) {
+-        return CallWasmCapiFunction(i::Cast<i::WasmCapiFunctionData>(data),
+-                                    args, results);
+-      }
+-      // TODO(jkummerow): Imported and then re-exported JavaScript functions
+-      // are not supported yet. If we support C-API + JavaScript, we'll need
+-      // to call those here.
+-      UNIMPLEMENTED();
+-    } else {
+-      // A WasmFunction from another module.
+-      DCHECK(IsWasmInstanceObject(*object_ref));
+-    }
+-  } else {
+-    // TODO(42204563): Avoid crashing if the instance object is not available.
+-    CHECK(instance_data->has_instance_object());
+-    object_ref = handle(instance_data->instance_object(), isolate);
+-  }
+-
+-  i::Execution::CallWasm(isolate, wrapper_code, call_target, object_ref,
++  i::DirectHandle<i::Object> implicit_arg(
++      function_data->internal()->implicit_arg(), isolate);
++  i::Execution::CallWasm(isolate, wrapper_code, call_target, implicit_arg,
+                          packer.argv());
+ 
+   if (isolate->has_exception()) {
+--- a/v8/src/wasm/module-instantiate.cc
++++ b/v8/src/wasm/module-instantiate.cc
+@@ -861,7 +861,7 @@
+   Handle<FixedArray> shared_tagged_globals_;
+   std::vector<Handle<WasmTagObject>> tags_wrappers_;
+   std::vector<Handle<WasmTagObject>> shared_tags_wrappers_;
+-  Handle<JSFunction> start_function_;
++  Handle<WasmTrustedInstanceData> start_instance_data_;
+   std::vector<Handle<Object>> sanitized_imports_;
+   std::vector<WellKnownImport> well_known_imports_;
+   // We pass this {Zone} to the temporary {WasmFullDecoder} we allocate during
+@@ -1458,37 +1458,13 @@
+     if (thrower_->error()) return {};
+   }
+ 
+-  //--------------------------------------------------------------------------
+-  // Create a wrapper for the start function.
+-  //--------------------------------------------------------------------------
++  // Keep the instance rooted until the start call. The dispatch entry supplies
++  // the target and implicit argument for imported starts as well.
+   if (module_->start_function_index >= 0) {
+-    int start_index = module_->start_function_index;
+-    auto& function = module_->functions[start_index];
+-
+-    DCHECK(start_function_.is_null());
+-    if (function.imported) {
+-      ImportedFunctionEntry entry(trusted_data, module_->start_function_index);
+-      Tagged<Object> callable = entry.maybe_callable();
+-      if (IsJSFunction(callable)) {
+-        // If the start function was imported and calls into Blink, we have
+-        // to pretend that the V8 API was used to enter its correct context.
+-        // In order to simplify entering the context in {ExecuteStartFunction}
+-        // below, we just record the callable as the start function.
+-        start_function_ = handle(Cast<JSFunction>(callable), isolate_);
+-      }
+-    }
+-    if (start_function_.is_null()) {
+-      // TODO(clemensb): Don't generate an exported function for the start
+-      // function. Use CWasmEntry instead.
+-      bool function_is_shared = module_->types[function.sig_index].is_shared;
+-      DirectHandle<WasmFuncRef> func_ref =
+-          WasmTrustedInstanceData::GetOrCreateFuncRef(
+-              isolate_, function_is_shared ? shared_trusted_data : trusted_data,
+-              start_index);
+-      DirectHandle<WasmInternalFunction> internal{func_ref->internal(isolate_),
+-                                                  isolate_};
+-      start_function_ = WasmInternalFunction::GetOrCreateExternal(internal);
+-    }
++    const auto& function = module_->functions[module_->start_function_index];
++    start_instance_data_ = module_->types[function.sig_index].is_shared
++                               ? shared_trusted_data
++                               : trusted_data;
+   }
+ 
+   DCHECK(!isolate_->has_exception());
+@@ -1521,29 +1497,27 @@
+ bool InstanceBuilder::ExecuteStartFunction() {
+   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.wasm.detailed"),
+                "wasm.ExecuteStartFunction");
+-  if (start_function_.is_null()) return true;  // No start function.
++  if (start_instance_data_.is_null()) return true;
+ 
+   HandleScope scope(isolate_);
+-  // In case the start function calls out to Blink, we have to make sure that
+-  // the correct "entered context" is available. This is the equivalent of
+-  // v8::Context::Enter() and must happen in addition to the function call
+-  // sequence doing the compiled version of "isolate->set_context(...)".
+-  HandleScopeImplementer* hsi = isolate_->handle_scope_implementer();
+-  hsi->EnterContext(start_function_->native_context());
+-
+-  // Call the JS function.
+-  Handle<Object> undefined = isolate_->factory()->undefined_value();
+-  MaybeHandle<Object> retval =
+-      Execution::Call(isolate_, start_function_, undefined, 0, nullptr);
+-  hsi->LeaveContext();
+-  // {start_function_} has to be called only once.
+-  start_function_ = {};
+-
+-  if (retval.is_null()) {
+-    DCHECK(isolate_->has_exception());
+-    return false;
+-  }
+-  return true;
++  const uint32_t index = module_->start_function_index;
++  const FunctionSig* sig = module_->functions[index].sig;
++  DCHECK_EQ(0, sig->parameter_count());
++  DCHECK_EQ(0, sig->return_count());
++  DirectHandle<Code> entry = compiler::CompileCWasmEntry(isolate_, sig, module_);
++  DirectHandle<Object> implicit_arg = start_instance_data_;
++  if (index < module_->num_imported_functions) {
++    implicit_arg = handle(
++        start_instance_data_->dispatch_table_for_imports()->implicit_arg(index),
++        isolate_);
++  }
++  // The validated start signature has no parameters or results, so the native
++  // entry never accesses an argument buffer. Keep exceptions pending for the
++  // instantiation caller to translate, just as for an ordinary native call.
++  Execution::CallWasm(isolate_, entry, start_instance_data_->GetCallTarget(index),
++                      implicit_arg, kNullAddress);
++  start_instance_data_ = {};
++  return !isolate_->has_exception();
+ }
+ 
+ // Look up an import value in the {ffi_} object.

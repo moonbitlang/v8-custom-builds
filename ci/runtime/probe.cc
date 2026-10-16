@@ -1,6 +1,10 @@
 #include "gc-bytes.h"
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
+#include "src/api/api-inl.h"
+#include "src/wasm/wasm-engine.h"
+#include "src/wasm/wasm-objects-inl.h"
+#include "src/wasm/wasm-result.h"
 #include <cstdint>
 #include <cstdio>
 #include <memory>
@@ -24,6 +28,29 @@ int main(int argc, char **argv) {
     v8::HandleScope handles(isolate);
     auto context = v8::Context::New(isolate);
     v8::Context::Scope entered_context(context);
+    // (module (func) (start 0)). Instantiation must enter Wasm directly:
+    // the old JS start-function wrapper aborts under this execution guard.
+    constexpr uint8_t start_bytes[] = {
+        0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0,
+        3, 2, 1, 0, 8, 1, 0, 10, 4, 1, 2, 0, 11};
+    v8::Local<v8::WasmModuleObject> start_module;
+    if (!v8::WasmModuleObject::Compile(isolate,
+                                     {start_bytes, sizeof(start_bytes)})
+             .ToLocal(&start_module)) {
+      status = 8;
+    } else {
+      auto* internal = reinterpret_cast<v8::internal::Isolate*>(isolate);
+      v8::internal::wasm::ErrorThrower thrower(internal, "native start");
+      v8::Isolate::DisallowJavascriptExecutionScope no_js(
+          isolate, v8::Isolate::DisallowJavascriptExecutionScope::CRASH_ON_FAILURE);
+      if (v8::internal::wasm::GetWasmEngine()
+              ->SyncInstantiate(internal, &thrower,
+                                v8::internal::Cast<v8::internal::WasmModuleObject>(
+                                    v8::Utils::OpenHandle(*start_module)),
+                                {}, {})
+              .is_null())
+        status = 8;
+    }
     // Check real registration removal, independently of the Wasm consumer.
     auto source = v8::String::NewFromUtf8Literal(
         isolate,
