@@ -25,10 +25,14 @@ because older V8 C APIs used identical symbols with incompatible signatures.
 
 ## Supported interface
 
-The validated guest subset is numeric Wasm 1.0 plus bulk-memory and multi-value
-instructions. Host calls and exported function calls accept numeric values and
-at most one result. Unsupported guest proposals are rejected before native
-introspection. Function imports are supplied in module declaration order.
+The validated guest subset is Wasm 1.0 plus bulk-memory, multi-value and SIMD
+instructions. SIMD values may appear in internal functions, locals and globals.
+Function and global imports/exports containing `v128` are rejected before
+native compilation: V8 executes SIMD, but this C API cannot describe vector
+values at the embedding boundary. Host calls and exported function calls accept
+scalar numeric values and at most one result. Other guest proposals, including
+relaxed SIMD and shared memory, remain rejected before native introspection.
+Function imports are supplied in module declaration order.
 
 A store owns its native objects; their Rust handles borrow the store and stay on
 its creating thread. `Compiled` may move between threads and create modules in

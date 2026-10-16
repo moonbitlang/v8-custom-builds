@@ -356,23 +356,51 @@ unsafe extern "C" fn call_host<T>(
 }
 
 impl<T: 'static> Store<T> {
-    /// Validate the supported numeric subset, then compile it in this store.
+    /// Validate guest proposals and C API boundary types, then compile in this store.
     pub fn compile<'store>(&'store self, bytes: &[u8]) -> Result<Module<'store, T>> {
-        // Engines may accept proposals that their C adapters cannot describe.
-        // Validate our supported scope before any engine-side introspection can
-        // reach an unimplemented conversion (tags, GC types, SIMD, etc.). This
-        // also excludes shared memory, whose concurrent mutation would make our
-        // copied memory access unsafe. MoonBit's linear-memory backend uses
-        // bulk memory and loops with parameters (multi-value). Neither requires
-        // reference values at the C boundary. Host calls remain single-result.
+        // V8 can execute internal SIMD, but its C API cannot describe v128 in
+        // an import/export type. Keep the proposal allowlist and separately
+        // validate that boundary before any native compilation/introspection.
+        // Shared memory remains excluded because memory access is not atomic.
         let features = wasmparser::WasmFeatures::WASM1
             | wasmparser::WasmFeatures::BULK_MEMORY
-            | wasmparser::WasmFeatures::MULTI_VALUE;
-        wasmparser::Validator::new_with_features(features)
+            | wasmparser::WasmFeatures::MULTI_VALUE
+            | wasmparser::WasmFeatures::SIMD;
+        let types = wasmparser::Validator::new_with_features(features)
             .validate_all(bytes)
             .map_err(|error| {
-                format!("outside wee8's supported numeric Wasm subset or invalid Wasm: {error}")
+                format!("outside wee8's supported Wasm subset or invalid Wasm: {error}")
             })?;
+        let types = types.as_ref();
+        // Use the validator's resolved types, including imported indices and
+        // duplicate import names, rather than rebuilding Wasm's index spaces.
+        let imports = types
+            .core_imports()
+            .unwrap()
+            .map(|(module, name, ty)| (format!("import `{module}::{name}`"), ty));
+        let exports = types
+            .core_exports()
+            .unwrap()
+            .map(|(name, ty)| (format!("export `{name}`"), ty));
+        for (name, ty) in imports.chain(exports) {
+            let has_vector = match ty {
+                wasmparser::types::EntityType::Func(id) => {
+                    let function = types[id].unwrap_func();
+                    function
+                        .params()
+                        .iter()
+                        .chain(function.results())
+                        .any(|ty| *ty == wasmparser::ValType::V128)
+                }
+                wasmparser::types::EntityType::Global(global) => {
+                    global.content_type == wasmparser::ValType::V128
+                }
+                _ => false,
+            };
+            if has_vector {
+                return Err(format!("v128 is unsupported in C API {name}").into());
+            }
+        }
         let bytes = ffi::wasm_byte_vec_t {
             size: bytes.len(),
             data: bytes.as_ptr().cast_mut().cast(),
