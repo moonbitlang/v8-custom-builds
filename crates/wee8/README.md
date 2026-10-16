@@ -25,8 +25,9 @@ because older V8 C APIs used identical symbols with incompatible signatures.
 
 ## Supported interface
 
-The validated guest subset is Wasm 1.0 plus bulk-memory, multi-value, SIMD,
-reference types, typed function references and GC. Structs, arrays and typed
+The validated guest subset is Wasm 1.0 plus bulk-memory, multi-value, saturating
+float-to-integer conversions, SIMD, reference types, typed function references
+and GC. Structs, arrays and typed
 function references may stay inside the guest. The C API boundary is checked
 separately: only scalar numbers and nullable `externref`/`funcref` can appear in
 import/export metadata. GC references, non-null references and `v128` at that
