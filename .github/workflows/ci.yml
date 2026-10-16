@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths: ['**.sh', '.github/**', 'ci/**', 'patches/**', 'licenses/**', '.gitmodules', 'rusty_v8']
+    paths: ['**.sh', '.github/**', 'ci/**', 'patches/**', 'experiments/regexp-clean/**', 'licenses/**', '.gitmodules', 'rusty_v8']
 
 permissions:
   contents: read
@@ -29,6 +29,8 @@ jobs:
             git -C rusty_v8 apply "../$patch"
           done
           echo '7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301  rusty_v8/v8/third_party/wasm-api/wasm.h' | sha256sum -c -
+      - name: Check isolated wee8 RegExp profile
+        run: git -C rusty_v8 apply --check ../experiments/regexp-clean/wee8-no-regexp.patch
       - name: Check workflows
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,15 @@
+[package]
+name = "wee8-regexp-cut-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[[bin]]
+name = "wee8-regexp-cut-probe"
+path = "probe.rs"
+
+[dependencies]
+wee8 = { path = "../../../crates/wee8" }
+wat = "=1.255.0"
