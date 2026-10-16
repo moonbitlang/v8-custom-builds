@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 thiserror = "1.0"
-wasmparser = { version = "=0.258.0", default-features = false, features = ["std", "validate", "features"] }
+wasmparser = { version = "=0.258.0", default-features = false, features = ["std", "validate", "features", "simd"] }
 
 [build-dependencies]
 bindgen = "=0.72.1"
