@@ -27,8 +27,9 @@ keeps the feature cut reviewable before changing release packaging.
 
 There are no replacement parser, compiler, matcher or interpreter definitions,
 trap aliases, or placeholder builtin IDs. This is not the earlier engine shim.
-Existing RegExp object layouts, GC metadata, stack/cache lifecycle and flag
-formatting remain to avoid widening the change into heap-schema surgery. Those
+The engine translation unit is excluded intact; `regexp-support.cc` retains only
+cache clearing and flag formatting. Existing RegExp object layouts, GC metadata
+and stack/cache lifecycle remain to avoid widening the change into heap-schema surgery. Those
 are real retained implementations, not fake engine entry points. Some unused
 internal declarations also remain in upstream headers.
 
