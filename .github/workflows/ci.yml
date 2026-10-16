@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths: ['**.sh', '.github/**', 'ci/**', 'patches/**', 'licenses/**', '.gitmodules', 'rusty_v8']
 
 permissions:
   contents: read

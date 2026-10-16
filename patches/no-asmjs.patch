@@ -11,7 +11,8 @@ asm.js parser and scanner. A mutable flag defaulting to false would retain that
 compilation path. This does not require C++ LTO.
 
 JavaScript with a "use asm" directive still executes as ordinary JavaScript.
-Wasm compilation, GC, RegExp and Inspector remain enabled. Keep source lists
+Wasm compilation, GC and Inspector remain enabled; the separate RegExp patch
+removes that library. Keep source lists
 and implementations intact: unused code can remain in the archive, and this
 does not reduce its compilation cost. InstantiateAsmJs and related runtime
 metadata remain; this is not complete removal of every asm.js component.

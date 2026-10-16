@@ -1,0 +1,1663 @@
+--- a/v8/BUILD.gn
++++ b/v8/BUILD.gn
+@@ -26,6 +26,9 @@
+ emit_builtins_as_inline_asm = is_win && is_clang
+ 
+ declare_args() {
++  # The Wasm-only producer disables the JavaScript RegExp library.
++  v8_enable_regexp = true
++
+   # Print to stdout on Android.
+   v8_android_log_stdout = false
+ 
+@@ -1078,6 +1081,12 @@
+ 
+   defines =
+       [ "V8_TYPED_ARRAY_MAX_SIZE_IN_HEAP=${v8_typed_array_max_size_in_heap}" ]
++
++  if (v8_enable_regexp) {
++    defines += [ "V8_ENABLE_REGEXP=1" ]
++  } else {
++    defines += [ "V8_ENABLE_REGEXP=0" ]
++  }
+ 
+   configs = [
+     ":v8_header_features",
+@@ -2161,6 +2170,25 @@
+   "test/torque/test-torque.tq",
+   "third_party/v8/builtins/array-sort.tq",
+ ]
++
++# Torque generates builtin tables before C++ compilation. Keep only the
++# shared IsRegExp predicate when the matching library is disabled.
++if (!v8_enable_regexp) {
++  torque_files -= [
++    "src/builtins/regexp-exec.tq",
++    "src/builtins/regexp-match-all.tq",
++    "src/builtins/regexp-match.tq",
++    "src/builtins/regexp-replace.tq",
++    "src/builtins/regexp-search.tq",
++    "src/builtins/regexp-source.tq",
++    "src/builtins/regexp-split.tq",
++    "src/builtins/regexp-test.tq",
++    "src/builtins/regexp.tq",
++    "src/builtins/string-match-search.tq",
++    "src/builtins/string-replaceall.tq",
++  ]
++  torque_files += [ "src/builtins/regexp-predicate.tq" ]
++}
+ 
+ if (v8_enable_i18n_support) {
+   torque_files += [
+@@ -4138,6 +4166,7 @@
+     "src/regexp/regexp-bytecode-peephole.h",
+     "src/regexp/regexp-bytecodes.h",
+     "src/regexp/regexp-compiler.h",
++    "src/regexp/regexp-config.h",
+     "src/regexp/regexp-dotprinter.h",
+     "src/regexp/regexp-error.h",
+     "src/regexp/regexp-flags.h",
+--- a/v8/src/builtins/base.tq
++++ b/v8/src/builtins/base.tq
+@@ -1505,9 +1505,6 @@
+ macro GetReflectApply(implicit context: Context)(): Callable {
+   return *NativeContextSlot(ContextSlot::REFLECT_APPLY_INDEX);
+ }
+-macro GetRegExpLastMatchInfo(implicit context: Context)(): RegExpMatchInfo {
+-  return *NativeContextSlot(ContextSlot::REGEXP_LAST_MATCH_INFO_INDEX);
+-}
+ macro GetStrictArgumentsMap(implicit context: Context)(): Map {
+   return *NativeContextSlot(ContextSlot::STRICT_ARGUMENTS_MAP_INDEX);
+ }
+--- a/v8/src/builtins/builtins-definitions.h
++++ b/v8/src/builtins/builtins-definitions.h
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_BUILTINS_BUILTINS_DEFINITIONS_H_
+ #define V8_BUILTINS_BUILTINS_DEFINITIONS_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "builtins-generated/bytecodes-builtins-list.h"
+ 
+@@ -893,6 +895,7 @@
+   CPP(ReflectOwnKeys)                                                          \
+   CPP(ReflectSet)                                                              \
+                                                                                \
++  IF_V8_ENABLE_REGEXP( \
+   /* RegExp */                                                                 \
+   CPP(RegExpCapture1Getter)                                                    \
+   CPP(RegExpCapture2Getter)                                                    \
+@@ -924,7 +927,8 @@
+       kMatchInfo)                                                              \
+   ASM(RegExpInterpreterTrampoline, RegExpTrampoline)                           \
+   ASM(RegExpExperimentalTrampoline, RegExpTrampoline)                          \
+-                                                                               \
++                                                                              \
++  )                                                                           \
+   /* Set */                                                                    \
+   TFS(FindOrderedHashSetEntry, NeedsContext::kYes, kTable, kKey)               \
+   TFJ(SetConstructor, kDontAdaptArgumentsSentinel)                             \
+@@ -989,14 +993,20 @@
+   /* ES6 #sec-string.prototype.lastindexof */                                  \
+   CPP(StringPrototypeLastIndexOf)                                              \
+   /* ES #sec-string.prototype.matchAll */                                      \
+-  TFJ(StringPrototypeMatchAll, kJSArgcReceiverSlots + 1, kReceiver, kRegexp)   \
++  IF_V8_ENABLE_REGEXP( \
++  TFJ(StringPrototypeMatchAll, kJSArgcReceiverSlots + 1, kReceiver, kRegexp)  \
++  )                                                                           \
+   /* ES6 #sec-string.prototype.localecompare */                                \
+   CPP(StringPrototypeLocaleCompare)                                            \
+   /* ES6 #sec-string.prototype.replace */                                      \
++  IF_V8_ENABLE_REGEXP( \
+   TFJ(StringPrototypeReplace, kJSArgcReceiverSlots + 2, kReceiver, kSearch,    \
+-      kReplace)                                                                \
++      kReplace)                                                               \
++  )                                                                           \
+   /* ES6 #sec-string.prototype.split */                                        \
+-  TFJ(StringPrototypeSplit, kDontAdaptArgumentsSentinel)                       \
++  IF_V8_ENABLE_REGEXP( \
++  TFJ(StringPrototypeSplit, kDontAdaptArgumentsSentinel)                      \
++  )                                                                           \
+   /* ES6 #sec-string.raw */                                                    \
+   CPP(StringRaw)                                                               \
+                                                                                \
+--- a/v8/src/builtins/builtins-regexp-gen.cc
++++ b/v8/src/builtins/builtins-regexp-gen.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/builtins/builtins-regexp-gen.h"
+ 
+ #include <optional>
+@@ -1704,3 +1705,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/builtins/builtins-regexp.cc
++++ b/v8/src/builtins/builtins-regexp.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/builtins/builtins-utils-inl.h"
+ #include "src/builtins/builtins.h"
+ #include "src/logging/counters.h"
+@@ -143,3 +144,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/builtins/builtins-string-gen.cc
++++ b/v8/src/builtins/builtins-string-gen.cc
+@@ -5,7 +5,9 @@
+ #include "src/builtins/builtins-string-gen.h"
+ 
+ #include "src/base/strings.h"
++#if V8_ENABLE_REGEXP
+ #include "src/builtins/builtins-regexp-gen.h"
++#endif  // V8_ENABLE_REGEXP
+ #include "src/builtins/builtins-utils-gen.h"
+ #include "src/builtins/builtins.h"
+ #include "src/codegen/code-stub-assembler-inl.h"
+@@ -1065,6 +1067,7 @@
+ 
+ #endif  // V8_ENABLE_EXPERIMENTAL_TSA_BUILTINS
+ 
++#if V8_ENABLE_REGEXP
+ void StringBuiltinsAssembler::MaybeCallFunctionAtSymbol(
+     const TNode<Context> context, const TNode<Object> object,
+     const TNode<Object> maybe_string, Handle<Symbol> symbol,
+@@ -1141,6 +1144,7 @@
+ 
+   BIND(&out);
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ const TNode<Smi> StringBuiltinsAssembler::IndexOfDollarChar(
+     const TNode<Context> context, const TNode<String> string) {
+@@ -1192,6 +1196,7 @@
+ }
+ 
+ // ES6 #sec-string.prototype.replace
++#if V8_ENABLE_REGEXP
+ TF_BUILTIN(StringPrototypeReplace, StringBuiltinsAssembler) {
+   Label out(this);
+ 
+@@ -1353,8 +1358,10 @@
+     Return(result);
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ // ES #sec-string.prototype.matchAll
++#if V8_ENABLE_REGEXP
+ TF_BUILTIN(StringPrototypeMatchAll, StringBuiltinsAssembler) {
+   char const* method_name = "String.prototype.matchAll";
+ 
+@@ -1452,6 +1459,7 @@
+       GetProperty(context, rx, isolate()->factory()->match_all_symbol());
+   Return(Call(context, match_all_func, rx, s));
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ TNode<JSArray> StringBuiltinsAssembler::StringToArray(
+     TNode<NativeContext> context, TNode<String> subject_string,
+@@ -1532,6 +1540,7 @@
+ }
+ 
+ // ES6 section 21.1.3.19 String.prototype.split ( separator, limit )
++#if V8_ENABLE_REGEXP
+ TF_BUILTIN(StringPrototypeSplit, StringBuiltinsAssembler) {
+   const int kSeparatorArg = 0;
+   const int kLimitArg = 1;
+@@ -1633,6 +1642,7 @@
+     args.PopAndReturn(result_array);
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ TF_BUILTIN(StringSubstring, StringBuiltinsAssembler) {
+   auto string = Parameter<String>(Descriptor::kString);
+--- a/v8/src/builtins/builtins-string-gen.h
++++ b/v8/src/builtins/builtins-string-gen.h
+@@ -167,6 +167,7 @@
+                                     TNode<Int32T> instance_type,
+                                     Label* cannot_deref);
+ 
++#if V8_ENABLE_REGEXP
+   // Implements boilerplate logic for {match, split, replace, search} of the
+   // form:
+   //
+@@ -189,6 +190,7 @@
+       DescriptorIndexNameValue additional_property_to_check,
+       const NodeFunction0& regexp_call, const NodeFunction1& generic_call);
+ 
++#endif  // V8_ENABLE_REGEXP
+  private:
+   template <typename T>
+   TNode<String> AllocAndCopyStringCharacters(TNode<T> from,
+--- a/v8/src/builtins/cast.tq
++++ b/v8/src/builtins/cast.tq
+@@ -454,11 +454,6 @@
+   goto CastError;
+ }
+ 
+-Cast<JSRegExpResult>(implicit context: Context)(o: HeapObject): JSRegExpResult
+-    labels CastError {
+-  if (regexp::IsRegExpResult(o)) return %RawDownCast<JSRegExpResult>(o);
+-  goto CastError;
+-}
+ 
+ Cast<JSSloppyArgumentsObject>(
+     implicit context: Context)(o: HeapObject): JSSloppyArgumentsObject
+@@ -495,17 +490,6 @@
+   }
+ }
+ 
+-Cast<FastJSRegExp>(implicit context: Context)(o: HeapObject): FastJSRegExp
+-    labels CastError {
+-  // TODO(jgruber): Remove or redesign this. There is no single 'fast' regexp,
+-  // the conditions to make a regexp object fast differ based on the callsite.
+-  // For now, run the strict variant since replace (the only current callsite)
+-  // accesses flag getters.
+-  if (regexp::IsFastRegExpStrict(o)) {
+-    return %RawDownCast<FastJSRegExp>(o);
+-  }
+-  goto CastError;
+-}
+ 
+ Cast<FastJSArray>(implicit context: Context)(o: HeapObject): FastJSArray
+     labels CastError {
+@@ -851,11 +835,6 @@
+   return %RawDownCast<&T>(r);
+ }
+ 
+-UnsafeCast<RegExpMatchInfo>(
+-    implicit context: Context)(o: Object): RegExpMatchInfo {
+-  dcheck(Is<RegExpMatchInfo>(o));
+-  return %RawDownCast<RegExpMatchInfo>(o);
+-}
+ 
+ UnsafeCast<ArrayList>(implicit context: Context)(o: Object): ArrayList {
+   dcheck(Is<ArrayList>(o));
+--- /dev/null
++++ b/v8/src/builtins/regexp-predicate.tq
+@@ -0,0 +1,41 @@
++// Copyright 2018 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++// String predicates use the type/protocol test without using a RegExp engine.
++namespace regexp {
++extern runtime IncrementUseCounter(Context, Smi): void;
++type UseCounterFeature extends int31
++    constexpr 'v8::Isolate::UseCounterFeature';
++const kRegExpMatchIsTrueishOnNonJSRegExp: constexpr UseCounterFeature
++    generates 'v8::Isolate::kRegExpMatchIsTrueishOnNonJSRegExp';
++const kRegExpMatchIsFalseishOnJSRegExp: constexpr UseCounterFeature
++    generates 'v8::Isolate::kRegExpMatchIsFalseishOnJSRegExp';
++
++transitioning macro IsRegExp(implicit context: Context)(obj: JSAny): bool {
++  const receiver = Cast<JSReceiver>(obj) otherwise return false;
++
++  // Check @match.
++  const value = GetProperty(receiver, MatchSymbolConstant());
++  if (value == Undefined) {
++    return Is<JSRegExp>(receiver);
++  }
++
++  dcheck(value != Undefined);
++  // The common path. Symbol.match exists, equals the RegExpPrototypeMatch
++  // function (and is thus trueish), and the receiver is a JSRegExp.
++  if (ToBoolean(value)) {
++    if (!Is<JSRegExp>(receiver)) {
++      IncrementUseCounter(
++          context, SmiConstant(kRegExpMatchIsTrueishOnNonJSRegExp));
++    }
++    return true;
++  }
++
++  dcheck(!ToBoolean(value));
++  if (Is<JSRegExp>(receiver)) {
++    IncrementUseCounter(context, SmiConstant(kRegExpMatchIsFalseishOnJSRegExp));
++  }
++  return false;
++}
++}
+--- a/v8/src/builtins/regexp.tq
++++ b/v8/src/builtins/regexp.tq
+@@ -459,3 +459,32 @@
+   return RegExpInitializeAndCompile(context, regexp, pattern, flags);
+ }
+ }
++
++// These casts depend on the RegExp library and are selected with it.
++Cast<JSRegExpResult>(implicit context: Context)(o: HeapObject): JSRegExpResult
++    labels CastError {
++  if (regexp::IsRegExpResult(o)) return %RawDownCast<JSRegExpResult>(o);
++  goto CastError;
++}
++
++Cast<FastJSRegExp>(implicit context: Context)(o: HeapObject): FastJSRegExp
++    labels CastError {
++  // TODO(jgruber): Remove or redesign this. There is no single 'fast' regexp,
++  // the conditions to make a regexp object fast differ based on the callsite.
++  // For now, run the strict variant since replace (the only current callsite)
++  // accesses flag getters.
++  if (regexp::IsFastRegExpStrict(o)) {
++    return %RawDownCast<FastJSRegExp>(o);
++  }
++  goto CastError;
++}
++
++macro GetRegExpLastMatchInfo(implicit context: Context)(): RegExpMatchInfo {
++  return *NativeContextSlot(ContextSlot::REGEXP_LAST_MATCH_INFO_INDEX);
++}
++
++UnsafeCast<RegExpMatchInfo>(
++    implicit context: Context)(o: Object): RegExpMatchInfo {
++  dcheck(Is<RegExpMatchInfo>(o));
++  return %RawDownCast<RegExpMatchInfo>(o);
++}
+--- a/v8/src/codegen/external-reference.cc
++++ b/v8/src/codegen/external-reference.cc
+@@ -1002,6 +1002,7 @@
+   return ExternalReference::Create(&thunk_fun, thunk_type);
+ }
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_X64
+ #define re_stack_check_func RegExpMacroAssemblerX64::CheckStackGuardState
+ #elif V8_TARGET_ARCH_IA32
+@@ -1071,6 +1072,7 @@
+   return ExternalReference(isolate->regexp_stack()->stack_pointer_address());
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
+ FUNCTION_REFERENCE_WITH_TYPE(ieee754_acos_function, base::ieee754::acos,
+                              BUILTIN_FP_CALL)
+ FUNCTION_REFERENCE_WITH_TYPE(ieee754_acosh_function, base::ieee754::acosh,
+--- a/v8/src/codegen/external-reference.h
++++ b/v8/src/codegen/external-reference.h
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_CODEGEN_EXTERNAL_REFERENCE_H_
+ #define V8_CODEGEN_EXTERNAL_REFERENCE_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "src/common/globals.h"
+ #include "src/runtime/runtime.h"
+@@ -68,13 +70,15 @@
+   V(debug_suspended_generator_address,                                         \
+     "Debug::step_suspended_generator_address()")                               \
+   V(context_address, "Isolate::context_address()")                             \
++  IF_V8_ENABLE_REGEXP( \
+   V(address_of_regexp_stack_limit_address,                                     \
+     "RegExpStack::limit_address_address()")                                    \
+   V(address_of_regexp_stack_memory_top_address,                                \
+     "RegExpStack::memory_top_address_address()")                               \
+   V(address_of_regexp_stack_stack_pointer,                                     \
+     "RegExpStack::stack_pointer_address()")                                    \
+-  V(address_of_static_offsets_vector, "OffsetsVector::static_offsets_vector")  \
++  V(address_of_static_offsets_vector, "OffsetsVector::static_offsets_vector") \
++  )                                                                           \
+   V(thread_in_wasm_flag_address_address,                                       \
+     "Isolate::thread_in_wasm_flag_address_address")                            \
+   EXTERNAL_REFERENCE_LIST_WITH_ISOLATE_SANDBOX(V)
+@@ -430,6 +434,7 @@
+           "tsan_relaxed_load_function_64_bits")                                \
+   V(js_finalization_registry_remove_cell_from_unregister_token_map,            \
+     "JSFinalizationRegistry::RemoveCellFromUnregisterTokenMap")                \
++  IF_V8_ENABLE_REGEXP( \
+   V(re_case_insensitive_compare_unicode,                                       \
+     "RegExpMacroAssembler::CaseInsensitiveCompareUnicode()")                   \
+   V(re_case_insensitive_compare_non_unicode,                                   \
+@@ -442,7 +447,8 @@
+   V(re_word_character_map, "NativeRegExpMacroAssembler::word_character_map")   \
+   V(re_match_for_call_from_js, "IrregexpInterpreter::MatchForCallFromJs")      \
+   V(re_experimental_match_for_call_from_js,                                    \
+-    "ExperimentalRegExp::MatchForCallFromJs")                                  \
++    "ExperimentalRegExp::MatchForCallFromJs")                                 \
++  )                                                                           \
+   V(typed_array_and_rab_gsab_typed_array_elements_kind_shifts,                 \
+     "TypedArrayAndRabGsabTypedArrayElementsKindShifts")                        \
+   V(typed_array_and_rab_gsab_typed_array_elements_kind_sizes,                  \
+--- a/v8/src/common/message-template.h
++++ b/v8/src/common/message-template.h
+@@ -12,6 +12,7 @@
+ 
+ #define MESSAGE_TEMPLATES(T)                                                   \
+   /* Error */                                                                  \
++  T(RegExpDisabled, "RegExp is not available in this Wasm runtime") \
+   T(None, "")                                                                  \
+   T(ConflictingPrivateName,                                                    \
+     "Operation is ambiguous because there are more than one private name"      \
+--- a/v8/src/compiler/js-call-reducer.cc
++++ b/v8/src/compiler/js-call-reducer.cc
+@@ -5109,8 +5109,10 @@
+       return ReduceMapPrototypeHas(node);
+     case Builtin::kSetPrototypeHas:
+       return ReduceSetPrototypeHas(node);
++#if V8_ENABLE_REGEXP
+     case Builtin::kRegExpPrototypeTest:
+       return ReduceRegExpPrototypeTest(node);
++#endif  // V8_ENABLE_REGEXP
+     case Builtin::kReturnReceiver:
+       return ReduceReturnReceiver(node);
+     case Builtin::kStringPrototypeIndexOf:
+@@ -8692,6 +8694,7 @@
+   return Changed(node);
+ }
+ 
++#if V8_ENABLE_REGEXP
+ Reduction JSCallReducer::ReduceRegExpPrototypeTest(Node* node) {
+   JSCallNode n(node);
+   CallParameters const& p = n.Parameters();
+@@ -8782,6 +8785,7 @@
+   return Changed(node);
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
+ // ES section #sec-number-constructor
+ Reduction JSCallReducer::ReduceNumberConstructor(Node* node) {
+   JSCallNode n(node);
+--- a/v8/src/compiler/js-call-reducer.h
++++ b/v8/src/compiler/js-call-reducer.h
+@@ -146,7 +146,9 @@
+   Reduction ReduceJSCall(Node* node, SharedFunctionInfoRef shared);
+   Reduction ReduceJSCallWithArrayLike(Node* node);
+   Reduction ReduceJSCallWithSpread(Node* node);
++#if V8_ENABLE_REGEXP
+   Reduction ReduceRegExpPrototypeTest(Node* node);
++#endif  // V8_ENABLE_REGEXP
+   Reduction ReduceReturnReceiver(Node* node);
+ 
+   Reduction ReduceStringConstructor(Node* node, JSFunctionRef constructor);
+--- a/v8/src/compiler/js-generic-lowering.cc
++++ b/v8/src/compiler/js-generic-lowering.cc
+@@ -682,9 +682,11 @@
+   ReplaceWithBuiltinCall(node, Builtin::kParseInt);
+ }
+ 
++#if V8_ENABLE_REGEXP
+ void JSGenericLowering::LowerJSRegExpTest(Node* node) {
+   ReplaceWithBuiltinCall(node, Builtin::kRegExpPrototypeTestFast);
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ void JSGenericLowering::LowerJSCreateClosure(Node* node) {
+   JSCreateClosureNode n(node);
+--- a/v8/src/compiler/js-operator.cc
++++ b/v8/src/compiler/js-operator.cc
+@@ -1,6 +1,8 @@
+ // Copyright 2014 the V8 project authors. All rights reserved.
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "src/compiler/js-operator.h"
+ 
+@@ -782,7 +784,9 @@
+   V(GetSuperConstructor, Operator::kNoWrite | Operator::kNoThrow, 1, 1)  \
+   V(FindNonDefaultConstructorOrConstruct, Operator::kNoProperties, 2, 2) \
+   V(ParseInt, Operator::kNoProperties, 2, 1)                             \
+-  V(RegExpTest, Operator::kNoProperties, 2, 1)
++  IF_V8_ENABLE_REGEXP( \
++  V(RegExpTest, Operator::kNoProperties, 2, 1)                                \
++  )
+ 
+ struct JSOperatorGlobalCache final {
+ #define CACHED_OP(Name, properties, value_input_count, value_output_count) \
+--- a/v8/src/compiler/js-operator.h
++++ b/v8/src/compiler/js-operator.h
+@@ -1112,7 +1112,9 @@
+ 
+   const Operator* ObjectIsArray();
+   const Operator* ParseInt();
++#if V8_ENABLE_REGEXP
+   const Operator* RegExpTest();
++#endif  // V8_ENABLE_REGEXP
+ 
+   const Operator* GetIterator(FeedbackSource const& load_feedback,
+                               FeedbackSource const& call_feedback);
+--- a/v8/src/compiler/opcodes.h
++++ b/v8/src/compiler/opcodes.h
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_COMPILER_OPCODES_H_
+ #define V8_COMPILER_OPCODES_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include <iosfwd>
+ 
+@@ -250,7 +252,9 @@
+   V(JSResolvePromise)                  \
+   V(JSStackCheck)                      \
+   V(JSObjectIsArray)                   \
+-  V(JSRegExpTest)                      \
++  IF_V8_ENABLE_REGEXP( \
++  V(JSRegExpTest)                                                             \
++  )                                                                           \
+   V(JSDebugger)
+ 
+ #define JS_OP_LIST(V)     \
+--- a/v8/src/compiler/operator-properties.cc
++++ b/v8/src/compiler/operator-properties.cc
+@@ -114,7 +114,9 @@
+     case IrOpcode::kJSObjectIsArray:
+     case IrOpcode::kJSPerformPromiseThen:
+     case IrOpcode::kJSPromiseResolve:
++#if V8_ENABLE_REGEXP
+     case IrOpcode::kJSRegExpTest:
++#endif  // V8_ENABLE_REGEXP
+     case IrOpcode::kJSRejectPromise:
+     case IrOpcode::kJSResolvePromise:
+       // These operators aren't introduced by BytecodeGraphBuilder and
+@@ -256,7 +258,9 @@
+     case IrOpcode::kJSResolvePromise:
+     case IrOpcode::kJSPerformPromiseThen:
+     case IrOpcode::kJSObjectIsArray:
++#if V8_ENABLE_REGEXP
+     case IrOpcode::kJSRegExpTest:
++#endif  // V8_ENABLE_REGEXP
+     case IrOpcode::kJSGetImportMeta:
+ 
+     // Iterator protocol operations
+--- a/v8/src/compiler/simplified-lowering-verifier.cc
++++ b/v8/src/compiler/simplified-lowering-verifier.cc
+@@ -728,7 +728,9 @@
+       CASE(JSRejectPromise)
+       CASE(JSResolvePromise)
+       CASE(JSObjectIsArray)
++#if V8_ENABLE_REGEXP
+       CASE(JSRegExpTest)
++#endif  // V8_ENABLE_REGEXP
+       CASE(JSDebugger) {
+         // TODO(nicohartmann@): These operators might need to be supported.
+         break;
+--- a/v8/src/compiler/typer.cc
++++ b/v8/src/compiler/typer.cc
+@@ -1563,8 +1563,10 @@
+ }
+ 
+ Type Typer::Visitor::TypeJSParseInt(Type input) { return Type::Number(); }
++#if V8_ENABLE_REGEXP
+ 
+ Type Typer::Visitor::TypeJSRegExpTest(Node* node) { return Type::Boolean(); }
++#endif  // V8_ENABLE_REGEXP
+ 
+ // Returns a somewhat larger range if we previously assigned
+ // a (smaller) range to this node. This is used  to speed up
+@@ -1983,6 +1985,7 @@
+       return Type::Receiver();
+     case Builtin::kPromiseResolveTrampoline:
+       return Type::Receiver();
++#if V8_ENABLE_REGEXP
+ 
+     // RegExp functions.
+     case Builtin::kRegExpPrototypeCompile:
+@@ -1993,6 +1996,7 @@
+       return Type::Boolean();
+     case Builtin::kRegExpPrototypeToString:
+       return Type::String();
++#endif  // V8_ENABLE_REGEXP
+ 
+     // Function functions.
+     case Builtin::kFunctionPrototypeBind:
+--- a/v8/src/compiler/verifier.cc
++++ b/v8/src/compiler/verifier.cc
+@@ -693,11 +693,13 @@
+       CheckValueInputIs(node, 0, Type::Any());
+       CheckValueInputIs(node, 1, Type::Any());
+       CheckTypeIs(node, Type::Number());
++#if V8_ENABLE_REGEXP
+       break;
+     case IrOpcode::kJSRegExpTest:
+       CheckValueInputIs(node, 0, Type::Any());
+       CheckValueInputIs(node, 1, Type::String());
+       CheckTypeIs(node, Type::Boolean());
++#endif  // V8_ENABLE_REGEXP
+       break;
+     case IrOpcode::kJSCreate:
+       CheckTypeIs(node, Type::Object());
+--- a/v8/src/debug/debug-evaluate.cc
++++ b/v8/src/debug/debug-evaluate.cc
+@@ -1,6 +1,8 @@
+ // Copyright 2015 the V8 project authors. All rights reserved.
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "src/debug/debug-evaluate.h"
+ 
+@@ -369,7 +371,9 @@
+   V(ObjectGetOwnPropertyNames)           \
+   V(ObjectGetOwnPropertyNamesTryFast)    \
+   V(ObjectIsExtensible)                  \
+-  V(RegExpInitializeAndCompile)          \
++  IF_V8_ENABLE_REGEXP( \
++  V(RegExpInitializeAndCompile)                                               \
++  )                                                                           \
+   V(StackGuard)                          \
+   V(HandleNoHeapWritesInterrupts)        \
+   V(StringAdd)                           \
+@@ -800,18 +804,24 @@
+     case Builtin::kStringPrototypeLastIndexOf:
+     case Builtin::kStringPrototypeLocaleCompare:
+     case Builtin::kStringPrototypeLink:
++#if V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeMatch:
+     case Builtin::kStringPrototypeMatchAll:
++#endif  // V8_ENABLE_REGEXP
+ 
+     case Builtin::kStringPrototypePadEnd:
+     case Builtin::kStringPrototypePadStart:
+     case Builtin::kStringPrototypeRepeat:
++#if V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeReplace:
+     case Builtin::kStringPrototypeReplaceAll:
+     case Builtin::kStringPrototypeSearch:
++#endif  // V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeSlice:
+     case Builtin::kStringPrototypeSmall:
++#if V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeSplit:
++#endif  // V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeStartsWith:
+     case Builtin::kStringSlowFlatten:
+     case Builtin::kStringPrototypeStrike:
+@@ -865,8 +875,10 @@
+     case Builtin::kFunctionPrototypeApply:
+     // Error builtins.
+     case Builtin::kErrorConstructor:
++#if V8_ENABLE_REGEXP
+     // RegExp builtins.
+     case Builtin::kRegExpConstructor:
++#endif  // V8_ENABLE_REGEXP
+     // Reflect builtins.
+     case Builtin::kReflectApply:
+     case Builtin::kReflectConstruct:
+@@ -1016,6 +1028,7 @@
+     case Builtin::kDisposableStackPrototypeAdopt:
+     case Builtin::kDisposableStackPrototypeDefer:
+     case Builtin::kDisposableStackPrototypeMove:
++#if V8_ENABLE_REGEXP
+     // RegExp builtins.
+     case Builtin::kRegExpPrototypeTest:
+     case Builtin::kRegExpPrototypeExec:
+@@ -1033,6 +1046,7 @@
+     case Builtin::kRegExpPrototypeStickyGetter:
+     case Builtin::kRegExpPrototypeReplace:
+     case Builtin::kRegExpPrototypeSearch:
++#endif  // V8_ENABLE_REGEXP
+       return DebugInfo::kRequiresRuntimeChecks;
+ 
+     // Debugging builtins.
+@@ -1264,11 +1278,14 @@
+         case Builtin::kArrayPrototypeToSorted:
+         case Builtin::kArrayFrom:
+         case Builtin::kTypedArrayPrototypeMap:
++#if V8_ENABLE_REGEXP
+         case Builtin::kStringPrototypeMatchAll:
++#endif  // V8_ENABLE_REGEXP
+           return true;
+         default:
+           return false;
+       }
++#if V8_ENABLE_REGEXP
+     case Builtin::kRegExpMatchFast:
+       // This is not a problem. We force String.prototype.match to take the
+       // slow path so that this call is not made.
+@@ -1285,6 +1302,7 @@
+       // This is not a problem. We force String.prototype.split to take the
+       // slow path so that this call is not made.
+       return caller == Builtin::kStringPrototypeSearch;
++#endif  // V8_ENABLE_REGEXP
+     default:
+       return false;
+   }
+--- a/v8/src/debug/debug.cc
++++ b/v8/src/debug/debug.cc
+@@ -3126,9 +3126,11 @@
+   DirectHandle<DebugInfo> debug_info = GetOrCreateDebugInfo(shared);
+   DebugInfo::SideEffectState side_effect_state =
+       debug_info->GetSideEffectState(isolate_);
++#if V8_ENABLE_REGEXP
+   if (shared->HasBuiltinId()) {
+     PrepareBuiltinForSideEffectCheck(isolate_, shared->builtin_id());
+   }
++#endif  // V8_ENABLE_REGEXP
+   switch (side_effect_state) {
+     case DebugInfo::kHasSideEffects:
+       if (v8_flags.trace_side_effect_free_debug_evaluate) {
+@@ -3162,6 +3164,7 @@
+   return handle(thread_local_.return_value_, isolate_);
+ }
+ 
++#if V8_ENABLE_REGEXP
+ void Debug::PrepareBuiltinForSideEffectCheck(Isolate* isolate, Builtin id) {
+   switch (id) {
+     case Builtin::kStringPrototypeMatch:
+@@ -3184,6 +3187,7 @@
+       return;
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ bool Debug::PerformSideEffectCheckForAccessor(
+     DirectHandle<AccessorInfo> accessor_info, Handle<Object> receiver,
+--- a/v8/src/debug/debug.h
++++ b/v8/src/debug/debug.h
+@@ -412,7 +412,9 @@
+   bool PerformSideEffectCheck(Handle<JSFunction> function,
+                               Handle<Object> receiver);
+ 
++#if V8_ENABLE_REGEXP
+   void PrepareBuiltinForSideEffectCheck(Isolate* isolate, Builtin id);
++#endif  // V8_ENABLE_REGEXP
+ 
+   bool PerformSideEffectCheckForAccessor(
+       DirectHandle<AccessorInfo> accessor_info, Handle<Object> receiver,
+--- a/v8/src/diagnostics/objects-debug.cc
++++ b/v8/src/diagnostics/objects-debug.cc
+@@ -2075,6 +2075,7 @@
+   CHECK(IsSmi(TaggedField<Object>::load(*this, kTicksUntilTierUpOffset)));
+   CHECK(IsSmi(TaggedField<Object>::load(*this, kBacktrackLimitOffset)));
+ 
++#if V8_ENABLE_REGEXP
+   switch (type_tag()) {
+     case RegExpData::Type::EXPERIMENTAL: {
+       if (has_latin1_code()) {
+@@ -2119,6 +2120,13 @@
+     default:
+       UNREACHABLE();
+   }
++#else
++  // This configuration never generates RegExp machine code or bytecode.
++  CHECK(!has_latin1_code());
++  CHECK(!has_uc16_code());
++  CHECK(!has_latin1_bytecode());
++  CHECK(!has_uc16_bytecode());
++#endif  // V8_ENABLE_REGEXP
+ }
+ 
+ void RegExpDataWrapper::RegExpDataWrapperVerify(Isolate* isolate) {
+--- a/v8/src/init/bootstrapper.cc
++++ b/v8/src/init/bootstrapper.cc
+@@ -258,7 +258,9 @@
+   HARMONY_SHIPPING(DECLARE_FEATURE_INITIALIZATION)
+   JAVASCRIPT_SHIPPING_FEATURES(DECLARE_FEATURE_INITIALIZATION)
+ #undef DECLARE_FEATURE_INITIALIZATION
++#if V8_ENABLE_REGEXP
+   void InitializeGlobal_regexp_linear_flag();
++#endif  // V8_ENABLE_REGEXP
+   void InitializeGlobal_sharedarraybuffer();
+ #if V8_ENABLE_WEBASSEMBLY
+   void InitializeWasmJSPI();
+@@ -664,6 +666,7 @@
+       .Check();
+ }
+ 
++#if V8_ENABLE_REGEXP
+ void SimpleInstallGetterSetter(Isolate* isolate, Handle<JSObject> base,
+                                const char* name, Builtin call_getter,
+                                Builtin call_setter) {
+@@ -671,6 +674,7 @@
+                             isolate->factory()->InternalizeUtf8String(name),
+                             call_getter, call_setter);
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ V8_NOINLINE Handle<JSFunction> SimpleInstallGetter(Isolate* isolate,
+                                                    Handle<JSObject> base,
+@@ -2885,10 +2889,12 @@
+     SimpleInstallFunction(isolate_, prototype, "localeCompare",
+                           Builtin::kStringPrototypeLocaleCompare, 1, true);
+ #endif  // V8_INTL_SUPPORT
++#if V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "match",
+                           Builtin::kStringPrototypeMatch, 1, true);
+     SimpleInstallFunction(isolate_, prototype, "matchAll",
+                           Builtin::kStringPrototypeMatchAll, 1, true);
++#endif  // V8_ENABLE_REGEXP
+ #ifdef V8_INTL_SUPPORT
+     SimpleInstallFunction(isolate_, prototype, "normalize",
+                           Builtin::kStringPrototypeNormalizeIntl, 0, false);
+@@ -2902,18 +2908,22 @@
+                           Builtin::kStringPrototypePadStart, 1, false);
+     SimpleInstallFunction(isolate_, prototype, "repeat",
+                           Builtin::kStringPrototypeRepeat, 1, true);
++#if V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "replace",
+                           Builtin::kStringPrototypeReplace, 2, true);
+     SimpleInstallFunction(isolate(), prototype, "replaceAll",
+                           Builtin::kStringPrototypeReplaceAll, 2, true);
+     SimpleInstallFunction(isolate_, prototype, "search",
+                           Builtin::kStringPrototypeSearch, 1, true);
++#endif  // V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "slice",
+                           Builtin::kStringPrototypeSlice, 2, false);
+     SimpleInstallFunction(isolate_, prototype, "small",
+                           Builtin::kStringPrototypeSmall, 0, false);
++#if V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "split",
+                           Builtin::kStringPrototypeSplit, 2, false);
++#endif  // V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "strike",
+                           Builtin::kStringPrototypeStrike, 0, false);
+     SimpleInstallFunction(isolate_, prototype, "sub",
+@@ -3259,6 +3269,7 @@
+     DCHECK(promise_fun->HasFastProperties());
+   }
+ 
++#if V8_ENABLE_REGEXP
+   {  // -- R e g E x p
+     // Builtin functions for RegExp.prototype.
+     Handle<JSFunction> regexp_fun = InstallFunction(
+@@ -3479,6 +3490,7 @@
+     native_context()->set_initial_regexp_string_iterator_prototype_map(
+         regexp_string_iterator_function->initial_map());
+   }
++#endif  // V8_ENABLE_REGEXP
+ 
+   // -- E r r o r
+   InstallError(isolate_, global, factory->Error_string(),
+@@ -4990,7 +5002,9 @@
+   HARMONY_INPROGRESS(FEATURE_INITIALIZE_GLOBAL)
+   JAVASCRIPT_INPROGRESS_FEATURES(FEATURE_INITIALIZE_GLOBAL)
+ #undef FEATURE_INITIALIZE_GLOBAL
++#if V8_ENABLE_REGEXP
+   InitializeGlobal_regexp_linear_flag();
++#endif  // V8_ENABLE_REGEXP
+   InitializeGlobal_sharedarraybuffer();
+ }
+ 
+@@ -5842,6 +5856,7 @@
+                       Builtin::kAbstractModuleSourceToStringTag, true);
+ }
+ 
++#if V8_ENABLE_REGEXP
+ void Genesis::InitializeGlobal_regexp_linear_flag() {
+   if (!v8_flags.enable_experimental_regexp_engine) return;
+ 
+@@ -5856,6 +5871,7 @@
+   // Store regexp prototype map again after change.
+   native_context()->set_regexp_prototype_map(regexp_prototype->map());
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ void Genesis::InitializeGlobal_harmony_temporal() {
+   if (!v8_flags.harmony_temporal) return;
+--- a/v8/src/objects/js-regexp.cc
++++ b/v8/src/objects/js-regexp.cc
+@@ -151,6 +151,7 @@
+ // static
+ MaybeHandle<JSRegExp> JSRegExp::New(Isolate* isolate, Handle<String> pattern,
+                                     Flags flags, uint32_t backtrack_limit) {
++#if V8_ENABLE_REGEXP
+   Handle<JSFunction> constructor = isolate->regexp_function();
+   Handle<JSRegExp> regexp =
+       Cast<JSRegExp>(isolate->factory()->NewJSObject(constructor));
+@@ -160,8 +161,13 @@
+   regexp->clear_data();
+ 
+   return JSRegExp::Initialize(regexp, pattern, flags, backtrack_limit);
+-}
+-
++#else
++  // No constructor is installed; reject API creation before using its slot.
++  THROW_NEW_ERROR(isolate, NewSyntaxError(MessageTemplate::kRegExpDisabled));
++#endif  // V8_ENABLE_REGEXP
++}
++
++#if V8_ENABLE_REGEXP
+ // static
+ MaybeHandle<JSRegExp> JSRegExp::Initialize(Handle<JSRegExp> regexp,
+                                            Handle<String> source,
+@@ -365,6 +371,8 @@
+   return regexp;
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
++
+ bool RegExpData::HasCompiledCode() const {
+   if (type_tag() != Type::IRREGEXP) return false;
+   Tagged<IrRegExpData> re_data = Cast<IrRegExpData>(*this);
+@@ -419,6 +427,7 @@
+   clear_uc16_bytecode();
+ }
+ 
++#if V8_ENABLE_REGEXP
+ void IrRegExpData::SetBytecodeForExperimental(
+     Isolate* isolate, Tagged<TrustedByteArray> bytecode) {
+   set_latin1_bytecode(bytecode);
+@@ -429,5 +438,6 @@
+   set_latin1_code(trampoline);
+   set_uc16_code(trampoline);
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ }  // namespace v8::internal
+--- a/v8/src/objects/regexp-match-info.tq
++++ b/v8/src/objects/regexp-match-info.tq
+@@ -4,9 +4,11 @@
+ 
+ @cppObjectDefinition
+ extern class RegExpMatchInfo extends HeapObject {
++  @if(V8_ENABLE_REGEXP)
+   macro GetStartOfCapture(i: constexpr int31): Smi {
+     return this.objects[i * 2];
+   }
++  @if(V8_ENABLE_REGEXP)
+   macro GetEndOfCapture(i: constexpr int31): Smi {
+     return this.objects[i * 2 + 1];
+   }
+--- a/v8/src/objects/value-serializer.cc
++++ b/v8/src/objects/value-serializer.cc
+@@ -629,9 +629,11 @@
+       return ThrowIfOutOfMemory();
+     case JS_PRIMITIVE_WRAPPER_TYPE:
+       return WriteJSPrimitiveWrapper(Cast<JSPrimitiveWrapper>(receiver));
++#if V8_ENABLE_REGEXP
+     case JS_REG_EXP_TYPE:
+       WriteJSRegExp(Cast<JSRegExp>(receiver));
+       return ThrowIfOutOfMemory();
++#endif  // V8_ENABLE_REGEXP
+     case JS_MAP_TYPE:
+       return WriteJSMap(Cast<JSMap>(receiver));
+     case JS_SET_TYPE:
+@@ -876,11 +878,13 @@
+   return ThrowIfOutOfMemory();
+ }
+ 
++#if V8_ENABLE_REGEXP
+ void ValueSerializer::WriteJSRegExp(DirectHandle<JSRegExp> regexp) {
+   WriteTag(SerializationTag::kRegExp);
+   WriteString(handle(regexp->source(), isolate_));
+   WriteVarint(static_cast<uint32_t>(regexp->flags()));
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ Maybe<bool> ValueSerializer::WriteJSMap(DirectHandle<JSMap> js_map) {
+   // First copy the key-value pairs, since getters could mutate them.
+@@ -1622,8 +1626,10 @@
+     case SerializationTag::kBigIntObject:
+     case SerializationTag::kStringObject:
+       return ReadJSPrimitiveWrapper(tag);
++#if V8_ENABLE_REGEXP
+     case SerializationTag::kRegExp:
+       return ReadJSRegExp();
++#endif  // V8_ENABLE_REGEXP
+     case SerializationTag::kBeginJSMap:
+       return ReadJSMap();
+     case SerializationTag::kBeginJSSet:
+@@ -1916,6 +1922,7 @@
+   return value;
+ }
+ 
++#if V8_ENABLE_REGEXP
+ MaybeHandle<JSRegExp> ValueDeserializer::ReadJSRegExp() {
+   uint32_t id = next_id_++;
+   Handle<String> pattern;
+@@ -1942,6 +1949,7 @@
+   AddObjectWithID(id, regexp);
+   return regexp;
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ MaybeHandle<JSMap> ValueDeserializer::ReadJSMap() {
+   // If we are at the end of the stack, abort. This function may recurse.
+--- a/v8/src/objects/value-serializer.h
++++ b/v8/src/objects/value-serializer.h
+@@ -126,7 +126,9 @@
+   void WriteJSDate(Tagged<JSDate> date);
+   Maybe<bool> WriteJSPrimitiveWrapper(DirectHandle<JSPrimitiveWrapper> value)
+       V8_WARN_UNUSED_RESULT;
++#if V8_ENABLE_REGEXP
+   void WriteJSRegExp(DirectHandle<JSRegExp> regexp);
++#endif  // V8_ENABLE_REGEXP
+   Maybe<bool> WriteJSMap(DirectHandle<JSMap> map) V8_WARN_UNUSED_RESULT;
+   Maybe<bool> WriteJSSet(DirectHandle<JSSet> map) V8_WARN_UNUSED_RESULT;
+   Maybe<bool> WriteJSArrayBuffer(Handle<JSArrayBuffer> array_buffer)
+@@ -290,7 +292,9 @@
+   MaybeHandle<JSDate> ReadJSDate() V8_WARN_UNUSED_RESULT;
+   MaybeHandle<JSPrimitiveWrapper> ReadJSPrimitiveWrapper(SerializationTag tag)
+       V8_WARN_UNUSED_RESULT;
++#if V8_ENABLE_REGEXP
+   MaybeHandle<JSRegExp> ReadJSRegExp() V8_WARN_UNUSED_RESULT;
++#endif  // V8_ENABLE_REGEXP
+   MaybeHandle<JSMap> ReadJSMap() V8_WARN_UNUSED_RESULT;
+   MaybeHandle<JSSet> ReadJSSet() V8_WARN_UNUSED_RESULT;
+   MaybeHandle<JSArrayBuffer> ReadJSArrayBuffer(
+--- a/v8/src/parsing/parser-base.h
++++ b/v8/src/parsing/parser-base.h
+@@ -1266,9 +1266,11 @@
+   const AstRawString* GetNextSymbolForRegExpLiteral() const {
+     return scanner()->NextSymbol(ast_value_factory());
+   }
++#if V8_ENABLE_REGEXP
+   bool ValidateRegExpFlags(RegExpFlags flags);
+   bool ValidateRegExpLiteral(const AstRawString* pattern, RegExpFlags flags,
+                              RegExpError* regexp_error);
++#endif  // V8_ENABLE_REGEXP
+   ExpressionT ParseRegExpLiteral();
+ 
+   ExpressionT ParseBindingPattern();
+@@ -1968,6 +1970,7 @@
+   return key;
+ }
+ 
++#if V8_ENABLE_REGEXP
+ template <typename Impl>
+ bool ParserBase<Impl>::ValidateRegExpFlags(RegExpFlags flags) {
+   return RegExp::VerifyFlags(flags);
+@@ -1992,9 +1995,11 @@
+                                 pattern->length(), flags, regexp_error, no_gc);
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ template <typename Impl>
+ typename ParserBase<Impl>::ExpressionT ParserBase<Impl>::ParseRegExpLiteral() {
++#if V8_ENABLE_REGEXP
+   int pos = peek_position();
+   if (!scanner()->ScanRegExpPattern()) {
+     Next();
+@@ -2019,6 +2024,11 @@
+     return impl()->FailureExpression();
+   }
+   return factory()->NewRegExpLiteral(pattern, flags.value(), pos);
++#else
++  Next();
++  ReportMessage(MessageTemplate::kRegExpDisabled);
++  return impl()->FailureExpression();
++#endif  // V8_ENABLE_REGEXP
+ }
+ 
+ template <typename Impl>
+--- a/v8/src/regexp/arm/regexp-macro-assembler-arm.cc
++++ b/v8/src/regexp/arm/regexp-macro-assembler-arm.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_ARM
+ 
+ #include "src/regexp/arm/regexp-macro-assembler-arm.h"
+@@ -1380,3 +1381,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_ARM
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/arm64/regexp-macro-assembler-arm64.cc
++++ b/v8/src/regexp/arm64/regexp-macro-assembler-arm64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_ARM64
+ 
+ #include "src/regexp/arm64/regexp-macro-assembler-arm64.h"
+@@ -1765,3 +1766,5 @@
+ #undef __
+ 
+ #endif  // V8_TARGET_ARCH_ARM64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental-bytecode.cc
++++ b/v8/src/regexp/experimental/experimental-bytecode.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental-bytecode.h"
+ 
+ #include <cctype>
+@@ -134,3 +135,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental-compiler.cc
++++ b/v8/src/regexp/experimental/experimental-compiler.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental-compiler.h"
+ 
+ #include "src/base/strings.h"
+@@ -1099,3 +1100,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental-interpreter.cc
++++ b/v8/src/regexp/experimental/experimental-interpreter.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental-interpreter.h"
+ 
+ #include <optional>
+@@ -1120,3 +1121,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental.cc
++++ b/v8/src/regexp/experimental/experimental.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental.h"
+ 
+ #include <optional>
+@@ -344,3 +345,5 @@
+ }
+ 
+ }  // namespace v8::internal
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/ia32/regexp-macro-assembler-ia32.cc
++++ b/v8/src/regexp/ia32/regexp-macro-assembler-ia32.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_IA32
+ 
+ #include "src/regexp/ia32/regexp-macro-assembler-ia32.h"
+@@ -1401,3 +1402,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_IA32
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/loong64/regexp-macro-assembler-loong64.cc
++++ b/v8/src/regexp/loong64/regexp-macro-assembler-loong64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_LOONG64
+ 
+ #include "src/regexp/loong64/regexp-macro-assembler-loong64.h"
+@@ -1350,3 +1351,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_LOONG64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/mips64/regexp-macro-assembler-mips64.cc
++++ b/v8/src/regexp/mips64/regexp-macro-assembler-mips64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_MIPS64
+ 
+ #include "src/regexp/mips64/regexp-macro-assembler-mips64.h"
+@@ -1389,3 +1390,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_MIPS64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/ppc/regexp-macro-assembler-ppc.cc
++++ b/v8/src/regexp/ppc/regexp-macro-assembler-ppc.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
+ 
+ #include "src/regexp/ppc/regexp-macro-assembler-ppc.h"
+@@ -1486,3 +1487,5 @@
+ }  // namespace v8
+ 
+ #endif  //  V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-ast.cc
++++ b/v8/src/regexp/regexp-ast.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-ast.h"
+ 
+ #include "src/utils/ostreams.h"
+@@ -443,3 +444,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-bytecode-generator.cc
++++ b/v8/src/regexp/regexp-bytecode-generator.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-bytecode-generator.h"
+ 
+ #include "src/ast/ast.h"
+@@ -405,3 +406,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-bytecode-peephole.cc
++++ b/v8/src/regexp/regexp-bytecode-peephole.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-bytecode-peephole.h"
+ 
+ #include "src/flags/flags.h"
+@@ -1034,3 +1035,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-bytecodes.cc
++++ b/v8/src/regexp/regexp-bytecodes.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-bytecodes.h"
+ 
+ #include <cctype>
+@@ -46,3 +47,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-compiler-tonode.cc
++++ b/v8/src/regexp/regexp-compiler-tonode.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/common/globals.h"
+ #include "src/execution/isolate.h"
+ #include "src/objects/string.h"
+@@ -2068,3 +2069,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-compiler.cc
++++ b/v8/src/regexp/regexp-compiler.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-compiler.h"
+ 
+ #include <optional>
+@@ -3988,3 +3989,5 @@
+ }
+ 
+ }  // namespace v8::internal
++
++#endif  // V8_ENABLE_REGEXP
+--- /dev/null
++++ b/v8/src/regexp/regexp-config.h
+@@ -0,0 +1,15 @@
++// Copyright 2026 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef V8_REGEXP_REGEXP_CONFIG_H_
++#define V8_REGEXP_REGEXP_CONFIG_H_
++
++// Select entries inside builtin, runtime and compiler X-macro tables.
++#if V8_ENABLE_REGEXP
++#define IF_V8_ENABLE_REGEXP(...) __VA_ARGS__
++#else
++#define IF_V8_ENABLE_REGEXP(...)
++#endif
++
++#endif  // V8_REGEXP_REGEXP_CONFIG_H_
+--- a/v8/src/regexp/regexp-dotprinter.cc
++++ b/v8/src/regexp/regexp-dotprinter.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-dotprinter.h"
+ 
+ #include "src/base/strings.h"
+@@ -253,3 +254,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-error.cc
++++ b/v8/src/regexp/regexp-error.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-error.h"
+ 
+ namespace v8 {
+@@ -20,3 +21,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-interpreter.cc
++++ b/v8/src/regexp/regexp-interpreter.cc
+@@ -4,6 +4,7 @@
+ 
+ // A simple interpreter for the Irregexp byte code.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-interpreter.h"
+ 
+ #include "src/base/small-vector.h"
+@@ -1166,3 +1167,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-macro-assembler-tracer.cc
++++ b/v8/src/regexp/regexp-macro-assembler-tracer.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-macro-assembler-tracer.h"
+ 
+ #include "src/objects/fixed-array-inl.h"
+@@ -442,3 +443,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-macro-assembler.cc
++++ b/v8/src/regexp/regexp-macro-assembler.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-macro-assembler.h"
+ 
+ #include "src/codegen/assembler.h"
+@@ -528,3 +529,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-parser.cc
++++ b/v8/src/regexp/regexp-parser.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-parser.h"
+ 
+ #include "src/execution/isolate.h"
+@@ -3279,3 +3280,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp.cc
++++ b/v8/src/regexp/regexp.cc
+@@ -26,6 +26,7 @@
+ namespace v8 {
+ namespace internal {
+ 
++#if V8_ENABLE_REGEXP
+ using namespace regexp_compiler_constants;  // NOLINT(build/namespaces)
+ 
+ class RegExpImpl final : public AllStatic {
+@@ -1297,6 +1298,8 @@
+       ReadOnlyRoots(isolate).fixed_cow_array_map());
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
++
+ void RegExpResultsCache::Clear(Tagged<FixedArray> cache) {
+   for (int i = 0; i < kRegExpResultsCacheSize; i++) {
+     cache->set(i, Smi::zero());
+--- a/v8/src/regexp/riscv/regexp-macro-assembler-riscv.cc
++++ b/v8/src/regexp/riscv/regexp-macro-assembler-riscv.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/riscv/regexp-macro-assembler-riscv.h"
+ 
+ #include "src/codegen/assembler-inl.h"
+@@ -1383,3 +1384,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/s390/regexp-macro-assembler-s390.cc
++++ b/v8/src/regexp/s390/regexp-macro-assembler-s390.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/init/v8.h"
+ 
+ #if V8_TARGET_ARCH_S390
+@@ -1520,3 +1521,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_S390
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/x64/regexp-macro-assembler-x64.cc
++++ b/v8/src/regexp/x64/regexp-macro-assembler-x64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_X64
+ 
+ #include "src/regexp/x64/regexp-macro-assembler-x64.h"
+@@ -1503,3 +1504,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_X64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/runtime/runtime-regexp.cc
++++ b/v8/src/runtime/runtime-regexp.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include <functional>
+ 
+ #include "src/base/small-vector.h"
+@@ -2075,3 +2076,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/runtime/runtime-test.cc
++++ b/v8/src/runtime/runtime-test.cc
+@@ -1677,6 +1677,7 @@
+   return ReadOnlyRoots(isolate).undefined_value();
+ }
+ 
++#if V8_ENABLE_REGEXP
+ RUNTIME_FUNCTION(Runtime_RegexpHasBytecode) {
+   SealHandleScope shs(isolate);
+   if (args.length() != 2 || !IsJSRegExp(args[0]) || !IsBoolean(args[1])) {
+@@ -1748,6 +1749,7 @@
+       RegExp::IsUnmodifiedRegExp(isolate, regexp));
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
+ #define ELEMENTS_KIND_CHECK_RUNTIME_FUNCTION(Name)    \
+   RUNTIME_FUNCTION(Runtime_##Name) {                  \
+     if (args.length() != 1 || !IsJSObject(args[0])) { \
+@@ -1796,11 +1798,13 @@
+       Protectors::IsTypedArraySpeciesLookupChainIntact(isolate));
+ }
+ 
++#if V8_ENABLE_REGEXP
+ RUNTIME_FUNCTION(Runtime_RegExpSpeciesProtector) {
+   SealHandleScope shs(isolate);
+   return isolate->heap()->ToBoolean(
+       Protectors::IsRegExpSpeciesLookupChainIntact(isolate));
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ RUNTIME_FUNCTION(Runtime_PromiseSpeciesProtector) {
+   SealHandleScope shs(isolate);
+@@ -1970,6 +1974,7 @@
+   return ReadOnlyRoots(isolate).undefined_value();
+ }
+ 
++#if V8_ENABLE_REGEXP
+ RUNTIME_FUNCTION(Runtime_NewRegExpWithBacktrackLimit) {
+   HandleScope scope(isolate);
+   if (args.length() != 3 || !IsString(args[0]) || !IsString(args[1]) ||
+@@ -1993,6 +1998,7 @@
+   RETURN_RESULT_OR_FAILURE(
+       isolate, JSRegExp::New(isolate, pattern, flags, backtrack_limit));
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
+ RUNTIME_FUNCTION(Runtime_Is64Bit) {
+   SealHandleScope shs(isolate);
+--- a/v8/src/runtime/runtime.h
++++ b/v8/src/runtime/runtime.h
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_RUNTIME_RUNTIME_H_
+ #define V8_RUNTIME_RUNTIME_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include <memory>
+ 
+@@ -413,6 +415,7 @@
+   F(JSProxyGetTarget, 1, 1)            \
+   F(SetPropertyWithReceiver, 4, 1)
+ 
++#if V8_ENABLE_REGEXP
+ #define FOR_EACH_INTRINSIC_REGEXP(F, I)                          \
+   F(RegExpBuildIndices, 3, 1)                                    \
+   F(RegExpExec, 4, 1)                                            \
+@@ -426,6 +429,9 @@
+   F(RegExpStringFromFlags, 1, 1)                                 \
+   F(StringReplaceNonGlobalRegExpWithFunction, 3, 1)              \
+   F(StringSplit, 3, 1)
++#else
++#define FOR_EACH_INTRINSIC_REGEXP(F, I)
++#endif  // V8_ENABLE_REGEXP
+ 
+ #define FOR_EACH_THROWING_INTRINSIC_SCOPES(F, I) \
+   F(ThrowConstAssignError, 0, 1)                 \
+@@ -584,7 +590,9 @@
+   F(IsWasmTieringPredictable, 0, 1)           \
+   F(MapIteratorProtector, 0, 1)               \
+   F(NeverOptimizeFunction, 1, 1)              \
+-  F(NewRegExpWithBacktrackLimit, 3, 1)        \
++  IF_V8_ENABLE_REGEXP( \
++  F(NewRegExpWithBacktrackLimit, 3, 1)                                        \
++  )                                                                           \
+   F(NoElementsProtector, 0, 1)                \
+   F(NotifyContextDisposed, 0, 1)              \
+   F(SetPriorityBestEffort, 0, 1)              \
+@@ -597,11 +605,13 @@
+   F(PretenureAllocationSite, 1, 1)            \
+   F(PrintWithNameForAssert, 2, 1)             \
+   F(PromiseSpeciesProtector, 0, 1)            \
++  IF_V8_ENABLE_REGEXP( \
+   F(RegExpSpeciesProtector, 0, 1)             \
+   F(RegexpHasBytecode, 2, 1)                  \
+   F(RegexpHasNativeCode, 2, 1)                \
+   F(RegexpIsUnmodified, 1, 1)                 \
+-  F(RegexpTypeTag, 1, 1)                      \
++  F(RegexpTypeTag, 1, 1)                                                      \
++  )                                                                           \
+   F(RunningInSimulator, 0, 1)                 \
+   F(RuntimeEvaluateREPL, 1, 1)                \
+   F(ScheduleGCInStackCheck, 0, 1)             \
+--- a/v8/src/torque/torque-parser.cc
++++ b/v8/src/torque/torque-parser.cc
+@@ -46,6 +46,7 @@
+ class BuildFlags : public base::ContextualClass<BuildFlags> {
+  public:
+   BuildFlags() {
++    build_flags_["V8_ENABLE_REGEXP"] = V8_ENABLE_REGEXP;
+     build_flags_["V8_EXTERNAL_CODE_SPACE"] = V8_EXTERNAL_CODE_SPACE_BOOL;
+     build_flags_["TAGGED_SIZE_8_BYTES"] = TargetArchitecture::TaggedSize() == 8;
+ #ifdef V8_INTL_SUPPORT
+@@ -2811,7 +2812,7 @@
+ 
+   // Result: std::optional<ClassBody*>
+   Symbol optionalClassBody = {
+-      Rule({Token("{"), List<Declaration*>(&method),
++      Rule({Token("{"), ListAllowIfAnnotation<Declaration*>(&method),
+             List<ClassFieldExpression>(&classField), Token("}")},
+            MakeClassBody),
+       Rule({Token(";")}, YieldDefaultValue<std::optional<ClassBody*>>)};

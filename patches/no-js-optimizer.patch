@@ -22,13 +22,13 @@ Keep V8_ENABLE_TURBOFAN and V8_ENABLE_TURBOFAN_BOOL unchanged: they describe
 shared capabilities needed by Wasm, host-call wrappers and snapshot builtin
 generation. Wasm's Liftoff, TurboFan and Turboshaft paths remain. JavaScript
 executes in Ignition, and runtime flags cannot enable its optimizing tiers.
-RegExp, the JavaScript parser, Inspector and the Rust binding API remain.
+The JavaScript parser and Inspector remain; no-regexp.patch separately removes
+the RegExp library from the combined recipe.
 
-Validation: the standalone rusty_v8 consumer checks disabled JS tiers and
-numeric Wasm/WasmGC through baseline and optimizing compilation, with GC
-references live across a native host call. This is a runtime smoke test, not
-an Inspector protocol suite. Check final-binary size and retained symbols on
-each linker; passing runtime tests alone does not establish dead stripping.
+Validation: the native runtime probe checks disabled JS tiers and numeric
+Wasm/WasmGC across compilation modes. This is not an Inspector protocol suite.
+Check final-binary size and retained symbols on each linker; passing runtime
+tests alone does not establish dead stripping.
 
 On upgrade, recheck the read-only flag expansion, implications, JS tier
 scheduling, job-factory callers and Maglev/Turboshaft frontend callers. New

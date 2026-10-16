@@ -62,5 +62,5 @@ jobs:
       - name: Publish release
         run: |
           gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
-            --notes "ICU-free rusty_v8 0.106.0 archives. All five platforms passed archive smoke tests: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
+            --notes "Trimmed wee8 Wasm C API archives. All five platforms passed archive smoke tests: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
             artifacts/native-*/*

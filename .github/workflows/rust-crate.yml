@@ -3,10 +3,8 @@ name: Rust crate
 # These are consumers of the published archive, not native V8 builds.
 on:
   pull_request:
-    paths: ['crates/wee8/**', '.github/workflows/rust-crate.yml']
   push:
     branches: [main]
-    paths: ['crates/wee8/**', '.github/workflows/rust-crate.yml']
 
 permissions:
   contents: read

@@ -16,8 +16,8 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-//! Acquisition and linking of the optional wee8 backend. This is independent of
-//! rusty_v8's build script and is compiled only when the wee8 feature is selected.
+//! Acquisition and linking of the wee8 native archive. Consumer builds do not
+//! invoke the V8 source bootstrap.
 
 #[path = "build/checksums.rs"]
 mod checksums;

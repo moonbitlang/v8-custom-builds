@@ -1,0 +1,59 @@
+Subject: Allow the native bootstrap to build wee8 without the Rust adapter
+
+Reuse the pinned upstream toolchain/GN setup from the native build driver.
+The upstream crate entry point retains its own target; this producer calls
+the same bootstrap with the wee8 build group and does not compile that crate.
+
+--- a/build.rs
++++ b/build.rs
+@@ -110,7 +110,7 @@
+     // cargo publish doesn't like pyc files.
+     env::set_var("PYTHONDONTWRITEBYTECODE", "1");
+ 
+-    build_v8(is_asan);
++    build_v8(is_asan, "rusty_v8");
+     build_binding();
+ 
+     return;
+@@ -171,7 +171,7 @@
+     .expect("Couldn't write bindings!");
+ }
+ 
+-fn build_v8(is_asan: bool) {
++fn build_v8(is_asan: bool, target: &str) {
+   env::set_var("DEPOT_TOOLS_WIN_TOOLCHAIN", "0");
+ 
+   if need_gn_ninja_download() {
+@@ -318,7 +318,7 @@
+   if env_bool("PRINT_GN_ARGS") {
+     print_gn_args(&gn_out);
+   }
+-  build("rusty_v8", None);
++  build(target, None);
+ }
+ 
+ fn print_gn_args(gn_out_dir: &Path) {
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -48,3 +48,21 @@
+     ]
+   }
+ }
++
++# Build the Wasm C API and its native regression probe with identical settings.
++group("wee8-build") {
++  deps = [ "//v8:wee8", ":wee8-runtime-check" ]
++}
++
++executable("wee8-runtime-check") {
++  sources = [ "wee8-runtime-check.cc" ]
++  deps = [ "//v8:wee8" ]
++  configs += [ ":wee8_probe_config" ]
++}
++
++# Follow the upstream config wrapper for V8's private toolchain config, but
++# keep normal executable CRT linkage instead of the Rust adapter's /Zl flag.
++config("wee8_probe_config") {
++  configs = [ "//v8:external_config", "//v8:toolchain", "//v8:features" ]
++  include_dirs = [ "v8" ]
++}
