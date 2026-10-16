@@ -20,6 +20,7 @@ cp ci/runtime/probe.cc rusty_v8/wee8-runtime-check.cc
 cp ci/runtime/gc-bytes.h rusty_v8/gc-bytes.h
 unset DOCS_RS DENO_TRYBUILD V8_FORCE_DEBUG EXTRA_GN_ARGS
 export GN_ARGS='
+  v8_enable_regexp=false
   v8_enable_i18n_support=false
   icu_use_data_file=false
   v8_enable_maglev=false

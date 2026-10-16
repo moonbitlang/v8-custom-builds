@@ -53,19 +53,23 @@ The normal build disables ICU, Maglev and Sparkplug through GN settings.
 retaining shared compiler infrastructure needed by Wasm. `no-asmjs.patch`
 disables the specialized asm.js-to-Wasm path.
 
-`no-regexp.patch` removes the JavaScript RegExp library at its registration and
-call-site boundaries:
+`no-regexp.patch` adds `v8_enable_regexp` (default `true`). The normal wee8
+recipe sets it to `false`, guarding the JavaScript RegExp library at its
+registration and call-site boundaries:
 
 - Context initialization does not install `RegExp` or String's `match`,
   `matchAll`, `search`, `replace`, `replaceAll` and `split` methods.
-- RegExp builtin/runtime IDs, external references and Torque inputs are removed,
-  together with their compiler reductions and RegExp serialization dispatch.
+- `V8_ENABLE_REGEXP` guards builtin/runtime IDs, external references, compiler
+  reductions and serialization dispatch. GN selects the corresponding Torque
+  inputs before builtin tables and snapshots are generated.
 - The parser rejects regexp literals; the existing public API creation boundary
   reports an unsupported-feature syntax error before accessing the absent
   constructor. No fake parser, compiler, matcher or interpreter is supplied.
-- Engine translation units are excluded intact. `regexp-support.cc` retains only
-  genuine cache clearing and flag formatting. Existing heap layouts, GC metadata
-  and stack/cache lifecycle remain.
+- Native source lists and upstream implementation bodies stay intact. Guards
+  skip the unavailable implementation; cache clearing and flag formatting stay
+  in their original file. Existing heap layouts, GC metadata and stack/cache
+  lifecycle remain. Unreachable shared code is left for final-link stripping
+  or LTO; build-time source exclusion is not the size objective.
 - Ordinary string predicates (`includes`, `startsWith`, `endsWith`) retain their
   actual `Symbol.match` protocol check; TypedArray registrations are unchanged.
 

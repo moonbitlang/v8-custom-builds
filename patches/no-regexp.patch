@@ -1,747 +1,251 @@
 --- a/v8/BUILD.gn
 +++ b/v8/BUILD.gn
-@@ -2025,15 +2025,7 @@
-   "src/builtins/proxy-set-prototype-of.tq",
-   "src/builtins/proxy.tq",
-   "src/builtins/reflect.tq",
--  "src/builtins/regexp-exec.tq",
--  "src/builtins/regexp-match-all.tq",
--  "src/builtins/regexp-match.tq",
--  "src/builtins/regexp-replace.tq",
--  "src/builtins/regexp-search.tq",
--  "src/builtins/regexp-source.tq",
--  "src/builtins/regexp-split.tq",
--  "src/builtins/regexp-test.tq",
--  "src/builtins/regexp.tq",
-+  "src/builtins/regexp-predicate.tq",
-   "src/builtins/set-difference.tq",
-   "src/builtins/set-intersection.tq",
-   "src/builtins/set-is-disjoint-from.tq",
-@@ -2048,10 +2040,8 @@
-   "src/builtins/string-indexof.tq",
-   "src/builtins/string-iswellformed.tq",
-   "src/builtins/string-iterator.tq",
--  "src/builtins/string-match-search.tq",
-   "src/builtins/string-pad.tq",
-   "src/builtins/string-repeat.tq",
--  "src/builtins/string-replaceall.tq",
-   "src/builtins/string-slice.tq",
-   "src/builtins/string-startswith.tq",
-   "src/builtins/string-substr.tq",
-@@ -2958,7 +2948,6 @@
-     "src/builtins/builtins-promise-gen.h",
-     "src/builtins/builtins-proxy-gen.cc",
-     "src/builtins/builtins-proxy-gen.h",
--    "src/builtins/builtins-regexp-gen.cc",
-     "src/builtins/builtins-regexp-gen.h",
-     "src/builtins/builtins-shadow-realm-gen.cc",
-     "src/builtins/builtins-sharedarraybuffer-gen.cc",
-@@ -5378,7 +5367,6 @@
-     "src/builtins/builtins-number.cc",
-     "src/builtins/builtins-object.cc",
-     "src/builtins/builtins-reflect.cc",
--    "src/builtins/builtins-regexp.cc",
-     "src/builtins/builtins-shadow-realm.cc",
-     "src/builtins/builtins-shared-array.cc",
-     "src/builtins/builtins-sharedarraybuffer.cc",
-@@ -5697,25 +5685,9 @@
-     "src/profiler/tick-sample.cc",
-     "src/profiler/tracing-cpu-profiler.cc",
-     "src/profiler/weak-code-registry.cc",
--    "src/regexp/experimental/experimental-bytecode.cc",
--    "src/regexp/experimental/experimental-compiler.cc",
--    "src/regexp/experimental/experimental-interpreter.cc",
--    "src/regexp/experimental/experimental.cc",
--    "src/regexp/regexp-ast.cc",
--    "src/regexp/regexp-bytecode-generator.cc",
--    "src/regexp/regexp-bytecode-peephole.cc",
--    "src/regexp/regexp-bytecodes.cc",
--    "src/regexp/regexp-compiler-tonode.cc",
--    "src/regexp/regexp-compiler.cc",
--    "src/regexp/regexp-dotprinter.cc",
--    "src/regexp/regexp-error.cc",
--    "src/regexp/regexp-interpreter.cc",
--    "src/regexp/regexp-macro-assembler-tracer.cc",
--    "src/regexp/regexp-macro-assembler.cc",
--    "src/regexp/regexp-parser.cc",
-     "src/regexp/regexp-stack.cc",
-     "src/regexp/regexp-utils.cc",
--    "src/regexp/regexp.cc",
-+    "src/regexp/regexp-support.cc",
-     "src/roots/roots.cc",
-     "src/runtime/runtime-array.cc",
-     "src/runtime/runtime-atomics.cc",
-@@ -5738,7 +5710,6 @@
-     "src/runtime/runtime-operators.cc",
-     "src/runtime/runtime-promise.cc",
-     "src/runtime/runtime-proxy.cc",
--    "src/runtime/runtime-regexp.cc",
-     "src/runtime/runtime-scopes.cc",
-     "src/runtime/runtime-shadow-realm.cc",
-     "src/runtime/runtime-strings.cc",
-@@ -5982,7 +5953,6 @@
-       "src/diagnostics/ia32/disasm-ia32.cc",
-       "src/diagnostics/ia32/unwinder-ia32.cc",
-       "src/execution/ia32/frame-constants-ia32.cc",
--      "src/regexp/ia32/regexp-macro-assembler-ia32.cc",
-     ]
-   } else if (v8_current_cpu == "x64") {
-     sources += [
-@@ -5996,7 +5966,6 @@
-       "src/diagnostics/x64/eh-frame-x64.cc",
-       "src/diagnostics/x64/unwinder-x64.cc",
-       "src/execution/x64/frame-constants-x64.cc",
--      "src/regexp/x64/regexp-macro-assembler-x64.cc",
-     ]
+@@ -26,6 +26,9 @@
+ emit_builtins_as_inline_asm = is_win && is_clang
  
-     if (is_win) {
-@@ -6032,7 +6001,6 @@
-       "src/diagnostics/arm/unwinder-arm.cc",
-       "src/execution/arm/frame-constants-arm.cc",
-       "src/execution/arm/simulator-arm.cc",
--      "src/regexp/arm/regexp-macro-assembler-arm.cc",
-     ]
-   } else if (v8_current_cpu == "arm64") {
-     sources += [
-@@ -6053,7 +6021,6 @@
-       "src/execution/arm64/pointer-auth-arm64.cc",
-       "src/execution/arm64/simulator-arm64.cc",
-       "src/execution/arm64/simulator-logic-arm64.cc",
--      "src/regexp/arm64/regexp-macro-assembler-arm64.cc",
-     ]
-     if (v8_enable_webassembly) {
-       # Trap handling is enabled on arm64 Mac and Linux and in simulators on
-@@ -6091,7 +6058,6 @@
-       "src/diagnostics/mips64/unwinder-mips64.cc",
-       "src/execution/mips64/frame-constants-mips64.cc",
-       "src/execution/mips64/simulator-mips64.cc",
--      "src/regexp/mips64/regexp-macro-assembler-mips64.cc",
-     ]
-   } else if (v8_current_cpu == "loong64") {
-     sources += [
-@@ -6106,7 +6072,6 @@
-       "src/diagnostics/loong64/unwinder-loong64.cc",
-       "src/execution/loong64/frame-constants-loong64.cc",
-       "src/execution/loong64/simulator-loong64.cc",
--      "src/regexp/loong64/regexp-macro-assembler-loong64.cc",
-     ]
-     if (v8_enable_webassembly) {
-       # Trap handling is enabled on loong64 Linux and in simulators on
-@@ -6135,7 +6100,6 @@
-       "src/diagnostics/ppc/unwinder-ppc.cc",
-       "src/execution/ppc/frame-constants-ppc.cc",
-       "src/execution/ppc/simulator-ppc.cc",
--      "src/regexp/ppc/regexp-macro-assembler-ppc.cc",
-     ]
-   } else if (v8_current_cpu == "ppc64") {
-     sources += [
-@@ -6150,7 +6114,6 @@
-       "src/diagnostics/ppc/unwinder-ppc.cc",
-       "src/execution/ppc/frame-constants-ppc.cc",
-       "src/execution/ppc/simulator-ppc.cc",
--      "src/regexp/ppc/regexp-macro-assembler-ppc.cc",
-     ]
-   } else if (v8_current_cpu == "s390" || v8_current_cpu == "s390x") {
-     sources += [
-@@ -6165,7 +6128,6 @@
-       "src/diagnostics/s390/unwinder-s390.cc",
-       "src/execution/s390/frame-constants-s390.cc",
-       "src/execution/s390/simulator-s390.cc",
--      "src/regexp/s390/regexp-macro-assembler-s390.cc",
-     ]
-   } else if (v8_current_cpu == "riscv64") {
-     sources += [
-@@ -6191,7 +6153,6 @@
-       "src/diagnostics/riscv/unwinder-riscv.cc",
-       "src/execution/riscv/frame-constants-riscv.cc",
-       "src/execution/riscv/simulator-riscv.cc",
--      "src/regexp/riscv/regexp-macro-assembler-riscv.cc",
-     ]
-     if (v8_enable_webassembly) {
-       # Trap handling is enabled on riscv64 Linux and in simulators on
-@@ -6231,7 +6192,6 @@
-       "src/diagnostics/riscv/unwinder-riscv.cc",
-       "src/execution/riscv/frame-constants-riscv.cc",
-       "src/execution/riscv/simulator-riscv.cc",
--      "src/regexp/riscv/regexp-macro-assembler-riscv.cc",
-     ]
-   }
+ declare_args() {
++  # The Wasm-only producer disables the JavaScript RegExp library.
++  v8_enable_regexp = true
++
+   # Print to stdout on Android.
+   v8_android_log_stdout = false
  
+@@ -1078,6 +1081,12 @@
+ 
+   defines =
+       [ "V8_TYPED_ARRAY_MAX_SIZE_IN_HEAP=${v8_typed_array_max_size_in_heap}" ]
++
++  if (v8_enable_regexp) {
++    defines += [ "V8_ENABLE_REGEXP=1" ]
++  } else {
++    defines += [ "V8_ENABLE_REGEXP=0" ]
++  }
+ 
+   configs = [
+     ":v8_header_features",
+@@ -2161,6 +2170,25 @@
+   "test/torque/test-torque.tq",
+   "third_party/v8/builtins/array-sort.tq",
+ ]
++
++# Torque generates builtin tables before C++ compilation. Keep only the
++# shared IsRegExp predicate when the matching library is disabled.
++if (!v8_enable_regexp) {
++  torque_files -= [
++    "src/builtins/regexp-exec.tq",
++    "src/builtins/regexp-match-all.tq",
++    "src/builtins/regexp-match.tq",
++    "src/builtins/regexp-replace.tq",
++    "src/builtins/regexp-search.tq",
++    "src/builtins/regexp-source.tq",
++    "src/builtins/regexp-split.tq",
++    "src/builtins/regexp-test.tq",
++    "src/builtins/regexp.tq",
++    "src/builtins/string-match-search.tq",
++    "src/builtins/string-replaceall.tq",
++  ]
++  torque_files += [ "src/builtins/regexp-predicate.tq" ]
++}
+ 
+ if (v8_enable_i18n_support) {
+   torque_files += [
+@@ -4138,6 +4166,7 @@
+     "src/regexp/regexp-bytecode-peephole.h",
+     "src/regexp/regexp-bytecodes.h",
+     "src/regexp/regexp-compiler.h",
++    "src/regexp/regexp-config.h",
+     "src/regexp/regexp-dotprinter.h",
+     "src/regexp/regexp-error.h",
+     "src/regexp/regexp-flags.h",
 --- a/v8/src/builtins/base.tq
 +++ b/v8/src/builtins/base.tq
-@@ -1505,9 +1505,7 @@
+@@ -1505,9 +1505,6 @@
  macro GetReflectApply(implicit context: Context)(): Callable {
    return *NativeContextSlot(ContextSlot::REFLECT_APPLY_INDEX);
  }
 -macro GetRegExpLastMatchInfo(implicit context: Context)(): RegExpMatchInfo {
 -  return *NativeContextSlot(ContextSlot::REGEXP_LAST_MATCH_INFO_INDEX);
 -}
-+
  macro GetStrictArgumentsMap(implicit context: Context)(): Map {
    return *NativeContextSlot(ContextSlot::STRICT_ARGUMENTS_MAP_INDEX);
  }
 --- a/v8/src/builtins/builtins-definitions.h
 +++ b/v8/src/builtins/builtins-definitions.h
-@@ -893,38 +893,6 @@
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_BUILTINS_BUILTINS_DEFINITIONS_H_
+ #define V8_BUILTINS_BUILTINS_DEFINITIONS_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "builtins-generated/bytecodes-builtins-list.h"
+ 
+@@ -893,6 +895,7 @@
    CPP(ReflectOwnKeys)                                                          \
    CPP(ReflectSet)                                                              \
                                                                                 \
--  /* RegExp */                                                                 \
--  CPP(RegExpCapture1Getter)                                                    \
--  CPP(RegExpCapture2Getter)                                                    \
--  CPP(RegExpCapture3Getter)                                                    \
--  CPP(RegExpCapture4Getter)                                                    \
--  CPP(RegExpCapture5Getter)                                                    \
--  CPP(RegExpCapture6Getter)                                                    \
--  CPP(RegExpCapture7Getter)                                                    \
--  CPP(RegExpCapture8Getter)                                                    \
--  CPP(RegExpCapture9Getter)                                                    \
--  /* ES #sec-regexp-pattern-flags */                                           \
--  TFJ(RegExpConstructor, kJSArgcReceiverSlots + 2, kReceiver, kPattern,        \
--      kFlags)                                                                  \
--  CPP(RegExpInputGetter)                                                       \
--  CPP(RegExpInputSetter)                                                       \
--  CPP(RegExpLastMatchGetter)                                                   \
--  CPP(RegExpLastParenGetter)                                                   \
--  CPP(RegExpLeftContextGetter)                                                 \
--  /* ES #sec-regexp.prototype.compile */                                       \
--  TFJ(RegExpPrototypeCompile, kJSArgcReceiverSlots + 2, kReceiver, kPattern,   \
--      kFlags)                                                                  \
--  CPP(RegExpPrototypeToString)                                                 \
--  CPP(RegExpRightContextGetter)                                                \
++  IF_V8_ENABLE_REGEXP( \
+   /* RegExp */                                                                 \
+   CPP(RegExpCapture1Getter)                                                    \
+   CPP(RegExpCapture2Getter)                                                    \
+@@ -924,7 +927,8 @@
+       kMatchInfo)                                                              \
+   ASM(RegExpInterpreterTrampoline, RegExpTrampoline)                           \
+   ASM(RegExpExperimentalTrampoline, RegExpTrampoline)                          \
 -                                                                               \
--  /* RegExp helpers */                                                         \
--  TFS(RegExpExecAtom, NeedsContext::kYes, kRegExp, kString, kLastIndex,        \
--      kMatchInfo)                                                              \
--  TFS(RegExpExecInternal, NeedsContext::kYes, kRegExp, kString, kLastIndex,    \
--      kMatchInfo)                                                              \
--  ASM(RegExpInterpreterTrampoline, RegExpTrampoline)                           \
--  ASM(RegExpExperimentalTrampoline, RegExpTrampoline)                          \
--                                                                               \
++                                                                              \
++  )                                                                           \
    /* Set */                                                                    \
    TFS(FindOrderedHashSetEntry, NeedsContext::kYes, kTable, kKey)               \
    TFJ(SetConstructor, kDontAdaptArgumentsSentinel)                             \
-@@ -989,14 +957,10 @@
+@@ -989,14 +993,20 @@
    /* ES6 #sec-string.prototype.lastindexof */                                  \
    CPP(StringPrototypeLastIndexOf)                                              \
    /* ES #sec-string.prototype.matchAll */                                      \
 -  TFJ(StringPrototypeMatchAll, kJSArgcReceiverSlots + 1, kReceiver, kRegexp)   \
++  IF_V8_ENABLE_REGEXP( \
++  TFJ(StringPrototypeMatchAll, kJSArgcReceiverSlots + 1, kReceiver, kRegexp)  \
++  )                                                                           \
    /* ES6 #sec-string.prototype.localecompare */                                \
    CPP(StringPrototypeLocaleCompare)                                            \
    /* ES6 #sec-string.prototype.replace */                                      \
--  TFJ(StringPrototypeReplace, kJSArgcReceiverSlots + 2, kReceiver, kSearch,    \
++  IF_V8_ENABLE_REGEXP( \
+   TFJ(StringPrototypeReplace, kJSArgcReceiverSlots + 2, kReceiver, kSearch,    \
 -      kReplace)                                                                \
++      kReplace)                                                               \
++  )                                                                           \
    /* ES6 #sec-string.prototype.split */                                        \
 -  TFJ(StringPrototypeSplit, kDontAdaptArgumentsSentinel)                       \
++  IF_V8_ENABLE_REGEXP( \
++  TFJ(StringPrototypeSplit, kDontAdaptArgumentsSentinel)                      \
++  )                                                                           \
    /* ES6 #sec-string.raw */                                                    \
    CPP(StringRaw)                                                               \
                                                                                 \
+--- a/v8/src/builtins/builtins-regexp-gen.cc
++++ b/v8/src/builtins/builtins-regexp-gen.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/builtins/builtins-regexp-gen.h"
+ 
+ #include <optional>
+@@ -1704,3 +1705,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/builtins/builtins-regexp.cc
++++ b/v8/src/builtins/builtins-regexp.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/builtins/builtins-utils-inl.h"
+ #include "src/builtins/builtins.h"
+ #include "src/logging/counters.h"
+@@ -143,3 +144,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
 --- a/v8/src/builtins/builtins-string-gen.cc
 +++ b/v8/src/builtins/builtins-string-gen.cc
-@@ -5,7 +5,6 @@
+@@ -5,7 +5,9 @@
  #include "src/builtins/builtins-string-gen.h"
  
  #include "src/base/strings.h"
--#include "src/builtins/builtins-regexp-gen.h"
++#if V8_ENABLE_REGEXP
+ #include "src/builtins/builtins-regexp-gen.h"
++#endif  // V8_ENABLE_REGEXP
  #include "src/builtins/builtins-utils-gen.h"
  #include "src/builtins/builtins.h"
  #include "src/codegen/code-stub-assembler-inl.h"
-@@ -1065,82 +1064,7 @@
+@@ -1065,6 +1067,7 @@
  
  #endif  // V8_ENABLE_EXPERIMENTAL_TSA_BUILTINS
  
--void StringBuiltinsAssembler::MaybeCallFunctionAtSymbol(
--    const TNode<Context> context, const TNode<Object> object,
--    const TNode<Object> maybe_string, Handle<Symbol> symbol,
--    DescriptorIndexNameValue additional_property_to_check,
--    const NodeFunction0& regexp_call, const NodeFunction1& generic_call) {
--  Label out(this), no_protector(this), object_is_heapobject(this);
--  Label get_property_lookup(this);
--
--  // The protector guarantees that that the Number and String wrapper
--  // prototypes do not contain Symbol.{matchAll|replace|split} (aka.
--  // @@matchAll, @@replace @@split).
--  GotoIf(IsNumberStringNotRegexpLikeProtectorCellInvalid(), &no_protector);
--  // Smi is safe thanks to the protector.
--  GotoIf(TaggedIsSmi(object), &out);
--  // String is safe thanks to the protector.
--  GotoIf(IsString(CAST(object)), &out);
--  // HeapNumber is safe thanks to the protector.
--  Branch(IsHeapNumber(CAST(object)), &out, &object_is_heapobject);
--
--  BIND(&no_protector);
--  // Smis have to go through the GetProperty lookup in case Number.prototype or
--  // Object.prototype was modified.
--  Branch(TaggedIsSmi(object), &get_property_lookup, &object_is_heapobject);
--
--  // Take the fast path for RegExps.
--  // There's two conditions: {object} needs to be a fast regexp, and
--  // {maybe_string} must be a string (we can't call ToString on the fast path
--  // since it may mutate {object}).
--  {
--    Label stub_call(this), slow_lookup(this);
--
--    BIND(&object_is_heapobject);
--    TNode<HeapObject> heap_object = CAST(object);
--
--    GotoIf(TaggedIsSmi(maybe_string), &slow_lookup);
--    GotoIfNot(IsString(CAST(maybe_string)), &slow_lookup);
--
--    // Note we don't run a full (= permissive) check here, because passing the
--    // check implies calling the fast variants of target builtins, which assume
--    // we've already made their appropriate fast path checks. This is not the
--    // case though; e.g.: some of the target builtins access flag getters.
--    // TODO(jgruber): Handle slow flag accesses on the fast path and make this
--    // permissive.
--    RegExpBuiltinsAssembler regexp_asm(state());
--    regexp_asm.BranchIfFastRegExp(
--        context, heap_object, LoadMap(heap_object),
--        PrototypeCheckAssembler::kCheckPrototypePropertyConstness,
--        additional_property_to_check, &stub_call, &slow_lookup);
--
--    BIND(&stub_call);
--    // TODO(jgruber): Add a no-JS scope once it exists.
--    regexp_call();
--
--    BIND(&slow_lookup);
--    // Special case null and undefined to skip the property lookup.
--    Branch(IsNullOrUndefined(heap_object), &out, &get_property_lookup);
--  }
--
--  // Fall back to a slow lookup of {heap_object[symbol]}.
--  //
--  // The spec uses GetMethod({heap_object}, {symbol}), which has a few quirks:
--  // * null values are turned into undefined, and
--  // * an exception is thrown if the value is not undefined, null, or callable.
--  // We handle the former by jumping to {out} for null values as well, while
--  // the latter is already handled by the Call({maybe_func}) operation.
--
--  BIND(&get_property_lookup);
--  const TNode<Object> maybe_func = GetProperty(context, object, symbol);
--  GotoIf(IsUndefined(maybe_func), &out);
--  GotoIf(IsNull(maybe_func), &out);
--
--  // Attempt to call the function.
--  generic_call(maybe_func);
--
--  BIND(&out);
--}
-+
++#if V8_ENABLE_REGEXP
+ void StringBuiltinsAssembler::MaybeCallFunctionAtSymbol(
+     const TNode<Context> context, const TNode<Object> object,
+     const TNode<Object> maybe_string, Handle<Symbol> symbol,
+@@ -1141,6 +1144,7 @@
+ 
+   BIND(&out);
+ }
++#endif  // V8_ENABLE_REGEXP
  
  const TNode<Smi> StringBuiltinsAssembler::IndexOfDollarChar(
      const TNode<Context> context, const TNode<String> string) {
-@@ -1192,266 +1116,10 @@
+@@ -1192,6 +1196,7 @@
  }
  
  // ES6 #sec-string.prototype.replace
--TF_BUILTIN(StringPrototypeReplace, StringBuiltinsAssembler) {
--  Label out(this);
--
--  auto receiver = Parameter<Object>(Descriptor::kReceiver);
--  const auto search = Parameter<Object>(Descriptor::kSearch);
--  const auto replace = Parameter<Object>(Descriptor::kReplace);
--  auto context = Parameter<Context>(Descriptor::kContext);
--
--  const TNode<Smi> smi_zero = SmiConstant(0);
--
--  RequireObjectCoercible(context, receiver, "String.prototype.replace");
--
--  // Redirect to replacer method if {search[@@replace]} is not undefined.
--  {
--    Label next(this);
--
--    MaybeCallFunctionAtSymbol(
--        context, search, receiver, isolate()->factory()->replace_symbol(),
--        DescriptorIndexNameValue{
--            JSRegExp::kSymbolReplaceFunctionDescriptorIndex,
--            RootIndex::kreplace_symbol, Context::REGEXP_REPLACE_FUNCTION_INDEX},
--        [=, this]() {
--          Return(CallBuiltin(Builtin::kRegExpReplace, context, search, receiver,
--                             replace));
--        },
--        [=, this](TNode<Object> fn) {
--          Return(Call(context, fn, search, receiver, replace));
--        });
--    Goto(&next);
--
--    BIND(&next);
--  }
--
--  // Convert {receiver} and {search} to strings.
--
--  const TNode<String> subject_string = ToString_Inline(context, receiver);
--  const TNode<String> search_string = ToString_Inline(context, search);
--
--  const TNode<IntPtrT> subject_length = LoadStringLengthAsWord(subject_string);
--  const TNode<IntPtrT> search_length = LoadStringLengthAsWord(search_string);
--
--  // Fast-path single-char {search}, long cons {receiver}, and simple string
--  // {replace}.
--  {
--    Label next(this);
--
--    GotoIfNot(WordEqual(search_length, IntPtrConstant(1)), &next);
--    GotoIfNot(IntPtrGreaterThan(subject_length, IntPtrConstant(0xFF)), &next);
--    GotoIf(TaggedIsSmi(replace), &next);
--    GotoIfNot(IsString(CAST(replace)), &next);
--
--    TNode<String> replace_string = CAST(replace);
--    const TNode<Uint16T> subject_instance_type =
--        LoadInstanceType(subject_string);
--    GotoIfNot(IsConsStringInstanceType(subject_instance_type), &next);
--
--    GotoIf(TaggedIsPositiveSmi(IndexOfDollarChar(context, replace_string)),
--           &next);
--
--    // Searching by traversing a cons string tree and replace with cons of
--    // slices works only when the replaced string is a single character, being
--    // replaced by a simple string and only pays off for long strings.
--    // TODO(jgruber): Reevaluate if this is still beneficial.
--    // TODO(jgruber): TailCallRuntime when it correctly handles adapter frames.
--    Return(CallRuntime(Runtime::kStringReplaceOneCharWithString, context,
--                       subject_string, search_string, replace_string));
--
--    BIND(&next);
--  }
--
--  // TODO(jgruber): Extend StringIndexOf to handle two-byte strings and
--  // longer substrings - we can handle up to 8 chars (one-byte) / 4 chars
--  // (2-byte).
--
--  const TNode<Smi> match_start_index =
--      CAST(CallBuiltin(Builtin::kStringIndexOf, context, subject_string,
--                       search_string, smi_zero));
--
--  // Early exit if no match found.
--  {
--    Label next(this), return_subject(this);
--
--    GotoIfNot(SmiIsNegative(match_start_index), &next);
--
--    // The spec requires to perform ToString(replace) if the {replace} is not
--    // callable even if we are going to exit here.
--    // Since ToString() being applied to Smi does not have side effects for
--    // numbers we can skip it.
--    GotoIf(TaggedIsSmi(replace), &return_subject);
--    GotoIf(IsCallableMap(LoadMap(CAST(replace))), &return_subject);
--
--    // TODO(jgruber): Could introduce ToStringSideeffectsStub which only
--    // performs observable parts of ToString.
--    ToString_Inline(context, replace);
--    Goto(&return_subject);
--
--    BIND(&return_subject);
--    Return(subject_string);
--
--    BIND(&next);
--  }
--
--  const TNode<Smi> match_end_index =
--      SmiAdd(match_start_index, SmiFromIntPtr(search_length));
--
--  TVARIABLE(String, var_result, EmptyStringConstant());
--
--  // Compute the prefix.
--  {
--    Label next(this);
--
--    GotoIf(SmiEqual(match_start_index, smi_zero), &next);
--    const TNode<String> prefix =
--        CAST(CallBuiltin(Builtin::kStringSubstring, context, subject_string,
--                         IntPtrConstant(0), SmiUntag(match_start_index)));
--    var_result = prefix;
--
--    Goto(&next);
--    BIND(&next);
--  }
--
--  // Compute the string to replace with.
--
--  Label if_iscallablereplace(this), if_notcallablereplace(this);
--  GotoIf(TaggedIsSmi(replace), &if_notcallablereplace);
--  Branch(IsCallableMap(LoadMap(CAST(replace))), &if_iscallablereplace,
--         &if_notcallablereplace);
--
--  BIND(&if_iscallablereplace);
--  {
--    const TNode<Object> replacement =
--        Call(context, replace, UndefinedConstant(), search_string,
--             match_start_index, subject_string);
--    const TNode<String> replacement_string =
--        ToString_Inline(context, replacement);
--    var_result = CAST(CallBuiltin(Builtin::kStringAdd_CheckNone, context,
--                                  var_result.value(), replacement_string));
--    Goto(&out);
--  }
--
--  BIND(&if_notcallablereplace);
--  {
--    const TNode<String> replace_string = ToString_Inline(context, replace);
--    const TNode<Object> replacement =
--        GetSubstitution(context, subject_string, match_start_index,
--                        match_end_index, replace_string);
--    var_result = CAST(CallBuiltin(Builtin::kStringAdd_CheckNone, context,
--                                  var_result.value(), replacement));
--    Goto(&out);
--  }
--
--  BIND(&out);
--  {
--    const TNode<Object> suffix =
--        CallBuiltin(Builtin::kStringSubstring, context, subject_string,
--                    SmiUntag(match_end_index), subject_length);
--    const TNode<Object> result = CallBuiltin(
--        Builtin::kStringAdd_CheckNone, context, var_result.value(), suffix);
--    Return(result);
--  }
--}
-+
++#if V8_ENABLE_REGEXP
+ TF_BUILTIN(StringPrototypeReplace, StringBuiltinsAssembler) {
+   Label out(this);
+ 
+@@ -1353,8 +1358,10 @@
+     Return(result);
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
  
  // ES #sec-string.prototype.matchAll
--TF_BUILTIN(StringPrototypeMatchAll, StringBuiltinsAssembler) {
--  char const* method_name = "String.prototype.matchAll";
--
--  auto context = Parameter<Context>(Descriptor::kContext);
--  auto maybe_regexp = Parameter<Object>(Descriptor::kRegexp);
--  auto receiver = Parameter<Object>(Descriptor::kReceiver);
--  TNode<NativeContext> native_context = LoadNativeContext(context);
--
--  // 1. Let O be ? RequireObjectCoercible(this value).
--  RequireObjectCoercible(context, receiver, method_name);
--
--  RegExpMatchAllAssembler regexp_asm(state());
--  {
--    Label fast(this), slow(this, Label::kDeferred),
--        throw_exception(this, Label::kDeferred),
--        throw_flags_exception(this, Label::kDeferred), next(this);
--
--    // 2. If regexp is neither undefined nor null, then
--    //   a. Let isRegExp be ? IsRegExp(regexp).
--    //   b. If isRegExp is true, then
--    //     i. Let flags be ? Get(regexp, "flags").
--    //    ii. Perform ? RequireObjectCoercible(flags).
--    //   iii. If ? ToString(flags) does not contain "g", throw a
--    //        TypeError exception.
--    GotoIf(TaggedIsSmi(maybe_regexp), &next);
--    TNode<HeapObject> heap_maybe_regexp = CAST(maybe_regexp);
--    regexp_asm.BranchIfFastRegExpForMatch(context, heap_maybe_regexp, &fast,
--                                          &slow);
--
--    BIND(&fast);
--    {
--      TNode<BoolT> is_global = regexp_asm.FlagGetter(context, heap_maybe_regexp,
--                                                     JSRegExp::kGlobal, true);
--      Branch(is_global, &next, &throw_exception);
--    }
--
--    BIND(&slow);
--    {
--      GotoIfNot(regexp_asm.IsRegExp(native_context, heap_maybe_regexp), &next);
--
--      TNode<Object> flags = GetProperty(context, heap_maybe_regexp,
--                                        isolate()->factory()->flags_string());
--      // TODO(syg): Implement a RequireObjectCoercible with more flexible error
--      // messages.
--      GotoIf(IsNullOrUndefined(flags), &throw_flags_exception);
--
--      TNode<String> flags_string = ToString_Inline(context, flags);
--      TNode<String> global_char_string = StringConstant("g");
--      TNode<Smi> global_ix =
--          CAST(CallBuiltin(Builtin::kStringIndexOf, context, flags_string,
--                           global_char_string, SmiConstant(0)));
--      Branch(SmiEqual(global_ix, SmiConstant(-1)), &throw_exception, &next);
--    }
--
--    BIND(&throw_exception);
--    ThrowTypeError(context, MessageTemplate::kRegExpGlobalInvokedOnNonGlobal,
--                   method_name);
--
--    BIND(&throw_flags_exception);
--    ThrowTypeError(context,
--                   MessageTemplate::kStringMatchAllNullOrUndefinedFlags);
--
--    BIND(&next);
--  }
--  //   a. Let matcher be ? GetMethod(regexp, @@matchAll).
--  //   b. If matcher is not undefined, then
--  //     i. Return ? Call(matcher, regexp, « O »).
--  auto if_regexp_call = [&] {
--    // MaybeCallFunctionAtSymbol guarantees fast path is chosen only if
--    // maybe_regexp is a fast regexp and receiver is a string.
--    TNode<String> s = CAST(receiver);
--
--    Return(
--        RegExpPrototypeMatchAllImpl(context, native_context, maybe_regexp, s));
--  };
--  auto if_generic_call = [=, this](TNode<Object> fn) {
--    Return(Call(context, fn, maybe_regexp, receiver));
--  };
--  MaybeCallFunctionAtSymbol(
--      context, maybe_regexp, receiver, isolate()->factory()->match_all_symbol(),
--      DescriptorIndexNameValue{JSRegExp::kSymbolMatchAllFunctionDescriptorIndex,
--                               RootIndex::kmatch_all_symbol,
--                               Context::REGEXP_MATCH_ALL_FUNCTION_INDEX},
--      if_regexp_call, if_generic_call);
--
--  // 3. Let S be ? ToString(O).
--  TNode<String> s = ToString_Inline(context, receiver);
--
--  // 4. Let rx be ? RegExpCreate(R, "g").
--  TNode<Object> rx = regexp_asm.RegExpCreate(context, native_context,
--                                             maybe_regexp, StringConstant("g"));
--
--  // 5. Return ? Invoke(rx, @@matchAll, « S »).
--  TNode<Object> match_all_func =
--      GetProperty(context, rx, isolate()->factory()->match_all_symbol());
--  Return(Call(context, match_all_func, rx, s));
--}
-+
++#if V8_ENABLE_REGEXP
+ TF_BUILTIN(StringPrototypeMatchAll, StringBuiltinsAssembler) {
+   char const* method_name = "String.prototype.matchAll";
+ 
+@@ -1452,6 +1459,7 @@
+       GetProperty(context, rx, isolate()->factory()->match_all_symbol());
+   Return(Call(context, match_all_func, rx, s));
+ }
++#endif  // V8_ENABLE_REGEXP
  
  TNode<JSArray> StringBuiltinsAssembler::StringToArray(
      TNode<NativeContext> context, TNode<String> subject_string,
-@@ -1532,107 +1200,7 @@
+@@ -1532,6 +1540,7 @@
  }
  
  // ES6 section 21.1.3.19 String.prototype.split ( separator, limit )
--TF_BUILTIN(StringPrototypeSplit, StringBuiltinsAssembler) {
--  const int kSeparatorArg = 0;
--  const int kLimitArg = 1;
--
--  const TNode<IntPtrT> argc = ChangeInt32ToIntPtr(
--      UncheckedParameter<Int32T>(Descriptor::kJSActualArgumentsCount));
--  CodeStubArguments args(this, argc);
--
--  TNode<Object> receiver = args.GetReceiver();
--  const TNode<Object> separator = args.GetOptionalArgumentValue(kSeparatorArg);
--  const TNode<Object> limit = args.GetOptionalArgumentValue(kLimitArg);
--  auto context = Parameter<NativeContext>(Descriptor::kContext);
--
--  TNode<Smi> smi_zero = SmiConstant(0);
--
--  RequireObjectCoercible(context, receiver, "String.prototype.split");
--
--  // Redirect to splitter method if {separator[@@split]} is not undefined.
--
--  MaybeCallFunctionAtSymbol(
--      context, separator, receiver, isolate()->factory()->split_symbol(),
--      DescriptorIndexNameValue{JSRegExp::kSymbolSplitFunctionDescriptorIndex,
--                               RootIndex::ksplit_symbol,
--                               Context::REGEXP_SPLIT_FUNCTION_INDEX},
--      [&]() {
--        args.PopAndReturn(CallBuiltin(Builtin::kRegExpSplit, context, separator,
--                                      receiver, limit));
--      },
--      [&](TNode<Object> fn) {
--        args.PopAndReturn(Call(context, fn, separator, receiver, limit));
--      });
--
--  // String and integer conversions.
--
--  TNode<String> subject_string = ToString_Inline(context, receiver);
--  TNode<Number> limit_number = Select<Number>(
--      IsUndefined(limit), [=, this] { return NumberConstant(kMaxUInt32); },
--      [=, this] { return ToUint32(context, limit); });
--  const TNode<String> separator_string = ToString_Inline(context, separator);
--
--  Label return_empty_array(this);
--
--  // Shortcut for {limit} == 0.
--  GotoIf(TaggedEqual(limit_number, smi_zero), &return_empty_array);
--
--  // ECMA-262 says that if {separator} is undefined, the result should
--  // be an array of size 1 containing the entire string.
--  {
--    Label next(this);
--    GotoIfNot(IsUndefined(separator), &next);
--
--    const ElementsKind kind = PACKED_ELEMENTS;
--    const TNode<NativeContext> native_context = LoadNativeContext(context);
--    TNode<Map> array_map = LoadJSArrayElementsMap(kind, native_context);
--
--    TNode<Smi> length = SmiConstant(1);
--    TNode<IntPtrT> capacity = IntPtrConstant(1);
--    TNode<JSArray> result = AllocateJSArray(kind, array_map, capacity, length);
--
--    TNode<FixedArray> fixed_array = CAST(LoadElements(result));
--    StoreFixedArrayElement(fixed_array, 0, subject_string);
--
--    args.PopAndReturn(result);
--
--    BIND(&next);
--  }
--
--  // If the separator string is empty then return the elements in the subject.
--  {
--    Label next(this);
--    GotoIfNot(SmiEqual(LoadStringLengthAsSmi(separator_string), smi_zero),
--              &next);
--
--    TNode<Smi> subject_length = LoadStringLengthAsSmi(subject_string);
--    GotoIf(SmiEqual(subject_length, smi_zero), &return_empty_array);
--
--    args.PopAndReturn(
--        StringToArray(context, subject_string, subject_length, limit_number));
--
--    BIND(&next);
--  }
--
--  const TNode<Object> result =
--      CallRuntime(Runtime::kStringSplit, context, subject_string,
--                  separator_string, limit_number);
--  args.PopAndReturn(result);
--
--  BIND(&return_empty_array);
--  {
--    const ElementsKind kind = PACKED_ELEMENTS;
--    const TNode<NativeContext> native_context = LoadNativeContext(context);
--    TNode<Map> array_map = LoadJSArrayElementsMap(kind, native_context);
--
--    TNode<Smi> length = smi_zero;
--    TNode<IntPtrT> capacity = IntPtrConstant(0);
--    TNode<JSArray> result_array =
--        AllocateJSArray(kind, array_map, capacity, length);
--
--    args.PopAndReturn(result_array);
--  }
--}
-+
++#if V8_ENABLE_REGEXP
+ TF_BUILTIN(StringPrototypeSplit, StringBuiltinsAssembler) {
+   const int kSeparatorArg = 0;
+   const int kLimitArg = 1;
+@@ -1633,6 +1642,7 @@
+     args.PopAndReturn(result_array);
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
  
  TF_BUILTIN(StringSubstring, StringBuiltinsAssembler) {
    auto string = Parameter<String>(Descriptor::kString);
 --- a/v8/src/builtins/builtins-string-gen.h
 +++ b/v8/src/builtins/builtins-string-gen.h
-@@ -167,28 +167,6 @@
+@@ -167,6 +167,7 @@
                                      TNode<Int32T> instance_type,
                                      Label* cannot_deref);
  
--  // Implements boilerplate logic for {match, split, replace, search} of the
--  // form:
--  //
--  //  if (!IS_NULL_OR_UNDEFINED(object)) {
--  //    var maybe_function = object[symbol];
--  //    if (!IS_UNDEFINED(maybe_function)) {
--  //      return %_Call(maybe_function, ...);
--  //    }
--  //  }
--  //
--  // Contains fast paths for Smi and RegExp objects.
--  // Important: {regexp_call} may not contain any code that can call into JS.
--  using NodeFunction0 = std::function<void()>;
--  using NodeFunction1 = std::function<void(TNode<Object> fn)>;
--  using DescriptorIndexNameValue =
--      PrototypeCheckAssembler::DescriptorIndexNameValue;
--  void MaybeCallFunctionAtSymbol(
--      const TNode<Context> context, const TNode<Object> object,
--      const TNode<Object> maybe_string, Handle<Symbol> symbol,
--      DescriptorIndexNameValue additional_property_to_check,
--      const NodeFunction0& regexp_call, const NodeFunction1& generic_call);
--
++#if V8_ENABLE_REGEXP
+   // Implements boilerplate logic for {match, split, replace, search} of the
+   // form:
+   //
+@@ -189,6 +190,7 @@
+       DescriptorIndexNameValue additional_property_to_check,
+       const NodeFunction0& regexp_call, const NodeFunction1& generic_call);
+ 
++#endif  // V8_ENABLE_REGEXP
   private:
    template <typename T>
    TNode<String> AllocAndCopyStringCharacters(TNode<T> from,
 --- a/v8/src/builtins/cast.tq
 +++ b/v8/src/builtins/cast.tq
-@@ -454,11 +454,7 @@
+@@ -454,11 +454,6 @@
    goto CastError;
  }
  
@@ -750,11 +254,10 @@
 -  if (regexp::IsRegExpResult(o)) return %RawDownCast<JSRegExpResult>(o);
 -  goto CastError;
 -}
-+
  
  Cast<JSSloppyArgumentsObject>(
      implicit context: Context)(o: HeapObject): JSSloppyArgumentsObject
-@@ -495,17 +491,7 @@
+@@ -495,17 +490,6 @@
    }
  }
  
@@ -769,11 +272,10 @@
 -  }
 -  goto CastError;
 -}
-+
  
  Cast<FastJSArray>(implicit context: Context)(o: HeapObject): FastJSArray
      labels CastError {
-@@ -851,11 +837,7 @@
+@@ -851,11 +835,6 @@
    return %RawDownCast<&T>(r);
  }
  
@@ -782,7 +284,6 @@
 -  dcheck(Is<RegExpMatchInfo>(o));
 -  return %RawDownCast<RegExpMatchInfo>(o);
 -}
-+
  
  UnsafeCast<ArrayList>(implicit context: Context)(o: Object): ArrayList {
    dcheck(Is<ArrayList>(o));
@@ -830,117 +331,102 @@
 +  return false;
 +}
 +}
+--- a/v8/src/builtins/regexp.tq
++++ b/v8/src/builtins/regexp.tq
+@@ -459,3 +459,32 @@
+   return RegExpInitializeAndCompile(context, regexp, pattern, flags);
+ }
+ }
++
++// These casts depend on the RegExp library and are selected with it.
++Cast<JSRegExpResult>(implicit context: Context)(o: HeapObject): JSRegExpResult
++    labels CastError {
++  if (regexp::IsRegExpResult(o)) return %RawDownCast<JSRegExpResult>(o);
++  goto CastError;
++}
++
++Cast<FastJSRegExp>(implicit context: Context)(o: HeapObject): FastJSRegExp
++    labels CastError {
++  // TODO(jgruber): Remove or redesign this. There is no single 'fast' regexp,
++  // the conditions to make a regexp object fast differ based on the callsite.
++  // For now, run the strict variant since replace (the only current callsite)
++  // accesses flag getters.
++  if (regexp::IsFastRegExpStrict(o)) {
++    return %RawDownCast<FastJSRegExp>(o);
++  }
++  goto CastError;
++}
++
++macro GetRegExpLastMatchInfo(implicit context: Context)(): RegExpMatchInfo {
++  return *NativeContextSlot(ContextSlot::REGEXP_LAST_MATCH_INFO_INDEX);
++}
++
++UnsafeCast<RegExpMatchInfo>(
++    implicit context: Context)(o: Object): RegExpMatchInfo {
++  dcheck(Is<RegExpMatchInfo>(o));
++  return %RawDownCast<RegExpMatchInfo>(o);
++}
 --- a/v8/src/codegen/external-reference.cc
 +++ b/v8/src/codegen/external-reference.cc
-@@ -1002,75 +1002,6 @@
+@@ -1002,6 +1002,7 @@
    return ExternalReference::Create(&thunk_fun, thunk_type);
  }
  
--#if V8_TARGET_ARCH_X64
--#define re_stack_check_func RegExpMacroAssemblerX64::CheckStackGuardState
--#elif V8_TARGET_ARCH_IA32
--#define re_stack_check_func RegExpMacroAssemblerIA32::CheckStackGuardState
--#elif V8_TARGET_ARCH_ARM64
--#define re_stack_check_func RegExpMacroAssemblerARM64::CheckStackGuardState
--#elif V8_TARGET_ARCH_ARM
--#define re_stack_check_func RegExpMacroAssemblerARM::CheckStackGuardState
--#elif V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
--#define re_stack_check_func RegExpMacroAssemblerPPC::CheckStackGuardState
--#elif V8_TARGET_ARCH_MIPS64
--#define re_stack_check_func RegExpMacroAssemblerMIPS::CheckStackGuardState
--#elif V8_TARGET_ARCH_LOONG64
--#define re_stack_check_func RegExpMacroAssemblerLOONG64::CheckStackGuardState
--#elif V8_TARGET_ARCH_S390
--#define re_stack_check_func RegExpMacroAssemblerS390::CheckStackGuardState
--#elif V8_TARGET_ARCH_RISCV32 || V8_TARGET_ARCH_RISCV64
--#define re_stack_check_func RegExpMacroAssemblerRISCV::CheckStackGuardState
--#else
--UNREACHABLE();
--#endif
--
--FUNCTION_REFERENCE(re_check_stack_guard_state, re_stack_check_func)
--#undef re_stack_check_func
--
--FUNCTION_REFERENCE(re_grow_stack, NativeRegExpMacroAssembler::GrowStack)
--
--FUNCTION_REFERENCE(re_match_for_call_from_js,
--                   IrregexpInterpreter::MatchForCallFromJs)
--
--FUNCTION_REFERENCE(re_experimental_match_for_call_from_js,
--                   ExperimentalRegExp::MatchForCallFromJs)
--
--FUNCTION_REFERENCE(re_case_insensitive_compare_unicode,
--                   NativeRegExpMacroAssembler::CaseInsensitiveCompareUnicode)
--
--FUNCTION_REFERENCE(re_case_insensitive_compare_non_unicode,
--                   NativeRegExpMacroAssembler::CaseInsensitiveCompareNonUnicode)
--
--FUNCTION_REFERENCE(re_is_character_in_range_array,
--                   RegExpMacroAssembler::IsCharacterInRangeArray)
--
--ExternalReference ExternalReference::re_word_character_map() {
--  return ExternalReference(
--      NativeRegExpMacroAssembler::word_character_map_address());
--}
--
--ExternalReference ExternalReference::address_of_static_offsets_vector(
--    Isolate* isolate) {
--  return ExternalReference(
--      reinterpret_cast<Address>(isolate->jsregexp_static_offsets_vector()));
--}
--
--ExternalReference ExternalReference::address_of_regexp_stack_limit_address(
--    Isolate* isolate) {
--  return ExternalReference(isolate->regexp_stack()->limit_address_address());
--}
--
--ExternalReference ExternalReference::address_of_regexp_stack_memory_top_address(
--    Isolate* isolate) {
--  return ExternalReference(
--      isolate->regexp_stack()->memory_top_address_address());
--}
--
--ExternalReference ExternalReference::address_of_regexp_stack_stack_pointer(
--    Isolate* isolate) {
--  return ExternalReference(isolate->regexp_stack()->stack_pointer_address());
--}
--
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_X64
+ #define re_stack_check_func RegExpMacroAssemblerX64::CheckStackGuardState
+ #elif V8_TARGET_ARCH_IA32
+@@ -1071,6 +1072,7 @@
+   return ExternalReference(isolate->regexp_stack()->stack_pointer_address());
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
  FUNCTION_REFERENCE_WITH_TYPE(ieee754_acos_function, base::ieee754::acos,
                               BUILTIN_FP_CALL)
  FUNCTION_REFERENCE_WITH_TYPE(ieee754_acosh_function, base::ieee754::acosh,
 --- a/v8/src/codegen/external-reference.h
 +++ b/v8/src/codegen/external-reference.h
-@@ -68,13 +68,6 @@
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_CODEGEN_EXTERNAL_REFERENCE_H_
+ #define V8_CODEGEN_EXTERNAL_REFERENCE_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "src/common/globals.h"
+ #include "src/runtime/runtime.h"
+@@ -68,13 +70,15 @@
    V(debug_suspended_generator_address,                                         \
      "Debug::step_suspended_generator_address()")                               \
    V(context_address, "Isolate::context_address()")                             \
--  V(address_of_regexp_stack_limit_address,                                     \
--    "RegExpStack::limit_address_address()")                                    \
--  V(address_of_regexp_stack_memory_top_address,                                \
--    "RegExpStack::memory_top_address_address()")                               \
--  V(address_of_regexp_stack_stack_pointer,                                     \
--    "RegExpStack::stack_pointer_address()")                                    \
++  IF_V8_ENABLE_REGEXP( \
+   V(address_of_regexp_stack_limit_address,                                     \
+     "RegExpStack::limit_address_address()")                                    \
+   V(address_of_regexp_stack_memory_top_address,                                \
+     "RegExpStack::memory_top_address_address()")                               \
+   V(address_of_regexp_stack_stack_pointer,                                     \
+     "RegExpStack::stack_pointer_address()")                                    \
 -  V(address_of_static_offsets_vector, "OffsetsVector::static_offsets_vector")  \
++  V(address_of_static_offsets_vector, "OffsetsVector::static_offsets_vector") \
++  )                                                                           \
    V(thread_in_wasm_flag_address_address,                                       \
      "Isolate::thread_in_wasm_flag_address_address")                            \
    EXTERNAL_REFERENCE_LIST_WITH_ISOLATE_SANDBOX(V)
-@@ -430,19 +423,6 @@
+@@ -430,6 +434,7 @@
            "tsan_relaxed_load_function_64_bits")                                \
    V(js_finalization_registry_remove_cell_from_unregister_token_map,            \
      "JSFinalizationRegistry::RemoveCellFromUnregisterTokenMap")                \
--  V(re_case_insensitive_compare_unicode,                                       \
--    "RegExpMacroAssembler::CaseInsensitiveCompareUnicode()")                   \
--  V(re_case_insensitive_compare_non_unicode,                                   \
--    "RegExpMacroAssembler::CaseInsensitiveCompareNonUnicode()")                \
--  V(re_is_character_in_range_array,                                            \
--    "RegExpMacroAssembler::IsCharacterInRangeArray()")                         \
--  V(re_check_stack_guard_state,                                                \
--    "RegExpMacroAssembler*::CheckStackGuardState()")                           \
--  V(re_grow_stack, "NativeRegExpMacroAssembler::GrowStack()")                  \
--  V(re_word_character_map, "NativeRegExpMacroAssembler::word_character_map")   \
--  V(re_match_for_call_from_js, "IrregexpInterpreter::MatchForCallFromJs")      \
--  V(re_experimental_match_for_call_from_js,                                    \
++  IF_V8_ENABLE_REGEXP( \
+   V(re_case_insensitive_compare_unicode,                                       \
+     "RegExpMacroAssembler::CaseInsensitiveCompareUnicode()")                   \
+   V(re_case_insensitive_compare_non_unicode,                                   \
+@@ -442,7 +447,8 @@
+   V(re_word_character_map, "NativeRegExpMacroAssembler::word_character_map")   \
+   V(re_match_for_call_from_js, "IrregexpInterpreter::MatchForCallFromJs")      \
+   V(re_experimental_match_for_call_from_js,                                    \
 -    "ExperimentalRegExp::MatchForCallFromJs")                                  \
++    "ExperimentalRegExp::MatchForCallFromJs")                                 \
++  )                                                                           \
    V(typed_array_and_rab_gsab_typed_array_elements_kind_shifts,                 \
      "TypedArrayAndRabGsabTypedArrayElementsKindShifts")                        \
    V(typed_array_and_rab_gsab_typed_array_elements_kind_sizes,                  \
@@ -956,1517 +442,1206 @@
      "Operation is ambiguous because there are more than one private name"      \
 --- a/v8/src/compiler/js-call-reducer.cc
 +++ b/v8/src/compiler/js-call-reducer.cc
-@@ -5109,8 +5109,6 @@
+@@ -5109,8 +5109,10 @@
        return ReduceMapPrototypeHas(node);
      case Builtin::kSetPrototypeHas:
        return ReduceSetPrototypeHas(node);
--    case Builtin::kRegExpPrototypeTest:
--      return ReduceRegExpPrototypeTest(node);
++#if V8_ENABLE_REGEXP
+     case Builtin::kRegExpPrototypeTest:
+       return ReduceRegExpPrototypeTest(node);
++#endif  // V8_ENABLE_REGEXP
      case Builtin::kReturnReceiver:
        return ReduceReturnReceiver(node);
      case Builtin::kStringPrototypeIndexOf:
-@@ -8692,96 +8690,6 @@
+@@ -8692,6 +8694,7 @@
    return Changed(node);
  }
  
--Reduction JSCallReducer::ReduceRegExpPrototypeTest(Node* node) {
--  JSCallNode n(node);
--  CallParameters const& p = n.Parameters();
--  if (v8_flags.force_slow_path) return NoChange();
--  if (n.ArgumentCount() < 1) return NoChange();
--
--  if (p.speculation_mode() == SpeculationMode::kDisallowSpeculation) {
--    return NoChange();
--  }
--
--  Effect effect = n.effect();
--  Control control = n.control();
--  Node* regexp = n.receiver();
--
--  // Only the initial JSRegExp map is valid here, since the following lastIndex
--  // check as well as the lowered builtin call rely on a known location of the
--  // lastIndex field.
--  MapRef regexp_initial_map =
--      native_context().regexp_function(broker()).initial_map(broker());
--
--  MapInference inference(broker(), regexp, effect);
--  if (!inference.Is(regexp_initial_map)) return inference.NoChange();
--  ZoneRefSet<Map> const& regexp_maps = inference.GetMaps();
--
--  ZoneVector<PropertyAccessInfo> access_infos(graph()->zone());
--  AccessInfoFactory access_info_factory(broker(), graph()->zone());
--
--  for (MapRef map : regexp_maps) {
--    access_infos.push_back(broker()->GetPropertyAccessInfo(
--        map, broker()->exec_string(), AccessMode::kLoad));
--  }
--
--  PropertyAccessInfo ai_exec =
--      access_info_factory.FinalizePropertyAccessInfosAsOne(access_infos,
--                                                           AccessMode::kLoad);
--  if (ai_exec.IsInvalid()) return inference.NoChange();
--  if (!ai_exec.IsFastDataConstant()) return inference.NoChange();
--
--  // Do not reduce if the exec method is not on the prototype chain.
--  OptionalJSObjectRef holder = ai_exec.holder();
--  if (!holder.has_value()) return inference.NoChange();
--
--  // Bail out if the exec method is not the original one.
--  if (ai_exec.field_representation().IsDouble()) return inference.NoChange();
--  OptionalObjectRef constant = holder->GetOwnFastConstantDataProperty(
--      broker(), ai_exec.field_representation(), ai_exec.field_index(),
--      dependencies());
--  if (!constant.has_value() ||
--      !constant->equals(native_context().regexp_exec_function(broker()))) {
--    return inference.NoChange();
--  }
--
--  // Add proper dependencies on the {regexp}s [[Prototype]]s.
--  dependencies()->DependOnStablePrototypeChains(
--      ai_exec.lookup_start_object_maps(), kStartAtPrototype, holder.value());
--
--  inference.RelyOnMapsPreferStability(dependencies(), jsgraph(), &effect,
--                                      control, p.feedback());
--
--  Node* context = n.context();
--  FrameState frame_state = n.frame_state();
--  Node* search = n.Argument(0);
--  Node* search_string = effect = graph()->NewNode(
--      simplified()->CheckString(p.feedback()), search, effect, control);
--
--  Node* lastIndex = effect = graph()->NewNode(
--      simplified()->LoadField(AccessBuilder::ForJSRegExpLastIndex()), regexp,
--      effect, control);
--
--  Node* lastIndexSmi = effect = graph()->NewNode(
--      simplified()->CheckSmi(p.feedback()), lastIndex, effect, control);
--
--  Node* is_positive = graph()->NewNode(simplified()->NumberLessThanOrEqual(),
--                                       jsgraph()->ZeroConstant(), lastIndexSmi);
--
--  effect = graph()->NewNode(
--      simplified()->CheckIf(DeoptimizeReason::kNotASmi, p.feedback()),
--      is_positive, effect, control);
--
--  node->ReplaceInput(0, regexp);
--  node->ReplaceInput(1, search_string);
--  node->ReplaceInput(2, context);
--  node->ReplaceInput(3, frame_state);
--  node->ReplaceInput(4, effect);
--  node->ReplaceInput(5, control);
--  node->TrimInputCount(6);
--  NodeProperties::ChangeOp(node, javascript()->RegExpTest());
--  return Changed(node);
--}
--
++#if V8_ENABLE_REGEXP
+ Reduction JSCallReducer::ReduceRegExpPrototypeTest(Node* node) {
+   JSCallNode n(node);
+   CallParameters const& p = n.Parameters();
+@@ -8782,6 +8785,7 @@
+   return Changed(node);
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
  // ES section #sec-number-constructor
  Reduction JSCallReducer::ReduceNumberConstructor(Node* node) {
    JSCallNode n(node);
 --- a/v8/src/compiler/js-call-reducer.h
 +++ b/v8/src/compiler/js-call-reducer.h
-@@ -146,7 +146,6 @@
+@@ -146,7 +146,9 @@
    Reduction ReduceJSCall(Node* node, SharedFunctionInfoRef shared);
    Reduction ReduceJSCallWithArrayLike(Node* node);
    Reduction ReduceJSCallWithSpread(Node* node);
--  Reduction ReduceRegExpPrototypeTest(Node* node);
++#if V8_ENABLE_REGEXP
+   Reduction ReduceRegExpPrototypeTest(Node* node);
++#endif  // V8_ENABLE_REGEXP
    Reduction ReduceReturnReceiver(Node* node);
  
    Reduction ReduceStringConstructor(Node* node, JSFunctionRef constructor);
 --- a/v8/src/compiler/js-generic-lowering.cc
 +++ b/v8/src/compiler/js-generic-lowering.cc
-@@ -39,7 +39,6 @@
-     : AdvancedReducer(editor), jsgraph_(jsgraph), broker_(broker) {}
- 
- JSGenericLowering::~JSGenericLowering() = default;
--
- 
- Reduction JSGenericLowering::Reduce(Node* node) {
-   switch (node->opcode()) {
-@@ -595,7 +594,6 @@
-   UNREACHABLE();  // Eliminated in typed lowering.
- }
- 
--
- void JSGenericLowering::LowerJSStoreContext(Node* node) {
-   UNREACHABLE();  // Eliminated in typed lowering.
- }
-@@ -607,7 +605,6 @@
- void JSGenericLowering::LowerJSCreate(Node* node) {
-   ReplaceWithBuiltinCall(node, Builtin::kFastNewObject);
- }
--
- 
- void JSGenericLowering::LowerJSCreateArguments(Node* node) {
-   CreateArgumentsType const type = CreateArgumentsTypeOf(node->op());
-@@ -623,7 +620,6 @@
-       break;
-   }
- }
--
- 
- void JSGenericLowering::LowerJSCreateArray(Node* node) {
-   CreateArrayParameters const& p = CreateArrayParametersOf(node->op());
-@@ -682,10 +678,6 @@
+@@ -682,9 +682,11 @@
    ReplaceWithBuiltinCall(node, Builtin::kParseInt);
  }
  
--void JSGenericLowering::LowerJSRegExpTest(Node* node) {
--  ReplaceWithBuiltinCall(node, Builtin::kRegExpPrototypeTestFast);
--}
--
++#if V8_ENABLE_REGEXP
+ void JSGenericLowering::LowerJSRegExpTest(Node* node) {
+   ReplaceWithBuiltinCall(node, Builtin::kRegExpPrototypeTestFast);
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
  void JSGenericLowering::LowerJSCreateClosure(Node* node) {
    JSCreateClosureNode n(node);
-   CreateClosureParameters const& p = n.Parameters();
-@@ -849,7 +841,6 @@
-   node->InsertInput(zone(), 3, jsgraph()->SmiConstant(p.flags()));
-   ReplaceWithBuiltinCall(node, Builtin::kCreateRegExpLiteral);
- }
--
- 
- void JSGenericLowering::LowerJSCreateCatchContext(Node* node) {
-   ScopeInfoRef scope_info = ScopeInfoOf(node->op());
-@@ -1140,7 +1131,6 @@
-   UNREACHABLE();  // Eliminated in typed lowering.
- }
- 
--
- void JSGenericLowering::LowerJSStoreMessage(Node* node) {
-   UNREACHABLE();  // Eliminated in typed lowering.
- }
-@@ -1264,17 +1254,13 @@
- 
- Zone* JSGenericLowering::zone() const { return graph()->zone(); }
- 
--
- Isolate* JSGenericLowering::isolate() const { return jsgraph()->isolate(); }
- 
--
- Graph* JSGenericLowering::graph() const { return jsgraph()->graph(); }
--
- 
- CommonOperatorBuilder* JSGenericLowering::common() const {
-   return jsgraph()->common();
- }
--
- 
- MachineOperatorBuilder* JSGenericLowering::machine() const {
-   return jsgraph()->machine();
 --- a/v8/src/compiler/js-operator.cc
 +++ b/v8/src/compiler/js-operator.cc
-@@ -781,8 +781,7 @@
-   V(ResolvePromise, Operator::kNoDeopt | Operator::kNoThrow, 2, 1)       \
+@@ -1,6 +1,8 @@
+ // Copyright 2014 the V8 project authors. All rights reserved.
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "src/compiler/js-operator.h"
+ 
+@@ -782,7 +784,9 @@
    V(GetSuperConstructor, Operator::kNoWrite | Operator::kNoThrow, 1, 1)  \
    V(FindNonDefaultConstructorOrConstruct, Operator::kNoProperties, 2, 2) \
--  V(ParseInt, Operator::kNoProperties, 2, 1)                             \
+   V(ParseInt, Operator::kNoProperties, 2, 1)                             \
 -  V(RegExpTest, Operator::kNoProperties, 2, 1)
-+  V(ParseInt, Operator::kNoProperties, 2, 1)
++  IF_V8_ENABLE_REGEXP( \
++  V(RegExpTest, Operator::kNoProperties, 2, 1)                                \
++  )
  
  struct JSOperatorGlobalCache final {
  #define CACHED_OP(Name, properties, value_input_count, value_output_count) \
 --- a/v8/src/compiler/js-operator.h
 +++ b/v8/src/compiler/js-operator.h
-@@ -1112,7 +1112,6 @@
+@@ -1112,7 +1112,9 @@
  
    const Operator* ObjectIsArray();
    const Operator* ParseInt();
--  const Operator* RegExpTest();
++#if V8_ENABLE_REGEXP
+   const Operator* RegExpTest();
++#endif  // V8_ENABLE_REGEXP
  
    const Operator* GetIterator(FeedbackSource const& load_feedback,
                                FeedbackSource const& call_feedback);
 --- a/v8/src/compiler/opcodes.h
 +++ b/v8/src/compiler/opcodes.h
-@@ -250,7 +250,6 @@
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_COMPILER_OPCODES_H_
+ #define V8_COMPILER_OPCODES_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include <iosfwd>
+ 
+@@ -250,7 +252,9 @@
    V(JSResolvePromise)                  \
    V(JSStackCheck)                      \
    V(JSObjectIsArray)                   \
 -  V(JSRegExpTest)                      \
++  IF_V8_ENABLE_REGEXP( \
++  V(JSRegExpTest)                                                             \
++  )                                                                           \
    V(JSDebugger)
  
  #define JS_OP_LIST(V)     \
 --- a/v8/src/compiler/operator-properties.cc
 +++ b/v8/src/compiler/operator-properties.cc
-@@ -114,7 +114,6 @@
+@@ -114,7 +114,9 @@
      case IrOpcode::kJSObjectIsArray:
      case IrOpcode::kJSPerformPromiseThen:
      case IrOpcode::kJSPromiseResolve:
--    case IrOpcode::kJSRegExpTest:
++#if V8_ENABLE_REGEXP
+     case IrOpcode::kJSRegExpTest:
++#endif  // V8_ENABLE_REGEXP
      case IrOpcode::kJSRejectPromise:
      case IrOpcode::kJSResolvePromise:
        // These operators aren't introduced by BytecodeGraphBuilder and
-@@ -256,7 +255,6 @@
+@@ -256,7 +258,9 @@
      case IrOpcode::kJSResolvePromise:
      case IrOpcode::kJSPerformPromiseThen:
      case IrOpcode::kJSObjectIsArray:
--    case IrOpcode::kJSRegExpTest:
++#if V8_ENABLE_REGEXP
+     case IrOpcode::kJSRegExpTest:
++#endif  // V8_ENABLE_REGEXP
      case IrOpcode::kJSGetImportMeta:
  
      // Iterator protocol operations
 --- a/v8/src/compiler/simplified-lowering-verifier.cc
 +++ b/v8/src/compiler/simplified-lowering-verifier.cc
-@@ -728,7 +728,6 @@
+@@ -728,7 +728,9 @@
        CASE(JSRejectPromise)
        CASE(JSResolvePromise)
        CASE(JSObjectIsArray)
--      CASE(JSRegExpTest)
++#if V8_ENABLE_REGEXP
+       CASE(JSRegExpTest)
++#endif  // V8_ENABLE_REGEXP
        CASE(JSDebugger) {
          // TODO(nicohartmann@): These operators might need to be supported.
          break;
 --- a/v8/src/compiler/typer.cc
 +++ b/v8/src/compiler/typer.cc
-@@ -54,7 +54,6 @@
- Typer::~Typer() {
-   graph_->RemoveDecorator(decorator_);
- }
--
- 
- class Typer::Visitor : public Reducer {
-  public:
-@@ -509,7 +508,6 @@
-   }
- }
- 
--
- // -----------------------------------------------------------------------------
- 
- // Helper functions that lift a function f on types to a function on bounds,
-@@ -634,7 +632,6 @@
- Type Typer::Visitor::ToBoolean(Type type, Typer* t) {
-   return t->operation_typer()->ToBoolean(type);
- }
--
- 
- // static
- Type Typer::Visitor::ToInteger(Type type, Typer* t) {
-@@ -647,7 +644,6 @@
-   }
-   return t->cache_->kInteger;
- }
--
- 
- // static
- Type Typer::Visitor::ToLength(Type type, Typer* t) {
-@@ -667,7 +663,6 @@
-   return Type::Range(min, max, t->zone());
- }
- 
--
- // static
- Type Typer::Visitor::ToName(Type type, Typer* t) {
-   // ES6 section 7.1.14 ToPropertyKey ( argument )
-@@ -677,7 +672,6 @@
-   return ToString(type, t);
- }
- 
--
- // static
- Type Typer::Visitor::ToNumber(Type type, Typer* t) {
-   return t->operation_typer_.ToNumber(type);
-@@ -714,7 +708,6 @@
-   return Type::Receiver();
- }
- 
--
- // static
- Type Typer::Visitor::ToString(Type type, Typer* t) {
-   // ES6 section 7.1.12 ToString ( argument )
-@@ -839,9 +832,7 @@
-   return Type::Boolean();
- }
- 
--
- // -----------------------------------------------------------------------------
--
- 
- // Control operators.
- 
-@@ -1363,7 +1354,6 @@
-   return NumberShiftRightLogical(ToNumber(lhs, t), ToNumber(rhs, t), t);
- }
- 
--
- // JS arithmetic operators.
- 
- Type Typer::Visitor::JSAddTyper(Type lhs, Type rhs, Typer* t) {
-@@ -1563,8 +1553,6 @@
+@@ -1563,8 +1563,10 @@
  }
  
  Type Typer::Visitor::TypeJSParseInt(Type input) { return Type::Number(); }
--
--Type Typer::Visitor::TypeJSRegExpTest(Node* node) { return Type::Boolean(); }
++#if V8_ENABLE_REGEXP
+ 
+ Type Typer::Visitor::TypeJSRegExpTest(Node* node) { return Type::Boolean(); }
++#endif  // V8_ENABLE_REGEXP
  
  // Returns a somewhat larger range if we previously assigned
  // a (smaller) range to this node. This is used  to speed up
-@@ -1984,16 +1972,6 @@
+@@ -1983,6 +1985,7 @@
+       return Type::Receiver();
      case Builtin::kPromiseResolveTrampoline:
        return Type::Receiver();
++#if V8_ENABLE_REGEXP
  
--    // RegExp functions.
--    case Builtin::kRegExpPrototypeCompile:
--      return Type::OtherObject();
--    case Builtin::kRegExpPrototypeExec:
--      return Type::Union(Type::Array(), Type::Null(), t->zone());
--    case Builtin::kRegExpPrototypeTest:
--      return Type::Boolean();
--    case Builtin::kRegExpPrototypeToString:
--      return Type::String();
--
+     // RegExp functions.
+     case Builtin::kRegExpPrototypeCompile:
+@@ -1993,6 +1996,7 @@
+       return Type::Boolean();
+     case Builtin::kRegExpPrototypeToString:
+       return Type::String();
++#endif  // V8_ENABLE_REGEXP
+ 
      // Function functions.
      case Builtin::kFunctionPrototypeBind:
-       return Type::BoundFunction();
 --- a/v8/src/compiler/verifier.cc
 +++ b/v8/src/compiler/verifier.cc
-@@ -693,11 +693,6 @@
+@@ -693,11 +693,13 @@
        CheckValueInputIs(node, 0, Type::Any());
        CheckValueInputIs(node, 1, Type::Any());
        CheckTypeIs(node, Type::Number());
--      break;
--    case IrOpcode::kJSRegExpTest:
--      CheckValueInputIs(node, 0, Type::Any());
--      CheckValueInputIs(node, 1, Type::String());
--      CheckTypeIs(node, Type::Boolean());
++#if V8_ENABLE_REGEXP
+       break;
+     case IrOpcode::kJSRegExpTest:
+       CheckValueInputIs(node, 0, Type::Any());
+       CheckValueInputIs(node, 1, Type::String());
+       CheckTypeIs(node, Type::Boolean());
++#endif  // V8_ENABLE_REGEXP
        break;
      case IrOpcode::kJSCreate:
        CheckTypeIs(node, Type::Object());
 --- a/v8/src/debug/debug-evaluate.cc
 +++ b/v8/src/debug/debug-evaluate.cc
-@@ -369,7 +369,6 @@
+@@ -1,6 +1,8 @@
+ // Copyright 2015 the V8 project authors. All rights reserved.
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include "src/debug/debug-evaluate.h"
+ 
+@@ -369,7 +371,9 @@
    V(ObjectGetOwnPropertyNames)           \
    V(ObjectGetOwnPropertyNamesTryFast)    \
    V(ObjectIsExtensible)                  \
 -  V(RegExpInitializeAndCompile)          \
++  IF_V8_ENABLE_REGEXP( \
++  V(RegExpInitializeAndCompile)                                               \
++  )                                                                           \
    V(StackGuard)                          \
    V(HandleNoHeapWritesInterrupts)        \
    V(StringAdd)                           \
-@@ -789,30 +788,28 @@
-     case Builtin::kStringPrototypeCharCodeAt:
-     case Builtin::kStringPrototypeCodePointAt:
-     case Builtin::kStringPrototypeConcat:
--    case Builtin::kStringPrototypeEndsWith:
-+
-     case Builtin::kStringPrototypeFixed:
-     case Builtin::kStringPrototypeFontcolor:
-     case Builtin::kStringPrototypeFontsize:
-+
-     case Builtin::kStringPrototypeIncludes:
-+    case Builtin::kStringPrototypeStartsWith:
-+    case Builtin::kStringPrototypeEndsWith:
-     case Builtin::kStringPrototypeIndexOf:
-     case Builtin::kStringPrototypeIsWellFormed:
-     case Builtin::kStringPrototypeItalics:
+@@ -800,18 +804,24 @@
      case Builtin::kStringPrototypeLastIndexOf:
      case Builtin::kStringPrototypeLocaleCompare:
      case Builtin::kStringPrototypeLink:
--    case Builtin::kStringPrototypeMatch:
--    case Builtin::kStringPrototypeMatchAll:
++#if V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeMatch:
+     case Builtin::kStringPrototypeMatchAll:
++#endif  // V8_ENABLE_REGEXP
  
      case Builtin::kStringPrototypePadEnd:
      case Builtin::kStringPrototypePadStart:
      case Builtin::kStringPrototypeRepeat:
--    case Builtin::kStringPrototypeReplace:
--    case Builtin::kStringPrototypeReplaceAll:
--    case Builtin::kStringPrototypeSearch:
-+
++#if V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeReplace:
+     case Builtin::kStringPrototypeReplaceAll:
+     case Builtin::kStringPrototypeSearch:
++#endif  // V8_ENABLE_REGEXP
      case Builtin::kStringPrototypeSlice:
      case Builtin::kStringPrototypeSmall:
--    case Builtin::kStringPrototypeSplit:
--    case Builtin::kStringPrototypeStartsWith:
-+
++#if V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeSplit:
++#endif  // V8_ENABLE_REGEXP
+     case Builtin::kStringPrototypeStartsWith:
      case Builtin::kStringSlowFlatten:
      case Builtin::kStringPrototypeStrike:
-     case Builtin::kStringPrototypeSub:
-@@ -865,8 +862,7 @@
+@@ -865,8 +875,10 @@
      case Builtin::kFunctionPrototypeApply:
      // Error builtins.
      case Builtin::kErrorConstructor:
--    // RegExp builtins.
--    case Builtin::kRegExpConstructor:
-+
++#if V8_ENABLE_REGEXP
+     // RegExp builtins.
+     case Builtin::kRegExpConstructor:
++#endif  // V8_ENABLE_REGEXP
      // Reflect builtins.
      case Builtin::kReflectApply:
      case Builtin::kReflectConstruct:
-@@ -1016,23 +1012,7 @@
+@@ -1016,6 +1028,7 @@
      case Builtin::kDisposableStackPrototypeAdopt:
      case Builtin::kDisposableStackPrototypeDefer:
      case Builtin::kDisposableStackPrototypeMove:
--    // RegExp builtins.
--    case Builtin::kRegExpPrototypeTest:
--    case Builtin::kRegExpPrototypeExec:
--    case Builtin::kRegExpPrototypeSplit:
--    case Builtin::kRegExpPrototypeFlagsGetter:
--    case Builtin::kRegExpPrototypeGlobalGetter:
--    case Builtin::kRegExpPrototypeHasIndicesGetter:
--    case Builtin::kRegExpPrototypeIgnoreCaseGetter:
--    case Builtin::kRegExpPrototypeMatch:
--    case Builtin::kRegExpPrototypeMatchAll:
--    case Builtin::kRegExpPrototypeMultilineGetter:
--    case Builtin::kRegExpPrototypeDotAllGetter:
--    case Builtin::kRegExpPrototypeUnicodeGetter:
--    case Builtin::kRegExpPrototypeUnicodeSetsGetter:
--    case Builtin::kRegExpPrototypeStickyGetter:
--    case Builtin::kRegExpPrototypeReplace:
--    case Builtin::kRegExpPrototypeSearch:
-+
++#if V8_ENABLE_REGEXP
+     // RegExp builtins.
+     case Builtin::kRegExpPrototypeTest:
+     case Builtin::kRegExpPrototypeExec:
+@@ -1033,6 +1046,7 @@
+     case Builtin::kRegExpPrototypeStickyGetter:
+     case Builtin::kRegExpPrototypeReplace:
+     case Builtin::kRegExpPrototypeSearch:
++#endif  // V8_ENABLE_REGEXP
        return DebugInfo::kRequiresRuntimeChecks;
  
      // Debugging builtins.
-@@ -1264,27 +1244,12 @@
+@@ -1264,11 +1278,14 @@
          case Builtin::kArrayPrototypeToSorted:
          case Builtin::kArrayFrom:
          case Builtin::kTypedArrayPrototypeMap:
--        case Builtin::kStringPrototypeMatchAll:
-+
++#if V8_ENABLE_REGEXP
+         case Builtin::kStringPrototypeMatchAll:
++#endif  // V8_ENABLE_REGEXP
            return true;
          default:
            return false;
        }
--    case Builtin::kRegExpMatchFast:
--      // This is not a problem. We force String.prototype.match to take the
--      // slow path so that this call is not made.
--      return caller == Builtin::kStringPrototypeMatch;
--    case Builtin::kRegExpReplace:
--      // This is not a problem. We force String.prototype.replace to take the
--      // slow path so that this call is not made.
--      return caller == Builtin::kStringPrototypeReplace;
--    case Builtin::kRegExpSplit:
--      // This is not a problem. We force String.prototype.split to take the
--      // slow path so that this call is not made.
--      return caller == Builtin::kStringPrototypeSplit;
--    case Builtin::kRegExpSearchFast:
--      // This is not a problem. We force String.prototype.split to take the
--      // slow path so that this call is not made.
--      return caller == Builtin::kStringPrototypeSearch;
-+
++#if V8_ENABLE_REGEXP
+     case Builtin::kRegExpMatchFast:
+       // This is not a problem. We force String.prototype.match to take the
+       // slow path so that this call is not made.
+@@ -1285,6 +1302,7 @@
+       // This is not a problem. We force String.prototype.split to take the
+       // slow path so that this call is not made.
+       return caller == Builtin::kStringPrototypeSearch;
++#endif  // V8_ENABLE_REGEXP
      default:
        return false;
    }
 --- a/v8/src/debug/debug.cc
 +++ b/v8/src/debug/debug.cc
-@@ -3126,9 +3126,6 @@
+@@ -3126,9 +3126,11 @@
    DirectHandle<DebugInfo> debug_info = GetOrCreateDebugInfo(shared);
    DebugInfo::SideEffectState side_effect_state =
        debug_info->GetSideEffectState(isolate_);
--  if (shared->HasBuiltinId()) {
--    PrepareBuiltinForSideEffectCheck(isolate_, shared->builtin_id());
--  }
++#if V8_ENABLE_REGEXP
+   if (shared->HasBuiltinId()) {
+     PrepareBuiltinForSideEffectCheck(isolate_, shared->builtin_id());
+   }
++#endif  // V8_ENABLE_REGEXP
    switch (side_effect_state) {
      case DebugInfo::kHasSideEffects:
        if (v8_flags.trace_side_effect_free_debug_evaluate) {
-@@ -3162,29 +3159,6 @@
+@@ -3162,6 +3164,7 @@
    return handle(thread_local_.return_value_, isolate_);
  }
  
--void Debug::PrepareBuiltinForSideEffectCheck(Isolate* isolate, Builtin id) {
--  switch (id) {
--    case Builtin::kStringPrototypeMatch:
--    case Builtin::kStringPrototypeSearch:
--    case Builtin::kStringPrototypeSplit:
--    case Builtin::kStringPrototypeMatchAll:
--    case Builtin::kStringPrototypeReplace:
--    case Builtin::kStringPrototypeReplaceAll:
--      if (Protectors::IsRegExpSpeciesLookupChainIntact(isolate_)) {
--        // Force RegExps to go slow path so that we have a chance to perform
--        // side-effect checks for the functions for Symbol.match,
--        // Symbol.matchAll, Symbol.search, Symbol.split and Symbol.replace.
--        if (v8_flags.trace_side_effect_free_debug_evaluate) {
--          PrintF("[debug-evaluate] invalidating protector cell for RegExps\n");
--        }
--        Protectors::InvalidateRegExpSpeciesLookupChain(isolate_);
--      }
--      return;
--    default:
--      return;
--  }
--}
--
++#if V8_ENABLE_REGEXP
+ void Debug::PrepareBuiltinForSideEffectCheck(Isolate* isolate, Builtin id) {
+   switch (id) {
+     case Builtin::kStringPrototypeMatch:
+@@ -3184,6 +3187,7 @@
+       return;
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
  bool Debug::PerformSideEffectCheckForAccessor(
      DirectHandle<AccessorInfo> accessor_info, Handle<Object> receiver,
-     AccessorComponent component) {
 --- a/v8/src/debug/debug.h
 +++ b/v8/src/debug/debug.h
-@@ -412,7 +412,6 @@
+@@ -412,7 +412,9 @@
    bool PerformSideEffectCheck(Handle<JSFunction> function,
                                Handle<Object> receiver);
  
--  void PrepareBuiltinForSideEffectCheck(Isolate* isolate, Builtin id);
++#if V8_ENABLE_REGEXP
+   void PrepareBuiltinForSideEffectCheck(Isolate* isolate, Builtin id);
++#endif  // V8_ENABLE_REGEXP
  
    bool PerformSideEffectCheckForAccessor(
        DirectHandle<AccessorInfo> accessor_info, Handle<Object> receiver,
 --- a/v8/src/diagnostics/objects-debug.cc
 +++ b/v8/src/diagnostics/objects-debug.cc
-@@ -2075,50 +2075,12 @@
+@@ -2075,6 +2075,7 @@
    CHECK(IsSmi(TaggedField<Object>::load(*this, kTicksUntilTierUpOffset)));
    CHECK(IsSmi(TaggedField<Object>::load(*this, kBacktrackLimitOffset)));
  
--  switch (type_tag()) {
--    case RegExpData::Type::EXPERIMENTAL: {
--      if (has_latin1_code()) {
--        CHECK_EQ(latin1_code(isolate)->builtin_id(),
--                 Builtin::kRegExpExperimentalTrampoline);
--        CHECK_EQ(latin1_code(isolate), uc16_code(isolate));
--        CHECK(Is<TrustedByteArray>(latin1_bytecode()));
--        CHECK_EQ(latin1_bytecode(), uc16_bytecode());
--      } else {
--        CHECK(!has_uc16_code());
--        CHECK(!has_latin1_bytecode());
--        CHECK(!has_uc16_bytecode());
--      }
--
--      CHECK_EQ(max_register_count(), JSRegExp::kUninitializedValue);
--      CHECK_EQ(ticks_until_tier_up(), JSRegExp::kUninitializedValue);
--      CHECK_EQ(backtrack_limit(), JSRegExp::kUninitializedValue);
--
--      break;
--    }
--    case RegExpData::Type::IRREGEXP: {
--      bool can_be_interpreted = RegExp::CanGenerateBytecode();
--      CHECK_IMPLIES(has_latin1_bytecode(), can_be_interpreted);
--      CHECK_IMPLIES(has_uc16_bytecode(), can_be_interpreted);
--
--      static_assert(JSRegExp::kUninitializedValue == -1);
--      CHECK_GE(max_register_count(), JSRegExp::kUninitializedValue);
--      CHECK_GE(capture_count(), 0);
--      if (v8_flags.regexp_tier_up) {
--        // With tier-up enabled, ticks_until_tier_up should actually be >= 0.
--        // However FlagScopes in unittests can modify the flag and verification
--        // on Isolate deinitialization will fail.
--        CHECK_GE(ticks_until_tier_up(), JSRegExp::kUninitializedValue);
--        CHECK_LE(ticks_until_tier_up(), v8_flags.regexp_tier_up_ticks);
--      } else {
--        CHECK_EQ(ticks_until_tier_up(), JSRegExp::kUninitializedValue);
--      }
--      CHECK_GE(backtrack_limit(), 0);
--
--      break;
--    }
--    default:
--      UNREACHABLE();
--  }
++#if V8_ENABLE_REGEXP
+   switch (type_tag()) {
+     case RegExpData::Type::EXPERIMENTAL: {
+       if (has_latin1_code()) {
+@@ -2119,6 +2120,13 @@
+     default:
+       UNREACHABLE();
+   }
++#else
 +  // This configuration never generates RegExp machine code or bytecode.
 +  CHECK(!has_latin1_code());
 +  CHECK(!has_uc16_code());
 +  CHECK(!has_latin1_bytecode());
 +  CHECK(!has_uc16_bytecode());
-+
++#endif  // V8_ENABLE_REGEXP
  }
  
  void RegExpDataWrapper::RegExpDataWrapperVerify(Isolate* isolate) {
 --- a/v8/src/init/bootstrapper.cc
 +++ b/v8/src/init/bootstrapper.cc
-@@ -258,7 +258,6 @@
+@@ -258,7 +258,9 @@
    HARMONY_SHIPPING(DECLARE_FEATURE_INITIALIZATION)
    JAVASCRIPT_SHIPPING_FEATURES(DECLARE_FEATURE_INITIALIZATION)
  #undef DECLARE_FEATURE_INITIALIZATION
--  void InitializeGlobal_regexp_linear_flag();
++#if V8_ENABLE_REGEXP
+   void InitializeGlobal_regexp_linear_flag();
++#endif  // V8_ENABLE_REGEXP
    void InitializeGlobal_sharedarraybuffer();
  #if V8_ENABLE_WEBASSEMBLY
    void InitializeWasmJSPI();
-@@ -2885,10 +2884,6 @@
+@@ -2885,10 +2887,12 @@
      SimpleInstallFunction(isolate_, prototype, "localeCompare",
                            Builtin::kStringPrototypeLocaleCompare, 1, true);
  #endif  // V8_INTL_SUPPORT
--    SimpleInstallFunction(isolate_, prototype, "match",
--                          Builtin::kStringPrototypeMatch, 1, true);
--    SimpleInstallFunction(isolate_, prototype, "matchAll",
--                          Builtin::kStringPrototypeMatchAll, 1, true);
++#if V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "match",
+                           Builtin::kStringPrototypeMatch, 1, true);
+     SimpleInstallFunction(isolate_, prototype, "matchAll",
+                           Builtin::kStringPrototypeMatchAll, 1, true);
++#endif  // V8_ENABLE_REGEXP
  #ifdef V8_INTL_SUPPORT
      SimpleInstallFunction(isolate_, prototype, "normalize",
                            Builtin::kStringPrototypeNormalizeIntl, 0, false);
-@@ -2902,18 +2897,10 @@
+@@ -2902,18 +2906,22 @@
                            Builtin::kStringPrototypePadStart, 1, false);
      SimpleInstallFunction(isolate_, prototype, "repeat",
                            Builtin::kStringPrototypeRepeat, 1, true);
--    SimpleInstallFunction(isolate_, prototype, "replace",
--                          Builtin::kStringPrototypeReplace, 2, true);
--    SimpleInstallFunction(isolate(), prototype, "replaceAll",
--                          Builtin::kStringPrototypeReplaceAll, 2, true);
--    SimpleInstallFunction(isolate_, prototype, "search",
--                          Builtin::kStringPrototypeSearch, 1, true);
++#if V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "replace",
+                           Builtin::kStringPrototypeReplace, 2, true);
+     SimpleInstallFunction(isolate(), prototype, "replaceAll",
+                           Builtin::kStringPrototypeReplaceAll, 2, true);
+     SimpleInstallFunction(isolate_, prototype, "search",
+                           Builtin::kStringPrototypeSearch, 1, true);
++#endif  // V8_ENABLE_REGEXP
      SimpleInstallFunction(isolate_, prototype, "slice",
                            Builtin::kStringPrototypeSlice, 2, false);
      SimpleInstallFunction(isolate_, prototype, "small",
                            Builtin::kStringPrototypeSmall, 0, false);
--    SimpleInstallFunction(isolate_, prototype, "split",
--                          Builtin::kStringPrototypeSplit, 2, false);
++#if V8_ENABLE_REGEXP
+     SimpleInstallFunction(isolate_, prototype, "split",
+                           Builtin::kStringPrototypeSplit, 2, false);
++#endif  // V8_ENABLE_REGEXP
      SimpleInstallFunction(isolate_, prototype, "strike",
                            Builtin::kStringPrototypeStrike, 0, false);
      SimpleInstallFunction(isolate_, prototype, "sub",
-@@ -3257,227 +3244,6 @@
-     prototype->map()->set_instance_type(JS_PROMISE_PROTOTYPE_TYPE);
- 
+@@ -3259,6 +3267,7 @@
      DCHECK(promise_fun->HasFastProperties());
--  }
--
--  {  // -- R e g E x p
--    // Builtin functions for RegExp.prototype.
--    Handle<JSFunction> regexp_fun = InstallFunction(
--        isolate_, global, "RegExp", JS_REG_EXP_TYPE,
--        JSRegExp::kHeaderSize + JSRegExp::kInObjectFieldCount * kTaggedSize,
--        JSRegExp::kInObjectFieldCount, factory->the_hole_value(),
--        Builtin::kRegExpConstructor, 2, true);
--    InstallWithIntrinsicDefaultProto(isolate_, regexp_fun,
--                                     Context::REGEXP_FUNCTION_INDEX);
--
--    {
--      // Setup %RegExpPrototype%.
--      Handle<JSObject> prototype(
--          Cast<JSObject>(regexp_fun->instance_prototype()), isolate());
--      native_context()->set_regexp_prototype(*prototype);
--
--      {
--        DirectHandle<JSFunction> fun =
--            SimpleInstallFunction(isolate_, prototype, "exec",
--                                  Builtin::kRegExpPrototypeExec, 1, true);
--        native_context()->set_regexp_exec_function(*fun);
--        DCHECK_EQ(JSRegExp::kExecFunctionDescriptorIndex,
--                  prototype->map()->LastAdded().as_int());
--      }
--
--      SimpleInstallGetter(isolate_, prototype, factory->dotAll_string(),
--                          Builtin::kRegExpPrototypeDotAllGetter, true);
--      SimpleInstallGetter(isolate_, prototype, factory->flags_string(),
--                          Builtin::kRegExpPrototypeFlagsGetter, true);
--      SimpleInstallGetter(isolate_, prototype, factory->global_string(),
--                          Builtin::kRegExpPrototypeGlobalGetter, true);
--      SimpleInstallGetter(isolate(), prototype, factory->hasIndices_string(),
--                          Builtin::kRegExpPrototypeHasIndicesGetter, true);
--      SimpleInstallGetter(isolate_, prototype, factory->ignoreCase_string(),
--                          Builtin::kRegExpPrototypeIgnoreCaseGetter, true);
--      SimpleInstallGetter(isolate_, prototype, factory->multiline_string(),
--                          Builtin::kRegExpPrototypeMultilineGetter, true);
--      SimpleInstallGetter(isolate_, prototype, factory->source_string(),
--                          Builtin::kRegExpPrototypeSourceGetter, true);
--      SimpleInstallGetter(isolate_, prototype, factory->sticky_string(),
--                          Builtin::kRegExpPrototypeStickyGetter, true);
--      SimpleInstallGetter(isolate_, prototype, factory->unicode_string(),
--                          Builtin::kRegExpPrototypeUnicodeGetter, true);
--      SimpleInstallGetter(isolate(), prototype,
--                      factory->unicodeSets_string(),
--                      Builtin::kRegExpPrototypeUnicodeSetsGetter, true);
--
--      SimpleInstallFunction(isolate_, prototype, "compile",
--                            Builtin::kRegExpPrototypeCompile, 2, true);
--      SimpleInstallFunction(isolate_, prototype, "toString",
--                            Builtin::kRegExpPrototypeToString, 0, false);
--      SimpleInstallFunction(isolate_, prototype, "test",
--                            Builtin::kRegExpPrototypeTest, 1, true);
--
--      {
--        DirectHandle<JSFunction> fun = InstallFunctionAtSymbol(
--            isolate_, prototype, factory->match_symbol(), "[Symbol.match]",
--            Builtin::kRegExpPrototypeMatch, 1, true);
--        native_context()->set_regexp_match_function(*fun);
--        DCHECK_EQ(JSRegExp::kSymbolMatchFunctionDescriptorIndex,
--                  prototype->map()->LastAdded().as_int());
--      }
--
--      {
--        DirectHandle<JSFunction> fun = InstallFunctionAtSymbol(
--            isolate_, prototype, factory->match_all_symbol(),
--            "[Symbol.matchAll]", Builtin::kRegExpPrototypeMatchAll, 1, true);
--        native_context()->set_regexp_match_all_function(*fun);
--        DCHECK_EQ(JSRegExp::kSymbolMatchAllFunctionDescriptorIndex,
--                  prototype->map()->LastAdded().as_int());
--      }
--
--      {
--        DirectHandle<JSFunction> fun = InstallFunctionAtSymbol(
--            isolate_, prototype, factory->replace_symbol(), "[Symbol.replace]",
--            Builtin::kRegExpPrototypeReplace, 2, false);
--        native_context()->set_regexp_replace_function(*fun);
--        DCHECK_EQ(JSRegExp::kSymbolReplaceFunctionDescriptorIndex,
--                  prototype->map()->LastAdded().as_int());
--      }
--
--      {
--        DirectHandle<JSFunction> fun = InstallFunctionAtSymbol(
--            isolate_, prototype, factory->search_symbol(), "[Symbol.search]",
--            Builtin::kRegExpPrototypeSearch, 1, true);
--        native_context()->set_regexp_search_function(*fun);
--        DCHECK_EQ(JSRegExp::kSymbolSearchFunctionDescriptorIndex,
--                  prototype->map()->LastAdded().as_int());
--      }
--
--      {
--        DirectHandle<JSFunction> fun = InstallFunctionAtSymbol(
--            isolate_, prototype, factory->split_symbol(), "[Symbol.split]",
--            Builtin::kRegExpPrototypeSplit, 2, false);
--        native_context()->set_regexp_split_function(*fun);
--        DCHECK_EQ(JSRegExp::kSymbolSplitFunctionDescriptorIndex,
--                  prototype->map()->LastAdded().as_int());
--      }
--
--      DirectHandle<Map> prototype_map(prototype->map(), isolate());
--      Map::SetShouldBeFastPrototypeMap(prototype_map, true, isolate_);
--      CHECK_NE((*prototype_map).ptr(),
--               isolate_->initial_object_prototype()->map().ptr());
--      prototype_map->set_instance_type(JS_REG_EXP_PROTOTYPE_TYPE);
--
--      // Store the initial RegExp.prototype map. This is used in fast-path
--      // checks. Do not alter the prototype after this point.
--      native_context()->set_regexp_prototype_map(*prototype_map);
--    }
--
--    {
--      // RegExp getters and setters.
--
--      InstallSpeciesGetter(isolate_, regexp_fun);
--
--      // Static properties set by a successful match.
--
--      SimpleInstallGetterSetter(isolate_, regexp_fun, factory->input_string(),
--                                Builtin::kRegExpInputGetter,
--                                Builtin::kRegExpInputSetter);
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "$_",
--                                Builtin::kRegExpInputGetter,
--                                Builtin::kRegExpInputSetter);
--
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "lastMatch",
--                                Builtin::kRegExpLastMatchGetter,
--                                Builtin::kEmptyFunction);
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "$&",
--                                Builtin::kRegExpLastMatchGetter,
--                                Builtin::kEmptyFunction);
--
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "lastParen",
--                                Builtin::kRegExpLastParenGetter,
--                                Builtin::kEmptyFunction);
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "$+",
--                                Builtin::kRegExpLastParenGetter,
--                                Builtin::kEmptyFunction);
--
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "leftContext",
--                                Builtin::kRegExpLeftContextGetter,
--                                Builtin::kEmptyFunction);
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "$`",
--                                Builtin::kRegExpLeftContextGetter,
--                                Builtin::kEmptyFunction);
--
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "rightContext",
--                                Builtin::kRegExpRightContextGetter,
--                                Builtin::kEmptyFunction);
--      SimpleInstallGetterSetter(isolate_, regexp_fun, "$'",
--                                Builtin::kRegExpRightContextGetter,
--                                Builtin::kEmptyFunction);
--
--#define INSTALL_CAPTURE_GETTER(i)                               \
--  SimpleInstallGetterSetter(isolate_, regexp_fun, "$" #i,       \
--                            Builtin::kRegExpCapture##i##Getter, \
--                            Builtin::kEmptyFunction)
--      INSTALL_CAPTURE_GETTER(1);
--      INSTALL_CAPTURE_GETTER(2);
--      INSTALL_CAPTURE_GETTER(3);
--      INSTALL_CAPTURE_GETTER(4);
--      INSTALL_CAPTURE_GETTER(5);
--      INSTALL_CAPTURE_GETTER(6);
--      INSTALL_CAPTURE_GETTER(7);
--      INSTALL_CAPTURE_GETTER(8);
--      INSTALL_CAPTURE_GETTER(9);
--#undef INSTALL_CAPTURE_GETTER
--    }
--    SetConstructorInstanceType(isolate_, regexp_fun,
--                               JS_REG_EXP_CONSTRUCTOR_TYPE);
--
--    DCHECK(regexp_fun->has_initial_map());
--    DirectHandle<Map> initial_map(regexp_fun->initial_map(), isolate());
--
--    DCHECK_EQ(1, initial_map->GetInObjectProperties());
--
--    Map::EnsureDescriptorSlack(isolate_, initial_map, 1);
--
--    // ECMA-262, section 15.10.7.5.
--    PropertyAttributes writable =
--        static_cast<PropertyAttributes>(DONT_ENUM | DONT_DELETE);
--    Descriptor d = Descriptor::DataField(isolate(), factory->lastIndex_string(),
--                                         JSRegExp::kLastIndexFieldIndex,
--                                         writable, Representation::Tagged());
--    initial_map->AppendDescriptor(isolate(), &d);
--
--    // Create the last match info.
--    DirectHandle<RegExpMatchInfo> last_match_info =
--        RegExpMatchInfo::New(isolate(), RegExpMatchInfo::kMinCapacity);
--    native_context()->set_regexp_last_match_info(*last_match_info);
--
--    // Install the species protector cell.
--    DirectHandle<PropertyCell> cell = factory->NewProtector();
--    native_context()->set_regexp_species_protector(*cell);
--
--    DCHECK(regexp_fun->HasFastProperties());
--  }
--
--  {  // --- R e g E x p S t r i n g  I t e r a t o r ---
--    Handle<JSObject> iterator_prototype(
--        native_context()->initial_iterator_prototype(), isolate());
--
--    Handle<JSObject> regexp_string_iterator_prototype = factory->NewJSObject(
--        isolate()->object_function(), AllocationType::kOld);
--    JSObject::ForceSetPrototype(isolate(), regexp_string_iterator_prototype,
--                                iterator_prototype);
--
--    InstallToStringTag(isolate(), regexp_string_iterator_prototype,
--                       "RegExp String Iterator");
--
--    SimpleInstallFunction(isolate(), regexp_string_iterator_prototype, "next",
--                          Builtin::kRegExpStringIteratorPrototypeNext, 0, true);
--
--    DirectHandle<JSFunction> regexp_string_iterator_function = CreateFunction(
--        isolate(), "RegExpStringIterator", JS_REG_EXP_STRING_ITERATOR_TYPE,
--        JSRegExpStringIterator::kHeaderSize, 0,
--        regexp_string_iterator_prototype, Builtin::kIllegal, 0, true);
--    regexp_string_iterator_function->shared()->set_native(false);
--    native_context()->set_initial_regexp_string_iterator_prototype_map(
--        regexp_string_iterator_function->initial_map());
    }
  
++#if V8_ENABLE_REGEXP
+   {  // -- R e g E x p
+     // Builtin functions for RegExp.prototype.
+     Handle<JSFunction> regexp_fun = InstallFunction(
+@@ -3479,6 +3488,7 @@
+     native_context()->set_initial_regexp_string_iterator_prototype_map(
+         regexp_string_iterator_function->initial_map());
+   }
++#endif  // V8_ENABLE_REGEXP
+ 
    // -- E r r o r
-@@ -4990,7 +4756,6 @@
+   InstallError(isolate_, global, factory->Error_string(),
+@@ -4990,7 +5000,9 @@
    HARMONY_INPROGRESS(FEATURE_INITIALIZE_GLOBAL)
    JAVASCRIPT_INPROGRESS_FEATURES(FEATURE_INITIALIZE_GLOBAL)
  #undef FEATURE_INITIALIZE_GLOBAL
--  InitializeGlobal_regexp_linear_flag();
++#if V8_ENABLE_REGEXP
+   InitializeGlobal_regexp_linear_flag();
++#endif  // V8_ENABLE_REGEXP
    InitializeGlobal_sharedarraybuffer();
  }
  
-@@ -5842,20 +5607,6 @@
+@@ -5842,6 +5854,7 @@
                        Builtin::kAbstractModuleSourceToStringTag, true);
  }
  
--void Genesis::InitializeGlobal_regexp_linear_flag() {
--  if (!v8_flags.enable_experimental_regexp_engine) return;
--
--  DirectHandle<JSFunction> regexp_fun(native_context()->regexp_function(),
--                                      isolate());
--  Handle<JSObject> regexp_prototype(
--      Cast<JSObject>(regexp_fun->instance_prototype()), isolate());
--  SimpleInstallGetter(isolate(), regexp_prototype,
--                      isolate()->factory()->linear_string(),
--                      Builtin::kRegExpPrototypeLinearGetter, true);
--
--  // Store regexp prototype map again after change.
--  native_context()->set_regexp_prototype_map(regexp_prototype->map());
--}
++#if V8_ENABLE_REGEXP
+ void Genesis::InitializeGlobal_regexp_linear_flag() {
+   if (!v8_flags.enable_experimental_regexp_engine) return;
+ 
+@@ -5856,6 +5869,7 @@
+   // Store regexp prototype map again after change.
+   native_context()->set_regexp_prototype_map(regexp_prototype->map());
+ }
++#endif  // V8_ENABLE_REGEXP
  
  void Genesis::InitializeGlobal_harmony_temporal() {
    if (!v8_flags.harmony_temporal) return;
 --- a/v8/src/objects/js-regexp.cc
 +++ b/v8/src/objects/js-regexp.cc
-@@ -151,218 +151,9 @@
+@@ -151,6 +151,7 @@
  // static
  MaybeHandle<JSRegExp> JSRegExp::New(Isolate* isolate, Handle<String> pattern,
                                      Flags flags, uint32_t backtrack_limit) {
--  Handle<JSFunction> constructor = isolate->regexp_function();
--  Handle<JSRegExp> regexp =
--      Cast<JSRegExp>(isolate->factory()->NewJSObject(constructor));
--
--  // Clear the data field, as a GC can be triggered before the field is set
--  // during compilation.
--  regexp->clear_data();
--
--  return JSRegExp::Initialize(regexp, pattern, flags, backtrack_limit);
++#if V8_ENABLE_REGEXP
+   Handle<JSFunction> constructor = isolate->regexp_function();
+   Handle<JSRegExp> regexp =
+       Cast<JSRegExp>(isolate->factory()->NewJSObject(constructor));
+@@ -160,8 +161,13 @@
+   regexp->clear_data();
+ 
+   return JSRegExp::Initialize(regexp, pattern, flags, backtrack_limit);
 -}
 -
--// static
--MaybeHandle<JSRegExp> JSRegExp::Initialize(Handle<JSRegExp> regexp,
--                                           Handle<String> source,
--                                           Handle<String> flags_string) {
--  Isolate* isolate = regexp->GetIsolate();
--  std::optional<Flags> flags = JSRegExp::FlagsFromString(isolate, flags_string);
--  if (!flags.has_value() ||
--      !RegExp::VerifyFlags(JSRegExp::AsRegExpFlags(flags.value()))) {
--    THROW_NEW_ERROR(
--        isolate,
--        NewSyntaxError(MessageTemplate::kInvalidRegExpFlags, flags_string));
--  }
--  return Initialize(regexp, source, flags.value());
--}
--
--namespace {
--
--bool IsLineTerminator(int c) {
--  // Expected to return true for '\n', '\r', 0x2028, and 0x2029.
--  return unibrow::IsLineTerminator(static_cast<unibrow::uchar>(c));
--}
--
--// TODO(jgruber): Consider merging CountAdditionalEscapeChars and
--// WriteEscapedRegExpSource into a single function to deduplicate dispatch logic
--// and move related code closer to each other.
--template <typename Char>
--int CountAdditionalEscapeChars(DirectHandle<String> source,
--                               bool* needs_escapes_out) {
--  DisallowGarbageCollection no_gc;
--  int escapes = 0;
--  bool needs_escapes = false;
--  bool in_character_class = false;
--  base::Vector<const Char> src = source->GetCharVector<Char>(no_gc);
--  for (int i = 0; i < src.length(); i++) {
--    const Char c = src[i];
--    if (c == '\\') {
--      if (i + 1 < src.length() && IsLineTerminator(src[i + 1])) {
--        // This '\' is ignored since the next character itself will be escaped.
--        escapes--;
--      } else {
--        // Escape. Skip next character, which will be copied verbatim;
--        i++;
--      }
--    } else if (c == '/' && !in_character_class) {
--      // Not escaped forward-slash needs escape.
--      needs_escapes = true;
--      escapes++;
--    } else if (c == '[') {
--      in_character_class = true;
--    } else if (c == ']') {
--      in_character_class = false;
--    } else if (c == '\n') {
--      needs_escapes = true;
--      escapes++;
--    } else if (c == '\r') {
--      needs_escapes = true;
--      escapes++;
--    } else if (static_cast<int>(c) == 0x2028) {
--      needs_escapes = true;
--      escapes += std::strlen("\\u2028") - 1;
--    } else if (static_cast<int>(c) == 0x2029) {
--      needs_escapes = true;
--      escapes += std::strlen("\\u2029") - 1;
--    } else {
--      DCHECK(!IsLineTerminator(c));
--    }
--  }
--  DCHECK(!in_character_class);
--  DCHECK_GE(escapes, 0);
--  DCHECK_IMPLIES(escapes != 0, needs_escapes);
--  *needs_escapes_out = needs_escapes;
--  return escapes;
--}
--
--template <typename Char>
--void WriteStringToCharVector(base::Vector<Char> v, int* d, const char* string) {
--  int s = 0;
--  while (string[s] != '\0') v[(*d)++] = string[s++];
--}
--
--template <typename Char, typename StringType>
--Handle<StringType> WriteEscapedRegExpSource(DirectHandle<String> source,
--                                            Handle<StringType> result) {
--  DisallowGarbageCollection no_gc;
--  base::Vector<const Char> src = source->GetCharVector<Char>(no_gc);
--  base::Vector<Char> dst(result->GetChars(no_gc), result->length());
--  int s = 0;
--  int d = 0;
--  bool in_character_class = false;
--  while (s < src.length()) {
--    const Char c = src[s];
--    if (c == '\\') {
--      if (s + 1 < src.length() && IsLineTerminator(src[s + 1])) {
--        // This '\' is ignored since the next character itself will be escaped.
--        s++;
--        continue;
--      } else {
--        // Escape. Copy this and next character.
--        dst[d++] = src[s++];
--      }
--      if (s == src.length()) break;
--    } else if (c == '/' && !in_character_class) {
--      // Not escaped forward-slash needs escape.
--      dst[d++] = '\\';
--    } else if (c == '[') {
--      in_character_class = true;
--    } else if (c == ']') {
--      in_character_class = false;
--    } else if (c == '\n') {
--      WriteStringToCharVector(dst, &d, "\\n");
--      s++;
--      continue;
--    } else if (c == '\r') {
--      WriteStringToCharVector(dst, &d, "\\r");
--      s++;
--      continue;
--    } else if (static_cast<int>(c) == 0x2028) {
--      WriteStringToCharVector(dst, &d, "\\u2028");
--      s++;
--      continue;
--    } else if (static_cast<int>(c) == 0x2029) {
--      WriteStringToCharVector(dst, &d, "\\u2029");
--      s++;
--      continue;
--    } else {
--      DCHECK(!IsLineTerminator(c));
--    }
--    dst[d++] = src[s++];
--  }
--  DCHECK_EQ(result->length(), d);
--  DCHECK(!in_character_class);
--  return result;
--}
--
--MaybeHandle<String> EscapeRegExpSource(Isolate* isolate,
--                                       Handle<String> source) {
--  DCHECK(source->IsFlat());
--  if (source->length() == 0) return isolate->factory()->query_colon_string();
--  bool one_byte = String::IsOneByteRepresentationUnderneath(*source);
--  bool needs_escapes = false;
--  int additional_escape_chars =
--      one_byte ? CountAdditionalEscapeChars<uint8_t>(source, &needs_escapes)
--               : CountAdditionalEscapeChars<base::uc16>(source, &needs_escapes);
--  if (!needs_escapes) return source;
--  int length = source->length() + additional_escape_chars;
--  if (one_byte) {
--    Handle<SeqOneByteString> result;
--    ASSIGN_RETURN_ON_EXCEPTION(isolate, result,
--                               isolate->factory()->NewRawOneByteString(length));
--    return WriteEscapedRegExpSource<uint8_t>(source, result);
--  } else {
--    Handle<SeqTwoByteString> result;
--    ASSIGN_RETURN_ON_EXCEPTION(isolate, result,
--                               isolate->factory()->NewRawTwoByteString(length));
--    return WriteEscapedRegExpSource<base::uc16>(source, result);
--  }
--}
--
--}  // namespace
--
--// static
--MaybeHandle<JSRegExp> JSRegExp::Initialize(Handle<JSRegExp> regexp,
--                                           Handle<String> source, Flags flags,
--                                           uint32_t backtrack_limit) {
--  Isolate* isolate = regexp->GetIsolate();
--  Factory* factory = isolate->factory();
--  // If source is the empty string we set it to "(?:)" instead as
--  // suggested by ECMA-262, 5th, section 15.10.4.1.
--  if (source->length() == 0) source = factory->query_colon_string();
--
--  source = String::Flatten(isolate, source);
--
--  RETURN_ON_EXCEPTION(isolate, RegExp::Compile(isolate, regexp, source,
--                                               JSRegExp::AsRegExpFlags(flags),
--                                               backtrack_limit));
--
--  Handle<String> escaped_source;
--  ASSIGN_RETURN_ON_EXCEPTION(isolate, escaped_source,
--                             EscapeRegExpSource(isolate, source));
--
--  regexp->set_source(*escaped_source);
--  regexp->set_flags(Smi::FromInt(flags));
--
--  Tagged<Map> map = regexp->map();
--  Tagged<Object> constructor = map->GetConstructor();
--  if (IsJSFunction(constructor) &&
--      Cast<JSFunction>(constructor)->initial_map() == map) {
--    // If we still have the original map, set in-object properties directly.
--    regexp->InObjectPropertyAtPut(JSRegExp::kLastIndexFieldIndex,
--                                  Smi::FromInt(kInitialLastIndexValue),
--                                  SKIP_WRITE_BARRIER);
--  } else {
--    // Map has changed, so use generic, but slower, method.
--    RETURN_ON_EXCEPTION(
--        isolate,
--        Object::SetProperty(
--            isolate, regexp, factory->lastIndex_string(),
--            Handle<Smi>(Smi::FromInt(kInitialLastIndexValue), isolate)));
--  }
--
--  return regexp;
-+  // The JS constructor is not installed. Reject API/literal creation before
-+  // accessing its absent context slot; no RegExp engine is linked.
++#else
++  // No constructor is installed; reject API creation before using its slot.
 +  THROW_NEW_ERROR(isolate, NewSyntaxError(MessageTemplate::kRegExpDisabled));
++#endif  // V8_ENABLE_REGEXP
++}
++
++#if V8_ENABLE_REGEXP
+ // static
+ MaybeHandle<JSRegExp> JSRegExp::Initialize(Handle<JSRegExp> regexp,
+                                            Handle<String> source,
+@@ -365,6 +371,8 @@
+   return regexp;
  }
  
++#endif  // V8_ENABLE_REGEXP
++
  bool RegExpData::HasCompiledCode() const {
-@@ -419,15 +210,4 @@
+   if (type_tag() != Type::IRREGEXP) return false;
+   Tagged<IrRegExpData> re_data = Cast<IrRegExpData>(*this);
+@@ -419,6 +427,7 @@
    clear_uc16_bytecode();
  }
  
--void IrRegExpData::SetBytecodeForExperimental(
--    Isolate* isolate, Tagged<TrustedByteArray> bytecode) {
--  set_latin1_bytecode(bytecode);
--  set_uc16_bytecode(bytecode);
--
--  Tagged<Code> trampoline =
--      *BUILTIN_CODE(isolate, RegExpExperimentalTrampoline);
--  set_latin1_code(trampoline);
--  set_uc16_code(trampoline);
--}
--
++#if V8_ENABLE_REGEXP
+ void IrRegExpData::SetBytecodeForExperimental(
+     Isolate* isolate, Tagged<TrustedByteArray> bytecode) {
+   set_latin1_bytecode(bytecode);
+@@ -429,5 +438,6 @@
+   set_latin1_code(trampoline);
+   set_uc16_code(trampoline);
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
  }  // namespace v8::internal
 --- a/v8/src/objects/regexp-match-info.tq
 +++ b/v8/src/objects/regexp-match-info.tq
-@@ -4,12 +4,8 @@
+@@ -4,9 +4,11 @@
  
  @cppObjectDefinition
  extern class RegExpMatchInfo extends HeapObject {
--  macro GetStartOfCapture(i: constexpr int31): Smi {
--    return this.objects[i * 2];
--  }
--  macro GetEndOfCapture(i: constexpr int31): Smi {
--    return this.objects[i * 2 + 1];
--  }
-+
-+
- 
-   const length: Smi;
-   number_of_capture_registers: Smi;
++  @if(V8_ENABLE_REGEXP)
+   macro GetStartOfCapture(i: constexpr int31): Smi {
+     return this.objects[i * 2];
+   }
++  @if(V8_ENABLE_REGEXP)
+   macro GetEndOfCapture(i: constexpr int31): Smi {
+     return this.objects[i * 2 + 1];
+   }
 --- a/v8/src/objects/value-serializer.cc
 +++ b/v8/src/objects/value-serializer.cc
-@@ -629,9 +629,6 @@
+@@ -629,9 +629,11 @@
        return ThrowIfOutOfMemory();
      case JS_PRIMITIVE_WRAPPER_TYPE:
        return WriteJSPrimitiveWrapper(Cast<JSPrimitiveWrapper>(receiver));
--    case JS_REG_EXP_TYPE:
--      WriteJSRegExp(Cast<JSRegExp>(receiver));
--      return ThrowIfOutOfMemory();
++#if V8_ENABLE_REGEXP
+     case JS_REG_EXP_TYPE:
+       WriteJSRegExp(Cast<JSRegExp>(receiver));
+       return ThrowIfOutOfMemory();
++#endif  // V8_ENABLE_REGEXP
      case JS_MAP_TYPE:
        return WriteJSMap(Cast<JSMap>(receiver));
      case JS_SET_TYPE:
-@@ -876,12 +873,6 @@
+@@ -876,11 +878,13 @@
    return ThrowIfOutOfMemory();
  }
  
--void ValueSerializer::WriteJSRegExp(DirectHandle<JSRegExp> regexp) {
--  WriteTag(SerializationTag::kRegExp);
--  WriteString(handle(regexp->source(), isolate_));
--  WriteVarint(static_cast<uint32_t>(regexp->flags()));
--}
--
++#if V8_ENABLE_REGEXP
+ void ValueSerializer::WriteJSRegExp(DirectHandle<JSRegExp> regexp) {
+   WriteTag(SerializationTag::kRegExp);
+   WriteString(handle(regexp->source(), isolate_));
+   WriteVarint(static_cast<uint32_t>(regexp->flags()));
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
  Maybe<bool> ValueSerializer::WriteJSMap(DirectHandle<JSMap> js_map) {
    // First copy the key-value pairs, since getters could mutate them.
-   DirectHandle<OrderedHashMap> table(Cast<OrderedHashMap>(js_map->table()),
-@@ -1622,8 +1613,6 @@
+@@ -1622,8 +1626,10 @@
      case SerializationTag::kBigIntObject:
      case SerializationTag::kStringObject:
        return ReadJSPrimitiveWrapper(tag);
--    case SerializationTag::kRegExp:
--      return ReadJSRegExp();
++#if V8_ENABLE_REGEXP
+     case SerializationTag::kRegExp:
+       return ReadJSRegExp();
++#endif  // V8_ENABLE_REGEXP
      case SerializationTag::kBeginJSMap:
        return ReadJSMap();
      case SerializationTag::kBeginJSSet:
-@@ -1914,33 +1903,6 @@
-   }
-   AddObjectWithID(id, value);
+@@ -1916,6 +1922,7 @@
    return value;
--}
--
--MaybeHandle<JSRegExp> ValueDeserializer::ReadJSRegExp() {
--  uint32_t id = next_id_++;
--  Handle<String> pattern;
--  uint32_t raw_flags;
--  Handle<JSRegExp> regexp;
--  if (!ReadString().ToHandle(&pattern) ||
--      !ReadVarint<uint32_t>().To(&raw_flags)) {
--    return MaybeHandle<JSRegExp>();
--  }
--
--  // Ensure the deserialized flags are valid.
--  uint32_t bad_flags_mask = static_cast<uint32_t>(-1) << JSRegExp::kFlagCount;
--  // kLinear is accepted only with the appropriate flag.
--  if (!v8_flags.enable_experimental_regexp_engine) {
--    bad_flags_mask |= JSRegExp::kLinear;
--  }
--  if ((raw_flags & bad_flags_mask) ||
--      !RegExp::VerifyFlags(static_cast<RegExpFlags>(raw_flags)) ||
--      !JSRegExp::New(isolate_, pattern, static_cast<JSRegExp::Flags>(raw_flags))
--           .ToHandle(&regexp)) {
--    return MaybeHandle<JSRegExp>();
--  }
--
--  AddObjectWithID(id, regexp);
--  return regexp;
  }
  
++#if V8_ENABLE_REGEXP
+ MaybeHandle<JSRegExp> ValueDeserializer::ReadJSRegExp() {
+   uint32_t id = next_id_++;
+   Handle<String> pattern;
+@@ -1942,6 +1949,7 @@
+   AddObjectWithID(id, regexp);
+   return regexp;
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
  MaybeHandle<JSMap> ValueDeserializer::ReadJSMap() {
+   // If we are at the end of the stack, abort. This function may recurse.
 --- a/v8/src/objects/value-serializer.h
 +++ b/v8/src/objects/value-serializer.h
-@@ -126,7 +126,6 @@
+@@ -126,7 +126,9 @@
    void WriteJSDate(Tagged<JSDate> date);
    Maybe<bool> WriteJSPrimitiveWrapper(DirectHandle<JSPrimitiveWrapper> value)
        V8_WARN_UNUSED_RESULT;
--  void WriteJSRegExp(DirectHandle<JSRegExp> regexp);
++#if V8_ENABLE_REGEXP
+   void WriteJSRegExp(DirectHandle<JSRegExp> regexp);
++#endif  // V8_ENABLE_REGEXP
    Maybe<bool> WriteJSMap(DirectHandle<JSMap> map) V8_WARN_UNUSED_RESULT;
    Maybe<bool> WriteJSSet(DirectHandle<JSSet> map) V8_WARN_UNUSED_RESULT;
    Maybe<bool> WriteJSArrayBuffer(Handle<JSArrayBuffer> array_buffer)
-@@ -290,7 +289,6 @@
+@@ -290,7 +292,9 @@
    MaybeHandle<JSDate> ReadJSDate() V8_WARN_UNUSED_RESULT;
    MaybeHandle<JSPrimitiveWrapper> ReadJSPrimitiveWrapper(SerializationTag tag)
        V8_WARN_UNUSED_RESULT;
--  MaybeHandle<JSRegExp> ReadJSRegExp() V8_WARN_UNUSED_RESULT;
++#if V8_ENABLE_REGEXP
+   MaybeHandle<JSRegExp> ReadJSRegExp() V8_WARN_UNUSED_RESULT;
++#endif  // V8_ENABLE_REGEXP
    MaybeHandle<JSMap> ReadJSMap() V8_WARN_UNUSED_RESULT;
    MaybeHandle<JSSet> ReadJSSet() V8_WARN_UNUSED_RESULT;
    MaybeHandle<JSArrayBuffer> ReadJSArrayBuffer(
 --- a/v8/src/parsing/parser-base.h
 +++ b/v8/src/parsing/parser-base.h
-@@ -1266,9 +1266,6 @@
+@@ -1266,9 +1266,11 @@
    const AstRawString* GetNextSymbolForRegExpLiteral() const {
      return scanner()->NextSymbol(ast_value_factory());
    }
--  bool ValidateRegExpFlags(RegExpFlags flags);
--  bool ValidateRegExpLiteral(const AstRawString* pattern, RegExpFlags flags,
--                             RegExpError* regexp_error);
++#if V8_ENABLE_REGEXP
+   bool ValidateRegExpFlags(RegExpFlags flags);
+   bool ValidateRegExpLiteral(const AstRawString* pattern, RegExpFlags flags,
+                              RegExpError* regexp_error);
++#endif  // V8_ENABLE_REGEXP
    ExpressionT ParseRegExpLiteral();
  
    ExpressionT ParseBindingPattern();
-@@ -1968,57 +1965,13 @@
+@@ -1968,6 +1970,7 @@
    return key;
  }
  
--template <typename Impl>
--bool ParserBase<Impl>::ValidateRegExpFlags(RegExpFlags flags) {
--  return RegExp::VerifyFlags(flags);
--}
--
--template <typename Impl>
--bool ParserBase<Impl>::ValidateRegExpLiteral(const AstRawString* pattern,
--                                             RegExpFlags flags,
--                                             RegExpError* regexp_error) {
--  // TODO(jgruber): If already validated in the preparser, skip validation in
--  // the parser.
--  DisallowGarbageCollection no_gc;
--  ZoneScope zone_scope(zone());  // Free regexp parser memory after use.
--  const unsigned char* d = pattern->raw_data();
--  if (pattern->is_one_byte()) {
--    return RegExp::VerifySyntax(zone(), stack_limit(),
--                                static_cast<const uint8_t*>(d),
--                                pattern->length(), flags, regexp_error, no_gc);
--  } else {
--    return RegExp::VerifySyntax(zone(), stack_limit(),
--                                reinterpret_cast<const uint16_t*>(d),
--                                pattern->length(), flags, regexp_error, no_gc);
--  }
--}
-+
++#if V8_ENABLE_REGEXP
+ template <typename Impl>
+ bool ParserBase<Impl>::ValidateRegExpFlags(RegExpFlags flags) {
+   return RegExp::VerifyFlags(flags);
+@@ -1992,9 +1995,11 @@
+                                 pattern->length(), flags, regexp_error, no_gc);
+   }
+ }
++#endif  // V8_ENABLE_REGEXP
  
  template <typename Impl>
  typename ParserBase<Impl>::ExpressionT ParserBase<Impl>::ParseRegExpLiteral() {
--  int pos = peek_position();
--  if (!scanner()->ScanRegExpPattern()) {
--    Next();
--    ReportMessage(MessageTemplate::kUnterminatedRegExp);
--    return impl()->FailureExpression();
--  }
--
--  const AstRawString* pattern = GetNextSymbolForRegExpLiteral();
--  std::optional<RegExpFlags> flags = scanner()->ScanRegExpFlags();
--  const AstRawString* flags_as_ast_raw_string = GetNextSymbolForRegExpLiteral();
--  if (!flags.has_value() || !ValidateRegExpFlags(flags.value())) {
--    Next();
--    ReportMessage(MessageTemplate::kMalformedRegExpFlags);
--    return impl()->FailureExpression();
--  }
-   Next();
--  RegExpError regexp_error;
--  if (!ValidateRegExpLiteral(pattern, flags.value(), &regexp_error)) {
--    if (RegExpErrorIsStackOverflow(regexp_error)) set_stack_overflow();
--    ReportMessage(MessageTemplate::kMalformedRegExp, pattern,
--                  flags_as_ast_raw_string, RegExpErrorString(regexp_error));
--    return impl()->FailureExpression();
--  }
--  return factory()->NewRegExpLiteral(pattern, flags.value(), pos);
++#if V8_ENABLE_REGEXP
+   int pos = peek_position();
+   if (!scanner()->ScanRegExpPattern()) {
+     Next();
+@@ -2019,6 +2024,11 @@
+     return impl()->FailureExpression();
+   }
+   return factory()->NewRegExpLiteral(pattern, flags.value(), pos);
++#else
++  Next();
 +  ReportMessage(MessageTemplate::kRegExpDisabled);
 +  return impl()->FailureExpression();
++#endif  // V8_ENABLE_REGEXP
  }
  
  template <typename Impl>
+--- a/v8/src/regexp/arm/regexp-macro-assembler-arm.cc
++++ b/v8/src/regexp/arm/regexp-macro-assembler-arm.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_ARM
+ 
+ #include "src/regexp/arm/regexp-macro-assembler-arm.h"
+@@ -1380,3 +1381,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_ARM
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/arm64/regexp-macro-assembler-arm64.cc
++++ b/v8/src/regexp/arm64/regexp-macro-assembler-arm64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_ARM64
+ 
+ #include "src/regexp/arm64/regexp-macro-assembler-arm64.h"
+@@ -1765,3 +1766,5 @@
+ #undef __
+ 
+ #endif  // V8_TARGET_ARCH_ARM64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental-bytecode.cc
++++ b/v8/src/regexp/experimental/experimental-bytecode.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental-bytecode.h"
+ 
+ #include <cctype>
+@@ -134,3 +135,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental-compiler.cc
++++ b/v8/src/regexp/experimental/experimental-compiler.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental-compiler.h"
+ 
+ #include "src/base/strings.h"
+@@ -1099,3 +1100,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental-interpreter.cc
++++ b/v8/src/regexp/experimental/experimental-interpreter.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental-interpreter.h"
+ 
+ #include <optional>
+@@ -1120,3 +1121,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/experimental/experimental.cc
++++ b/v8/src/regexp/experimental/experimental.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/experimental/experimental.h"
+ 
+ #include <optional>
+@@ -344,3 +345,5 @@
+ }
+ 
+ }  // namespace v8::internal
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/ia32/regexp-macro-assembler-ia32.cc
++++ b/v8/src/regexp/ia32/regexp-macro-assembler-ia32.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_IA32
+ 
+ #include "src/regexp/ia32/regexp-macro-assembler-ia32.h"
+@@ -1401,3 +1402,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_IA32
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/loong64/regexp-macro-assembler-loong64.cc
++++ b/v8/src/regexp/loong64/regexp-macro-assembler-loong64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_LOONG64
+ 
+ #include "src/regexp/loong64/regexp-macro-assembler-loong64.h"
+@@ -1350,3 +1351,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_LOONG64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/mips64/regexp-macro-assembler-mips64.cc
++++ b/v8/src/regexp/mips64/regexp-macro-assembler-mips64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_MIPS64
+ 
+ #include "src/regexp/mips64/regexp-macro-assembler-mips64.h"
+@@ -1389,3 +1390,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_MIPS64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/ppc/regexp-macro-assembler-ppc.cc
++++ b/v8/src/regexp/ppc/regexp-macro-assembler-ppc.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
+ 
+ #include "src/regexp/ppc/regexp-macro-assembler-ppc.h"
+@@ -1486,3 +1487,5 @@
+ }  // namespace v8
+ 
+ #endif  //  V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-ast.cc
++++ b/v8/src/regexp/regexp-ast.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-ast.h"
+ 
+ #include "src/utils/ostreams.h"
+@@ -443,3 +444,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-bytecode-generator.cc
++++ b/v8/src/regexp/regexp-bytecode-generator.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-bytecode-generator.h"
+ 
+ #include "src/ast/ast.h"
+@@ -405,3 +406,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-bytecode-peephole.cc
++++ b/v8/src/regexp/regexp-bytecode-peephole.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-bytecode-peephole.h"
+ 
+ #include "src/flags/flags.h"
+@@ -1034,3 +1035,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-bytecodes.cc
++++ b/v8/src/regexp/regexp-bytecodes.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-bytecodes.h"
+ 
+ #include <cctype>
+@@ -46,3 +47,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-compiler-tonode.cc
++++ b/v8/src/regexp/regexp-compiler-tonode.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/common/globals.h"
+ #include "src/execution/isolate.h"
+ #include "src/objects/string.h"
+@@ -2068,3 +2069,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-compiler.cc
++++ b/v8/src/regexp/regexp-compiler.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-compiler.h"
+ 
+ #include <optional>
+@@ -3988,3 +3989,5 @@
+ }
+ 
+ }  // namespace v8::internal
++
++#endif  // V8_ENABLE_REGEXP
 --- /dev/null
-+++ b/v8/src/regexp/regexp-support.cc
-@@ -0,0 +1,30 @@
-+// Copyright 2012 the V8 project authors. All rights reserved.
++++ b/v8/src/regexp/regexp-config.h
+@@ -0,0 +1,15 @@
++// Copyright 2026 the V8 project authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
 +
-+#include "src/regexp/regexp.h"
++#ifndef V8_REGEXP_REGEXP_CONFIG_H_
++#define V8_REGEXP_REGEXP_CONFIG_H_
 +
-+#include "src/objects/fixed-array-inl.h"
-+#include "src/utils/ostreams.h"
++// Select entries inside builtin, runtime and compiler X-macro tables.
++#if V8_ENABLE_REGEXP
++#define IF_V8_ENABLE_REGEXP(...) __VA_ARGS__
++#else
++#define IF_V8_ENABLE_REGEXP(...)
++#endif
 +
-+namespace v8 {
-+namespace internal {
++#endif  // V8_REGEXP_REGEXP_CONFIG_H_
+--- a/v8/src/regexp/regexp-dotprinter.cc
++++ b/v8/src/regexp/regexp-dotprinter.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-dotprinter.h"
+ 
+ #include "src/base/strings.h"
+@@ -253,3 +254,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
 +
-+// Keep the existing heap-root cache lifecycle and flag formatting. The RegExp
-+// engine and its registrations are absent from this wee8-only configuration.
-+void RegExpResultsCache::Clear(Tagged<FixedArray> cache) {
-+  for (int i = 0; i < kRegExpResultsCacheSize; i++) {
-+    cache->set(i, Smi::zero());
-+  }
-+}
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-error.cc
++++ b/v8/src/regexp/regexp-error.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-error.h"
+ 
+ namespace v8 {
+@@ -20,3 +21,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
 +
-+std::ostream& operator<<(std::ostream& os, RegExpFlags flags) {
-+#define V(Lower, Camel, LowerCamel, Char, Bit) \
-+  if (flags & RegExpFlag::k##Camel) os << Char;
-+  REGEXP_FLAG_LIST(V)
-+#undef V
-+  return os;
-+}
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-interpreter.cc
++++ b/v8/src/regexp/regexp-interpreter.cc
+@@ -4,6 +4,7 @@
+ 
+ // A simple interpreter for the Irregexp byte code.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-interpreter.h"
+ 
+ #include "src/base/small-vector.h"
+@@ -1166,3 +1167,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
 +
-+}  // namespace internal
-+}  // namespace v8
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-macro-assembler-tracer.cc
++++ b/v8/src/regexp/regexp-macro-assembler-tracer.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-macro-assembler-tracer.h"
+ 
+ #include "src/objects/fixed-array-inl.h"
+@@ -442,3 +443,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-macro-assembler.cc
++++ b/v8/src/regexp/regexp-macro-assembler.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-macro-assembler.h"
+ 
+ #include "src/codegen/assembler.h"
+@@ -528,3 +529,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp-parser.cc
++++ b/v8/src/regexp/regexp-parser.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/regexp-parser.h"
+ 
+ #include "src/execution/isolate.h"
+@@ -3279,3 +3280,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/regexp.cc
++++ b/v8/src/regexp/regexp.cc
+@@ -26,6 +26,7 @@
+ namespace v8 {
+ namespace internal {
+ 
++#if V8_ENABLE_REGEXP
+ using namespace regexp_compiler_constants;  // NOLINT(build/namespaces)
+ 
+ class RegExpImpl final : public AllStatic {
+@@ -1297,6 +1298,8 @@
+       ReadOnlyRoots(isolate).fixed_cow_array_map());
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
++
+ void RegExpResultsCache::Clear(Tagged<FixedArray> cache) {
+   for (int i = 0; i < kRegExpResultsCacheSize; i++) {
+     cache->set(i, Smi::zero());
+--- a/v8/src/regexp/riscv/regexp-macro-assembler-riscv.cc
++++ b/v8/src/regexp/riscv/regexp-macro-assembler-riscv.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/regexp/riscv/regexp-macro-assembler-riscv.h"
+ 
+ #include "src/codegen/assembler-inl.h"
+@@ -1383,3 +1384,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/s390/regexp-macro-assembler-s390.cc
++++ b/v8/src/regexp/s390/regexp-macro-assembler-s390.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include "src/init/v8.h"
+ 
+ #if V8_TARGET_ARCH_S390
+@@ -1520,3 +1521,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_S390
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/regexp/x64/regexp-macro-assembler-x64.cc
++++ b/v8/src/regexp/x64/regexp-macro-assembler-x64.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #if V8_TARGET_ARCH_X64
+ 
+ #include "src/regexp/x64/regexp-macro-assembler-x64.h"
+@@ -1503,3 +1504,5 @@
+ }  // namespace v8
+ 
+ #endif  // V8_TARGET_ARCH_X64
++
++#endif  // V8_ENABLE_REGEXP
+--- a/v8/src/runtime/runtime-regexp.cc
++++ b/v8/src/runtime/runtime-regexp.cc
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
++#if V8_ENABLE_REGEXP
+ #include <functional>
+ 
+ #include "src/base/small-vector.h"
+@@ -2075,3 +2076,5 @@
+ 
+ }  // namespace internal
+ }  // namespace v8
++
++#endif  // V8_ENABLE_REGEXP
 --- a/v8/src/runtime/runtime-test.cc
 +++ b/v8/src/runtime/runtime-test.cc
-@@ -1677,77 +1677,6 @@
+@@ -1677,6 +1677,7 @@
    return ReadOnlyRoots(isolate).undefined_value();
  }
  
--RUNTIME_FUNCTION(Runtime_RegexpHasBytecode) {
--  SealHandleScope shs(isolate);
--  if (args.length() != 2 || !IsJSRegExp(args[0]) || !IsBoolean(args[1])) {
--    return CrashUnlessFuzzing(isolate);
--  }
--  auto regexp = args.at<JSRegExp>(0);
--  bool is_latin1 = args.at<Boolean>(1)->ToBool(isolate);
--  bool result = false;
--  if (regexp->has_data()) {
--    Tagged<RegExpData> data = regexp->data(isolate);
--    if (data->type_tag() == RegExpData::Type::IRREGEXP) {
--      result = Cast<IrRegExpData>(data)->has_bytecode(is_latin1);
--    }
--  }
--  return isolate->heap()->ToBoolean(result);
--}
--
--RUNTIME_FUNCTION(Runtime_RegexpHasNativeCode) {
--  SealHandleScope shs(isolate);
--  if (args.length() != 2 || !IsJSRegExp(args[0]) || !IsBoolean(args[1])) {
--    return CrashUnlessFuzzing(isolate);
--  }
--  auto regexp = args.at<JSRegExp>(0);
--  bool is_latin1 = args.at<Boolean>(1)->ToBool(isolate);
--  bool result = false;
--  if (regexp->has_data()) {
--    Tagged<RegExpData> data = regexp->data(isolate);
--    if (data->type_tag() == RegExpData::Type::IRREGEXP) {
--      result = Cast<IrRegExpData>(data)->has_code(is_latin1);
--    }
--  }
--  return isolate->heap()->ToBoolean(result);
--}
--
--RUNTIME_FUNCTION(Runtime_RegexpTypeTag) {
--  HandleScope shs(isolate);
--  if (args.length() != 1 || !IsJSRegExp(args[0])) {
--    return CrashUnlessFuzzing(isolate);
--  }
--  auto regexp = Cast<JSRegExp>(args[0]);
--  const char* type_str;
--  if (regexp->has_data()) {
--    switch (regexp->data(isolate)->type_tag()) {
--      case RegExpData::Type::ATOM:
--        type_str = "ATOM";
--        break;
--      case RegExpData::Type::IRREGEXP:
--        type_str = "IRREGEXP";
--        break;
--      case RegExpData::Type::EXPERIMENTAL:
--        type_str = "EXPERIMENTAL";
--        break;
--      default:
--        UNREACHABLE();
--    }
--  } else {
--    type_str = "NOT_COMPILED";
--  }
--  return *isolate->factory()->NewStringFromAsciiChecked(type_str);
--}
--
--RUNTIME_FUNCTION(Runtime_RegexpIsUnmodified) {
--  HandleScope shs(isolate);
--  if (args.length() != 1 || !IsJSRegExp(args[0])) {
--    return CrashUnlessFuzzing(isolate);
--  }
--  DirectHandle<JSRegExp> regexp = args.at<JSRegExp>(0);
--  return isolate->heap()->ToBoolean(
--      RegExp::IsUnmodifiedRegExp(isolate, regexp));
--}
--
++#if V8_ENABLE_REGEXP
+ RUNTIME_FUNCTION(Runtime_RegexpHasBytecode) {
+   SealHandleScope shs(isolate);
+   if (args.length() != 2 || !IsJSRegExp(args[0]) || !IsBoolean(args[1])) {
+@@ -1748,6 +1749,7 @@
+       RegExp::IsUnmodifiedRegExp(isolate, regexp));
+ }
+ 
++#endif  // V8_ENABLE_REGEXP
  #define ELEMENTS_KIND_CHECK_RUNTIME_FUNCTION(Name)    \
    RUNTIME_FUNCTION(Runtime_##Name) {                  \
      if (args.length() != 1 || !IsJSObject(args[0])) { \
-@@ -1794,12 +1723,6 @@
-   SealHandleScope shs(isolate);
-   return isolate->heap()->ToBoolean(
+@@ -1796,11 +1798,13 @@
        Protectors::IsTypedArraySpeciesLookupChainIntact(isolate));
--}
--
--RUNTIME_FUNCTION(Runtime_RegExpSpeciesProtector) {
--  SealHandleScope shs(isolate);
--  return isolate->heap()->ToBoolean(
--      Protectors::IsRegExpSpeciesLookupChainIntact(isolate));
  }
  
++#if V8_ENABLE_REGEXP
+ RUNTIME_FUNCTION(Runtime_RegExpSpeciesProtector) {
+   SealHandleScope shs(isolate);
+   return isolate->heap()->ToBoolean(
+       Protectors::IsRegExpSpeciesLookupChainIntact(isolate));
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
  RUNTIME_FUNCTION(Runtime_PromiseSpeciesProtector) {
-@@ -1970,30 +1893,6 @@
+   SealHandleScope shs(isolate);
+@@ -1970,6 +1974,7 @@
    return ReadOnlyRoots(isolate).undefined_value();
  }
  
--RUNTIME_FUNCTION(Runtime_NewRegExpWithBacktrackLimit) {
--  HandleScope scope(isolate);
--  if (args.length() != 3 || !IsString(args[0]) || !IsString(args[1]) ||
--      !IsSmi(args[2])) {
--    return CrashUnlessFuzzing(isolate);
--  }
--
--  Handle<String> pattern = args.at<String>(0);
--  Handle<String> flags_string = args.at<String>(1);
--  int backtrack_limit = args.smi_value_at(2);
--  if (backtrack_limit < 0) {
--    return CrashUnlessFuzzing(isolate);
--  }
--
--  auto maybe_flags = JSRegExp::FlagsFromString(isolate, flags_string);
--  if (!maybe_flags.has_value()) {
--    return CrashUnlessFuzzing(isolate);
--  }
--  JSRegExp::Flags flags = maybe_flags.value();
--
--  RETURN_RESULT_OR_FAILURE(
--      isolate, JSRegExp::New(isolate, pattern, flags, backtrack_limit));
--}
--
++#if V8_ENABLE_REGEXP
+ RUNTIME_FUNCTION(Runtime_NewRegExpWithBacktrackLimit) {
+   HandleScope scope(isolate);
+   if (args.length() != 3 || !IsString(args[0]) || !IsString(args[1]) ||
+@@ -1993,6 +1998,7 @@
+   RETURN_RESULT_OR_FAILURE(
+       isolate, JSRegExp::New(isolate, pattern, flags, backtrack_limit));
+ }
++#endif  // V8_ENABLE_REGEXP
+ 
  RUNTIME_FUNCTION(Runtime_Is64Bit) {
    SealHandleScope shs(isolate);
-   return isolate->heap()->ToBoolean(kSystemPointerSize == 8);
 --- a/v8/src/runtime/runtime.h
 +++ b/v8/src/runtime/runtime.h
-@@ -413,19 +413,6 @@
+@@ -4,6 +4,8 @@
+ 
+ #ifndef V8_RUNTIME_RUNTIME_H_
+ #define V8_RUNTIME_RUNTIME_H_
++
++#include "src/regexp/regexp-config.h"
+ 
+ #include <memory>
+ 
+@@ -413,6 +415,7 @@
    F(JSProxyGetTarget, 1, 1)            \
    F(SetPropertyWithReceiver, 4, 1)
  
--#define FOR_EACH_INTRINSIC_REGEXP(F, I)                          \
--  F(RegExpBuildIndices, 3, 1)                                    \
--  F(RegExpExec, 4, 1)                                            \
--  F(RegExpExecTreatMatchAtEndAsFailure, 4, 1)                    \
--  F(RegExpExperimentalOneshotExec, 4, 1)                         \
--  F(RegExpExperimentalOneshotExecTreatMatchAtEndAsFailure, 4, 1) \
--  F(RegExpExecMultiple, 3, 1)                                    \
--  F(RegExpInitializeAndCompile, 3, 1)                            \
--  F(RegExpReplaceRT, 3, 1)                                       \
--  F(RegExpSplit, 3, 1)                                           \
--  F(RegExpStringFromFlags, 1, 1)                                 \
--  F(StringReplaceNonGlobalRegExpWithFunction, 3, 1)              \
--  F(StringSplit, 3, 1)
++#if V8_ENABLE_REGEXP
+ #define FOR_EACH_INTRINSIC_REGEXP(F, I)                          \
+   F(RegExpBuildIndices, 3, 1)                                    \
+   F(RegExpExec, 4, 1)                                            \
+@@ -426,6 +429,9 @@
+   F(RegExpStringFromFlags, 1, 1)                                 \
+   F(StringReplaceNonGlobalRegExpWithFunction, 3, 1)              \
+   F(StringSplit, 3, 1)
++#else
++#define FOR_EACH_INTRINSIC_REGEXP(F, I)
++#endif  // V8_ENABLE_REGEXP
  
  #define FOR_EACH_THROWING_INTRINSIC_SCOPES(F, I) \
    F(ThrowConstAssignError, 0, 1)                 \
-@@ -584,7 +571,6 @@
+@@ -584,7 +590,9 @@
    F(IsWasmTieringPredictable, 0, 1)           \
    F(MapIteratorProtector, 0, 1)               \
    F(NeverOptimizeFunction, 1, 1)              \
 -  F(NewRegExpWithBacktrackLimit, 3, 1)        \
++  IF_V8_ENABLE_REGEXP( \
++  F(NewRegExpWithBacktrackLimit, 3, 1)                                        \
++  )                                                                           \
    F(NoElementsProtector, 0, 1)                \
    F(NotifyContextDisposed, 0, 1)              \
    F(SetPriorityBestEffort, 0, 1)              \
-@@ -597,11 +583,6 @@
+@@ -597,11 +605,13 @@
    F(PretenureAllocationSite, 1, 1)            \
    F(PrintWithNameForAssert, 2, 1)             \
    F(PromiseSpeciesProtector, 0, 1)            \
--  F(RegExpSpeciesProtector, 0, 1)             \
--  F(RegexpHasBytecode, 2, 1)                  \
--  F(RegexpHasNativeCode, 2, 1)                \
--  F(RegexpIsUnmodified, 1, 1)                 \
++  IF_V8_ENABLE_REGEXP( \
+   F(RegExpSpeciesProtector, 0, 1)             \
+   F(RegexpHasBytecode, 2, 1)                  \
+   F(RegexpHasNativeCode, 2, 1)                \
+   F(RegexpIsUnmodified, 1, 1)                 \
 -  F(RegexpTypeTag, 1, 1)                      \
++  F(RegexpTypeTag, 1, 1)                                                      \
++  )                                                                           \
    F(RunningInSimulator, 0, 1)                 \
    F(RuntimeEvaluateREPL, 1, 1)                \
    F(ScheduleGCInStackCheck, 0, 1)             \
-@@ -812,7 +793,6 @@
-   FOR_EACH_INTRINSIC_OPERATORS(F, I)                              \
-   FOR_EACH_INTRINSIC_PROMISE(F, I)                                \
-   FOR_EACH_INTRINSIC_PROXY(F, I)                                  \
--  FOR_EACH_INTRINSIC_REGEXP(F, I)                                 \
-   FOR_EACH_INTRINSIC_SCOPES(F, I)                                 \
-   FOR_EACH_INTRINSIC_SHADOW_REALM(F, I)                           \
-   FOR_EACH_INTRINSIC_STRINGS(F, I)                                \
+--- a/v8/src/torque/torque-parser.cc
++++ b/v8/src/torque/torque-parser.cc
+@@ -46,6 +46,7 @@
+ class BuildFlags : public base::ContextualClass<BuildFlags> {
+  public:
+   BuildFlags() {
++    build_flags_["V8_ENABLE_REGEXP"] = V8_ENABLE_REGEXP;
+     build_flags_["V8_EXTERNAL_CODE_SPACE"] = V8_EXTERNAL_CODE_SPACE_BOOL;
+     build_flags_["TAGGED_SIZE_8_BYTES"] = TargetArchitecture::TaggedSize() == 8;
+ #ifdef V8_INTL_SUPPORT
+@@ -2811,7 +2812,7 @@
+ 
+   // Result: std::optional<ClassBody*>
+   Symbol optionalClassBody = {
+-      Rule({Token("{"), List<Declaration*>(&method),
++      Rule({Token("{"), ListAllowIfAnnotation<Declaration*>(&method),
+             List<ClassFieldExpression>(&classField), Token("}")},
+            MakeClassBody),
+       Rule({Token(";")}, YieldDefaultValue<std::optional<ClassBody*>>)};
