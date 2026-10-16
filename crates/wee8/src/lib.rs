@@ -521,6 +521,7 @@ impl<T: 'static> Store<T> {
         let features = wasmparser::WasmFeatures::WASM1
             | wasmparser::WasmFeatures::BULK_MEMORY
             | wasmparser::WasmFeatures::MULTI_VALUE
+            | wasmparser::WasmFeatures::SATURATING_FLOAT_TO_INT
             | wasmparser::WasmFeatures::SIMD
             | wasmparser::WasmFeatures::REFERENCE_TYPES
             | wasmparser::WasmFeatures::GC
