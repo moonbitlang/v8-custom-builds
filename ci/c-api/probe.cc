@@ -3,6 +3,7 @@
 #undef NDEBUG
 #include "wasm.h"
 #include <initializer_list>
+#include <string>
 
 struct HostState {
   int calls = 0;
@@ -28,6 +29,25 @@ static wasm_trap_t* increment(const wasm_val_vec_t* args,
   assert(args->data[0].kind == WASM_I32);
   results->data[0] = WASM_I32_VAL(args->data[0].of.i32 + 1);
   return nullptr;
+}
+
+struct StartState {
+  wasm_store_t* store;
+  int calls = 0;
+  bool fail = false;
+};
+
+static wasm_trap_t* start_host(void* env, const wasm_val_vec_t* args,
+                               wasm_val_vec_t* results) {
+  assert(args->size == 0 && results->size == 0);
+  auto* state = static_cast<StartState*>(env);
+  state->calls++;
+  if (!state->fail) return nullptr;
+  wasm_message_t message;
+  wasm_name_new_from_string(&message, "start callback failed");
+  wasm_trap_t* trap = wasm_trap_new(state->store, &message);
+  wasm_byte_vec_delete(&message);
+  return trap;
 }
 
 extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
@@ -120,6 +140,55 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
       wasm_trap_delete(imported_trap);
     }
   }
+  // Direct host imports used as starts need the native entry introduced by
+  // this build. Keep this regression here: the published archive predates it.
+  wasm_byte_vec_t serialized;
+  wasm_module_serialize(imported_module, &serialized);
+  wasm_module_t* restored = wasm_module_deserialize(store, &serialized);
+  assert(restored);
+  wasm_byte_vec_delete(&serialized);
+  StartState start_state{store};
+  type = wasm_functype_new_0_0();
+  wasm_func_t* start_callback =
+      wasm_func_new_with_env(store, type, start_host, &start_state, nullptr);
+  wasm_functype_delete(type);
+  wasm_extern_t* host_start_data[] = {wasm_func_as_extern(start_callback)};
+  wasm_extern_vec_t host_start_imports = {1, host_start_data};
+  for (wasm_module_t* candidate : {imported_module, restored}) {
+    for (bool should_fail : {false, true}) {
+      start_state.fail = should_fail;
+      int before = start_state.calls;
+      wasm_trap_t* host_trap = nullptr;
+      wasm_instance_t* started =
+          wasm_instance_new(store, candidate, &host_start_imports, &host_trap);
+      assert(start_state.calls == before + 1);
+      if (should_fail) {
+        assert(!started && host_trap);
+        wasm_message_t message;
+        wasm_trap_message(host_trap, &message);
+        assert(message.size > 0);
+        assert(std::string(message.data, message.size).find("start callback failed") !=
+               std::string::npos);
+        wasm_byte_vec_delete(&message);
+        wasm_trap_delete(host_trap);
+      } else {
+        assert(started && !host_trap);
+        wasm_extern_vec_t started_exports;
+        wasm_instance_exports(started, &started_exports);
+        assert(started_exports.size == 1);
+        assert(!wasm_func_call(wasm_extern_as_func(started_exports.data[0]),
+                              &empty, &empty));
+        assert(start_state.calls == before + 2);
+        wasm_extern_vec_delete(&started_exports);
+        wasm_instance_delete(started);
+      }
+      // A failed start must leave the store usable.
+      assert(!wasm_func_call(run, &args, &results));
+      assert(result.of.i32 == 42);
+    }
+  }
+  wasm_func_delete(start_callback);
+  wasm_module_delete(restored);
   wasm_module_delete(imported_module);
 
   trap = wasm_func_call(run, &empty, &results);
