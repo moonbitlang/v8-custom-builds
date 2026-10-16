@@ -25,14 +25,42 @@ because older V8 C APIs used identical symbols with incompatible signatures.
 
 ## Supported interface
 
-The validated guest subset is Wasm 1.0 plus bulk-memory, multi-value and SIMD
-instructions. SIMD values may appear in internal functions, locals and globals.
-Function and global imports/exports containing `v128` are rejected before
-native compilation: V8 executes SIMD, but this C API cannot describe vector
-values at the embedding boundary. Host calls and exported function calls accept
-scalar numeric values and at most one result. Other guest proposals, including
-relaxed SIMD and shared memory, remain rejected before native introspection.
-Function imports are supplied in module declaration order.
+The validated guest subset is Wasm 1.0 plus bulk-memory, multi-value, SIMD,
+reference types, typed function references and GC. Structs, arrays and typed
+function references may stay inside the guest. The C API boundary is checked
+separately: only scalar numbers and nullable `externref`/`funcref` can appear in
+import/export metadata. GC references, non-null references and `v128` at that
+boundary are rejected before native introspection, which would otherwise abort.
+The Rust call interface supports scalar numbers and nullable `externref`, with
+at most one result; callable `funcref` handles are not exposed yet.
+
+`Store::as_context` and `Caller::as_context` provide the same borrowed
+`StoreContext` interface for host data and reference creation. Shared host code
+can take a context and call `ExternRef::new(context, value)` from either place.
+The root borrows the underlying store, so it may outlive the temporary context
+but cannot outlive the store or escape a callback's store borrow.
+`Store::extern_ref` and `Caller::extern_ref` remain convenience methods.
+
+`ExternRef::data` downcasts their payloads without exposing a native pointer.
+Cloning a reference keeps the same object alive; guest globals, tables and GC
+objects can retain it after the Rust handle is dropped. Handles borrow their
+store, and calls reject references from a different store. Host payloads are
+released by native finalizers, including during store teardown.
+
+Internally, the store separates host data `T` from a non-generic `StoreOpaque`
+holding native identity and execution state, following Wasmtime's store/context
+organization. `Store` owns native teardown; callback environments retain Rust
+state until their native finalizers run. `ExternRef` owns a V8 root and borrows
+the non-generic store state for lifetime and cross-store checks. Root creation,
+copying and deletion use V8's C API; there is no additional Rust root registry.
+
+`extern.convert_any` remains rejected in function bodies and constant
+expressions. This pinned V8 C API represents reference values with `JSReceiver`
+handles, while externalizing an `i31ref` can produce a native immediate. The
+wrapper cannot safely expose every result of that operation yet. Thus this is
+internal GC support, not support for every GC module or GC values at the host
+boundary. Exceptions/tags, relaxed SIMD, shared memory and other unlisted
+proposals remain excluded. Function imports are supplied in declaration order.
 
 A store owns its native objects; their Rust handles borrow the store and stay on
 its creating thread. `Compiled` may move between threads and create modules in
@@ -54,7 +82,9 @@ using another engine's native Rust API.
 ## Validation
 
 `cargo test` exercises native ownership, callbacks, memory borrowing, numeric
-execution, checksum parsing, and public API examples using the published archive.
+execution, internal GC/typed function references, host-reference ownership and
+shared store/callback contexts, rejection of unsupported boundary types, checksum
+parsing, and public API examples using the published archive.
 The Rust-crate workflow runs these checks on Linux, macOS, and Windows without
 building V8. Native archive production remains in the separately dispatched
 build workflow.

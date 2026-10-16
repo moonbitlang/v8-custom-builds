@@ -16,13 +16,13 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-//! Experimental numeric Wasm interface over the wee8 archive. All C ownership rules
+//! Experimental Wasm interface over the wee8 archive. All C ownership rules
 //! live here. Stores and their borrowed handles stay on their creating thread;
 //! Rust host state is retained through callback finalization. No JS handles cross
 //! this interface. V8 still uses JS objects internally.
 //!
 //! Host services such as WASI belong to the embedder. This crate only compiles,
-//! instantiates, and calls Wasm with numeric values and borrowed store handles.
+//! instantiates, and calls Wasm with numeric values and store-bound host references.
 //!
 //! ```
 //! use wee8::{Kind, Store, Value};
@@ -50,6 +50,8 @@
 //! ```
 
 mod ffi;
+mod references;
+pub use references::ExternRef;
 use std::{
     cell::{Cell, RefCell},
     ffi::c_void,
@@ -83,12 +85,19 @@ impl From<&str> for Error {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Value {
+impl From<wasmparser::BinaryReaderError> for Error {
+    fn from(error: wasmparser::BinaryReaderError) -> Self {
+        Self::Interface(error.to_string())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Value<'store> {
     I32(i32),
     I64(i64),
     F32(f32),
     F64(f64),
+    ExternRef(Option<ExternRef<'store>>),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -97,6 +106,7 @@ pub enum Kind {
     I64,
     F32,
     F64,
+    ExternRef,
 }
 
 impl Kind {
@@ -106,6 +116,7 @@ impl Kind {
             Self::I64 => 1,
             Self::F32 => 2,
             Self::F64 => 3,
+            Self::ExternRef => ffi::wasm_valkind_enum_WASM_EXTERNREF as u8,
         }
     }
 
@@ -115,43 +126,84 @@ impl Kind {
             1 => Ok(Self::I64),
             2 => Ok(Self::F32),
             3 => Ok(Self::F64),
-            _ => Err("the MVP supports only numeric host values".into()),
+            128 => Ok(Self::ExternRef),
+            _ => Err("unsupported host value type".into()),
         }
     }
 }
 
-impl Value {
-    fn raw(self) -> ffi::wasm_val_t {
-        use ffi::wasm_val_t__bindgen_ty_1 as Payload;
+impl<'store> Value<'store> {
+    pub fn kind(&self) -> Kind {
         match self {
-            Self::I32(i32) => ffi::wasm_val_t {
-                kind: 0,
-                of: Payload { i32_: i32 },
-            },
-            Self::I64(i64) => ffi::wasm_val_t {
-                kind: 1,
-                of: Payload { i64_: i64 },
-            },
-            Self::F32(f32) => ffi::wasm_val_t {
-                kind: 2,
-                of: Payload { f32_: f32 },
-            },
-            Self::F64(f64) => ffi::wasm_val_t {
-                kind: 3,
-                of: Payload { f64_: f64 },
-            },
+            Self::I32(_) => Kind::I32,
+            Self::I64(_) => Kind::I64,
+            Self::F32(_) => Kind::F32,
+            Self::F64(_) => Kind::F64,
+            Self::ExternRef(_) => Kind::ExternRef,
         }
     }
 
-    // The discriminant is checked before accessing the corresponding union field.
-    unsafe fn from_raw(value: &ffi::wasm_val_t) -> Result<Self> {
+    fn check_store(&self, store: &StoreOpaque) -> Result<()> {
+        if let Self::ExternRef(Some(reference)) = self
+            && reference.store.raw != store.raw
+        {
+            return Err("externref belongs to a different store".into());
+        }
+        Ok(())
+    }
+
+    // The returned C value owns a new root, consumed by the caller or RawValues.
+    fn raw(&self) -> ffi::wasm_val_t {
+        use ffi::wasm_val_t__bindgen_ty_1 as Payload;
+        let of = match self {
+            Self::I32(value) => Payload { i32_: *value },
+            Self::I64(value) => Payload { i64_: *value },
+            Self::F32(value) => Payload { f32_: *value },
+            Self::F64(value) => Payload { f64_: *value },
+            Self::ExternRef(reference) => Payload {
+                ref_: reference
+                    .as_ref()
+                    .map_or(ptr::null_mut(), |reference| unsafe {
+                        NonNull::new(ffi::wasm_ref_copy(reference.raw.as_ptr()))
+                            .expect("failed to copy externref root")
+                            .as_ptr()
+                    }),
+            },
+        };
+        ffi::wasm_val_t {
+            kind: self.kind().raw(),
+            of,
+        }
+    }
+
+    // C arguments are borrowed; C results are released separately. Both need
+    // their own root before becoming an independently owned Rust value.
+    unsafe fn from_raw(value: &ffi::wasm_val_t, store: &'store StoreOpaque) -> Result<Self> {
         unsafe {
             match Kind::from_raw(value.kind)? {
                 Kind::I32 => Ok(Self::I32(value.of.i32_)),
                 Kind::I64 => Ok(Self::I64(value.of.i64_)),
                 Kind::F32 => Ok(Self::F32(value.of.f32_)),
                 Kind::F64 => Ok(Self::F64(value.of.f64_)),
+                Kind::ExternRef => Ok(Self::ExternRef(NonNull::new(value.of.ref_).map(|raw| {
+                    ExternRef {
+                        raw: NonNull::new(ffi::wasm_ref_copy(raw.as_ptr()))
+                            .expect("failed to copy externref root"),
+                        store,
+                    }
+                }))),
             }
+        }
+    }
+}
+
+// C value vectors own roots even when a call traps or result conversion fails.
+// Callback descriptors themselves are borrowed and never wrapped here.
+struct RawValues(Vec<ffi::wasm_val_t>);
+impl Drop for RawValues {
+    fn drop(&mut self) {
+        for value in &mut self.0 {
+            unsafe { ffi::wasm_val_delete(value) }
         }
     }
 }
@@ -181,7 +233,17 @@ fn process_engine() -> Result<&'static ProcessEngine> {
 }
 
 struct State<T> {
+    inner: StoreOpaque,
     data: RefCell<T>,
+}
+
+// Like Wasmtime's StoreOpaque, this is the part of the store independent of T.
+// It holds native identity and execution state, not a second reference store.
+// Store<T> deletes the native store while callback-owned Rc<State<T>> values
+// still keep this state alive for finalization. Dropping State must not delete
+// the native store: native callbacks themselves retain State until teardown.
+struct StoreOpaque {
+    raw: NonNull<ffi::wasm_store_t>,
     executing: Cell<bool>,
     memory: Cell<*mut ffi::wasm_memory_t>,
     host_error: RefCell<Option<String>>,
@@ -190,10 +252,10 @@ struct State<T> {
 // Both instantiation (which can run a start function) and exported calls enter
 // guest code. Reject re-entry through another instance in the same store too:
 // it could otherwise grow a memory while a host callback holds its Rust view.
-struct Execution<'a, T>(&'a State<T>);
+struct Execution<'a>(&'a StoreOpaque);
 
-impl<T> State<T> {
-    fn enter(&self) -> Result<Execution<'_, T>> {
+impl StoreOpaque {
+    fn enter(&self) -> Result<Execution<'_>> {
         if self.executing.replace(true) {
             return Err("wee8 does not support guest re-entry from a host callback yet".into());
         }
@@ -201,17 +263,88 @@ impl<T> State<T> {
     }
 }
 
-impl<T> Drop for Execution<'_, T> {
+impl Drop for Execution<'_> {
     fn drop(&mut self) {
         self.0.memory.set(ptr::null_mut());
         self.0.executing.set(false);
     }
 }
 
+// GC constant expressions can also externalize values; scan every expression
+// location, not just function bodies. This is intentionally conservative until
+// the native adapter supports all representations of externref.
+fn validate_reference_conversions(bytes: &[u8]) -> Result<()> {
+    use wasmparser::{DataKind, ElementItems, ElementKind, Payload, TableInit};
+    fn check(mut operators: wasmparser::OperatorsReader<'_>) -> Result<()> {
+        while !operators.eof() {
+            let offset = operators.original_position();
+            if matches!(operators.read()?, wasmparser::Operator::ExternConvertAny) {
+                return Err(format!("extern.convert_any is unsupported by this V8 C API's externref representation (at offset {offset:#x})").into());
+            }
+        }
+        Ok(())
+    }
+    for payload in wasmparser::Parser::new(0).parse_all(bytes) {
+        match payload? {
+            Payload::CodeSectionEntry(body) => check(body.get_operators_reader()?)?,
+            Payload::GlobalSection(globals) => {
+                for global in globals {
+                    check(global?.init_expr.get_operators_reader())?;
+                }
+            }
+            Payload::TableSection(tables) => {
+                for table in tables {
+                    if let TableInit::Expr(expr) = table?.init {
+                        check(expr.get_operators_reader())?;
+                    }
+                }
+            }
+            Payload::ElementSection(elements) => {
+                for element in elements {
+                    let element = element?;
+                    if let ElementKind::Active { offset_expr, .. } = element.kind {
+                        check(offset_expr.get_operators_reader())?;
+                    }
+                    if let ElementItems::Expressions(_, expressions) = element.items {
+                        for expr in expressions {
+                            check(expr?.get_operators_reader())?;
+                        }
+                    }
+                }
+            }
+            Payload::DataSection(data) => {
+                for segment in data {
+                    if let DataKind::Active { offset_expr, .. } = segment?.kind {
+                        check(offset_expr.get_operators_reader())?;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 /// Native store and host state. Native handles borrow it and cannot cross threads.
 pub struct Store<T> {
-    raw: NonNull<ffi::wasm_store_t>,
     state: Rc<State<T>>,
+}
+
+/// Borrowed access to one store, obtained from either [`Store::as_context`] or
+/// [`Caller::as_context`]. This follows Wasmtime's store-context separation;
+/// native rooting remains owned by V8, with no Rust reference registry.
+///
+/// A context exposes host data and creates store-bound references. Guest memory
+/// access remains on [`Caller`], where the current instance is known. Unlike
+/// Wasmtime's mutable context, this wrapper uses checked interior borrows and
+/// rejects guest re-entry; the context does not grant exclusive store access.
+pub struct StoreContext<'a, T>(&'a State<T>);
+
+impl<T> StoreContext<'_, T> {
+    /// Borrow the embedder's host state for the duration of the operation.
+    pub fn with_data<R>(&self, operation: impl FnOnce(&T) -> R) -> R {
+        operation(&self.0.data.borrow())
+    }
 }
 
 impl<T> Store<T> {
@@ -220,19 +353,32 @@ impl<T> Store<T> {
         let raw = NonNull::new(unsafe { ffi::wasm_store_new(process_engine()?.0.as_ptr()) })
             .ok_or("failed to create wee8 store")?;
         Ok(Self {
-            raw,
             state: Rc::new(State {
+                inner: StoreOpaque {
+                    raw,
+                    executing: Cell::new(false),
+                    memory: Cell::new(ptr::null_mut()),
+                    host_error: RefCell::new(None),
+                },
                 data: RefCell::new(data),
-                executing: Cell::new(false),
-                memory: Cell::new(ptr::null_mut()),
-                host_error: RefCell::new(None),
             }),
         })
     }
 
+    /// Borrow this store through the same interface available to host callbacks.
+    pub fn as_context(&self) -> StoreContext<'_, T> {
+        StoreContext(&self.state)
+    }
+
+    /// Root a host value in this store. The guest may retain the object after
+    /// the Rust root is dropped; its payload is finalized when no roots remain.
+    pub fn extern_ref(&self, data: impl std::any::Any) -> Result<ExternRef<'_>> {
+        ExternRef::new(self.as_context(), data)
+    }
+
     fn take_trap(&self, trap: *mut ffi::wasm_trap_t) -> Error {
         let message = unsafe { take_trap(trap) };
-        match self.state.host_error.borrow_mut().take() {
+        match self.state.inner.host_error.borrow_mut().take() {
             Some(error) => Error::Host(error),
             None => Error::Trap(message),
         }
@@ -242,7 +388,7 @@ impl<T> Store<T> {
 impl<T> Drop for Store<T> {
     fn drop(&mut self) {
         // Native finalizers still have their own Rc to Rust state during teardown.
-        unsafe { ffi::wasm_store_delete(self.raw.as_ptr()) }
+        unsafe { ffi::wasm_store_delete(self.state.inner.raw.as_ptr()) }
     }
 }
 
@@ -250,16 +396,27 @@ impl<T> Drop for Store<T> {
 /// exposed yet. A memory borrow cannot escape this closure or cross guest growth.
 pub struct Caller<'a, T>(&'a State<T>);
 
-impl<T> Caller<'_, T> {
+impl<'a, T> Caller<'a, T> {
+    /// Borrow the store for this host call. Returned roots can outlive this
+    /// temporary Caller value, but cannot escape the callback's store borrow.
+    pub fn as_context(&self) -> StoreContext<'a, T> {
+        StoreContext(self.0)
+    }
+
+    /// Create a host object during this callback, for example as a return value.
+    pub fn extern_ref(&self, data: impl std::any::Any) -> Result<ExternRef<'a>> {
+        ExternRef::new(self.as_context(), data)
+    }
+
     /// Read the store's host state for this callback.
     pub fn with_data<R>(&self, operation: impl FnOnce(&T) -> R) -> R {
-        operation(&self.0.data.borrow())
+        self.as_context().with_data(operation)
     }
 
     /// Borrow the current instance's exported `memory` for one host call.
     /// Fails during start sections, nested memory borrows, or without that export.
     pub fn with_memory<R>(&self, operation: impl FnOnce(&T, &mut [u8]) -> R) -> Result<R> {
-        let memory = self.0.memory.get();
+        let memory = self.0.inner.memory.get();
         if memory.is_null() {
             return Err("wee8 host memory requires an exported `memory` and is unavailable during module start".into());
         }
@@ -280,11 +437,10 @@ impl<T> Caller<'_, T> {
     }
 }
 
-type Callback<T> = dyn Fn(Caller<'_, T>, &[Value]) -> Result<Vec<Value>>;
+type Callback<T> = dyn for<'a> Fn(Caller<'a, T>, &[Value<'a>]) -> Result<Vec<Value<'a>>>;
 
 struct CallbackEnvironment<T> {
     state: Rc<State<T>>,
-    store: *mut ffi::wasm_store_t,
     results: Vec<Kind>,
     callback: Box<Callback<T>>,
 }
@@ -318,14 +474,11 @@ unsafe extern "C" fn call_host<T>(
             };
             let values = args
                 .iter()
-                .map(|value| Value::from_raw(value))
+                .map(|value| Value::from_raw(value, &env.state.inner))
                 .collect::<Result<Vec<_>>>()?;
             let values = (env.callback)(Caller(&env.state), &values)?;
             if values.len() != env.results.len()
-                || values
-                    .iter()
-                    .zip(&env.results)
-                    .any(|(v, k)| v.raw().kind != k.raw())
+                || values.iter().zip(&env.results).any(|(v, k)| v.kind() != *k)
             {
                 return Err("host callback returned the wrong result signature".into());
             }
@@ -333,6 +486,9 @@ unsafe extern "C" fn call_host<T>(
             // borrowed; do not replace or free it, even for a zero-result call.
             if (*results).size != values.len() {
                 return Err("invalid callback result capacity".into());
+            }
+            for value in &values {
+                value.check_store(&env.state.inner)?;
             }
             for (index, value) in values.into_iter().enumerate() {
                 (*results).data.add(index).write(value.raw());
@@ -345,27 +501,30 @@ unsafe extern "C" fn call_host<T>(
             Err(_) => "Rust host callback panicked".into(),
         };
         // Wasm C API trap messages include the trailing NUL in their size.
-        *env.state.host_error.borrow_mut() = Some(error.clone());
+        *env.state.inner.host_error.borrow_mut() = Some(error.clone());
         error.push('\0');
         let message = ffi::wasm_byte_vec_t {
             size: error.len(),
             data: error.as_ptr().cast_mut().cast(),
         };
-        ffi::wasm_trap_new(env.store, &message)
+        ffi::wasm_trap_new(env.state.inner.raw.as_ptr(), &message)
     }
 }
 
 impl<T: 'static> Store<T> {
     /// Validate guest proposals and C API boundary types, then compile in this store.
     pub fn compile<'store>(&'store self, bytes: &[u8]) -> Result<Module<'store, T>> {
-        // V8 can execute internal SIMD, but its C API cannot describe v128 in
-        // an import/export type. Keep the proposal allowlist and separately
-        // validate that boundary before any native compilation/introspection.
+        // V8 can execute internal SIMD and GC, but its C API cannot describe
+        // vectors or GC references in an import/export type. Keep the proposal
+        // allowlist and check that boundary before native introspection.
         // Shared memory remains excluded because memory access is not atomic.
         let features = wasmparser::WasmFeatures::WASM1
             | wasmparser::WasmFeatures::BULK_MEMORY
             | wasmparser::WasmFeatures::MULTI_VALUE
-            | wasmparser::WasmFeatures::SIMD;
+            | wasmparser::WasmFeatures::SIMD
+            | wasmparser::WasmFeatures::REFERENCE_TYPES
+            | wasmparser::WasmFeatures::GC
+            | wasmparser::WasmFeatures::FUNCTION_REFERENCES;
         let types = wasmparser::Validator::new_with_features(features)
             .validate_all(bytes)
             .map_err(|error| {
@@ -382,41 +541,66 @@ impl<T: 'static> Store<T> {
             .core_exports()
             .unwrap()
             .map(|(name, ty)| (format!("export `{name}`"), ty));
+        // The native C API only describes scalar numbers and nullable externref/
+        // funcref. Unsupported GC/SIMD boundary types abort inside V8's type
+        // conversion, so reject them before any C API introspection.
+        let supported = |ty: wasmparser::ValType| {
+            matches!(
+                ty,
+                wasmparser::ValType::I32
+                    | wasmparser::ValType::I64
+                    | wasmparser::ValType::F32
+                    | wasmparser::ValType::F64
+            ) || ty == wasmparser::ValType::EXTERNREF
+                || ty == wasmparser::ValType::FUNCREF
+        };
         for (name, ty) in imports.chain(exports) {
-            let has_vector = match ty {
+            let unsupported = match ty {
                 wasmparser::types::EntityType::Func(id) => {
                     let function = types[id].unwrap_func();
                     function
                         .params()
                         .iter()
                         .chain(function.results())
-                        .any(|ty| *ty == wasmparser::ValType::V128)
+                        .copied()
+                        .find(|ty| !supported(*ty))
                 }
                 wasmparser::types::EntityType::Global(global) => {
-                    global.content_type == wasmparser::ValType::V128
+                    (!supported(global.content_type)).then_some(global.content_type)
                 }
-                _ => false,
+                wasmparser::types::EntityType::Table(table) => {
+                    let ty = wasmparser::ValType::Ref(table.element_type);
+                    (!supported(ty)).then_some(ty)
+                }
+                _ => None,
             };
-            if has_vector {
-                return Err(format!("v128 is unsupported in C API {name}").into());
+            if let Some(ty) = unsupported {
+                return Err(format!("{ty} is unsupported in C API {name}").into());
             }
         }
+        // This V8 C API represents externref with JSReceiver handles. A guest
+        // can externalize i31 (a native immediate) through extern.convert_any,
+        // which violates that representation even with an externref signature.
+        // Permit GC internally, but do not expose that unsafe conversion yet.
+        validate_reference_conversions(bytes)?;
         let bytes = ffi::wasm_byte_vec_t {
             size: bytes.len(),
             data: bytes.as_ptr().cast_mut().cast(),
         };
-        let raw = NonNull::new(unsafe { ffi::wasm_module_new(self.raw.as_ptr(), &bytes) })
-            .ok_or("module validation or compilation failed")?;
+        let raw =
+            NonNull::new(unsafe { ffi::wasm_module_new(self.state.inner.raw.as_ptr(), &bytes) })
+                .ok_or("module validation or compilation failed")?;
         Ok(Module { raw, store: self })
     }
 
-    /// Create a numeric host function with at most one result. Callback state is
-    /// retained until native finalization, which can outlive the function handle.
+    /// Create a numeric or externref host function with at most one result.
+    /// Callback state is retained until native finalization, which can outlive
+    /// the function handle.
     pub fn host_func<'store>(
         &'store self,
         params: &[Kind],
         results: &[Kind],
-        callback: impl Fn(Caller<'_, T>, &[Value]) -> Result<Vec<Value>> + 'static,
+        callback: impl for<'a> Fn(Caller<'a, T>, &[Value<'a>]) -> Result<Vec<Value<'a>>> + 'static,
     ) -> Result<HostFunc<'store, T>> {
         if results.len() > 1 {
             return Err("wee8 host functions return at most one value".into());
@@ -448,12 +632,11 @@ impl<T: 'static> Store<T> {
             }
             let env = Box::into_raw(Box::new(CallbackEnvironment {
                 state: Rc::clone(&self.state),
-                store: self.raw.as_ptr(),
                 results: results.to_vec(),
                 callback: Box::new(callback),
             }));
             let raw = ffi::wasm_func_new_with_env(
-                self.raw.as_ptr(),
+                self.state.inner.raw.as_ptr(),
                 ty,
                 Some(call_host::<T>),
                 env.cast(),
@@ -499,8 +682,10 @@ impl<T> Store<T> {
             size: compiled.0.len(),
             data: compiled.0.as_ptr().cast_mut().cast(),
         };
-        let raw = NonNull::new(unsafe { ffi::wasm_module_deserialize(self.raw.as_ptr(), &bytes) })
-            .ok_or("failed to obtain compiled module in new store")?;
+        let raw = NonNull::new(unsafe {
+            ffi::wasm_module_deserialize(self.state.inner.raw.as_ptr(), &bytes)
+        })
+        .ok_or("failed to obtain compiled module in new store")?;
         Ok(Module { raw, store: self })
     }
 }
@@ -592,7 +777,7 @@ impl<T> Drop for Module<'_, T> {
 impl<'store, T> Module<'store, T> {
     /// Imports follow module declaration order. The MVP accepts function imports.
     pub fn instantiate(&self, imports: &[&HostFunc<'_, T>]) -> Result<Instance<'store, T>> {
-        let _execution = self.store.state.enter()?;
+        let _execution = self.store.state.inner.enter()?;
         if imports.iter().any(|f| !ptr::eq(f.store, self.store)) {
             return Err("imports must belong to the module's store".into());
         }
@@ -617,7 +802,7 @@ impl<'store, T> Module<'store, T> {
             };
             let mut trap = ptr::null_mut();
             let raw = ffi::wasm_instance_new(
-                self.store.raw.as_ptr(),
+                self.store.state.inner.raw.as_ptr(),
                 self.raw.as_ptr(),
                 &imports,
                 &mut trap,
@@ -674,7 +859,7 @@ impl<T> Drop for Instance<'_, T> {
     }
 }
 
-impl<T> Instance<'_, T> {
+impl<'store, T> Instance<'store, T> {
     /// Test whether an export exists, regardless of its kind.
     pub fn has_export(&self, name: &str) -> bool {
         self.names.iter().any(|export| export == name.as_bytes())
@@ -692,10 +877,13 @@ impl<T> Instance<'_, T> {
         Ok(unsafe { *self.exports.data.add(index) })
     }
 
-    /// Call an exported function with numeric arguments and at most one result.
-    /// Guest traps and host callback failures remain distinct errors.
-    pub fn call(&mut self, name: &str, args: &[Value]) -> Result<Vec<Value>> {
-        let _execution = self.store.state.enter()?;
+    /// Call an exported function with numeric or externref arguments and at most
+    /// one result. Guest traps and host callback failures remain distinct errors.
+    pub fn call(&mut self, name: &str, args: &[Value<'_>]) -> Result<Vec<Value<'store>>> {
+        let _execution = self.store.state.inner.enter()?;
+        for value in args {
+            value.check_store(&self.store.state.inner)?;
+        }
         unsafe {
             let func = ffi::wasm_extern_as_func(self.export(name)?);
             if func.is_null() {
@@ -715,7 +903,7 @@ impl<T> Instance<'_, T> {
                 && args
                     .iter()
                     .enumerate()
-                    .all(|(i, v)| v.raw().kind == ffi::wasm_valtype_kind(*params.data.add(i)));
+                    .all(|(i, v)| v.kind().raw() == ffi::wasm_valtype_kind(*params.data.add(i)));
             let kinds = (0..returns.size)
                 .map(|i| Kind::from_raw(ffi::wasm_valtype_kind(*returns.data.add(i))))
                 .collect::<Result<Vec<_>>>();
@@ -724,21 +912,23 @@ impl<T> Instance<'_, T> {
                 return Err("argument signature mismatch".into());
             }
             let kinds = kinds?;
-            let mut args_raw: Vec<_> = args.iter().map(|v| v.raw()).collect();
-            let mut result_raw: Vec<_> = kinds
-                .iter()
-                .map(|k| ffi::wasm_val_t {
-                    kind: k.raw(),
-                    of: ffi::wasm_val_t__bindgen_ty_1 { i64_: 0 },
-                })
-                .collect();
+            let mut args_raw = RawValues(args.iter().map(|v| v.raw()).collect());
+            let mut result_raw = RawValues(
+                kinds
+                    .iter()
+                    .map(|k| ffi::wasm_val_t {
+                        kind: k.raw(),
+                        of: ffi::wasm_val_t__bindgen_ty_1 { i64_: 0 },
+                    })
+                    .collect(),
+            );
             let args = ffi::wasm_val_vec_t {
-                size: args_raw.len(),
-                data: args_raw.as_mut_ptr(),
+                size: args_raw.0.len(),
+                data: args_raw.0.as_mut_ptr(),
             };
             let mut results = ffi::wasm_val_vec_t {
-                size: result_raw.len(),
-                data: result_raw.as_mut_ptr(),
+                size: result_raw.0.len(),
+                data: result_raw.0.as_mut_ptr(),
             };
             let memory = self
                 .names
@@ -746,12 +936,16 @@ impl<T> Instance<'_, T> {
                 .position(|name| name == b"memory")
                 .map(|index| ffi::wasm_extern_as_memory(*self.exports.data.add(index)))
                 .unwrap_or(ptr::null_mut());
-            self.store.state.memory.set(memory);
+            self.store.state.inner.memory.set(memory);
             let trap = ffi::wasm_func_call(func, &args, &mut results);
             if !trap.is_null() {
                 return Err(self.store.take_trap(trap));
             }
-            result_raw.iter().map(|v| Value::from_raw(v)).collect()
+            result_raw
+                .0
+                .iter()
+                .map(|v| Value::from_raw(v, &self.store.state.inner))
+                .collect()
         }
     }
 }
