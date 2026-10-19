@@ -1,13 +1,17 @@
 #include "gc-bytes.h"
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
+#include "src/api/api-inl.h"
 #include "src/flags/flags.h"
+#include "src/runtime/runtime.h"
 #include <cstdint>
 #include <cstdio>
 #include <initializer_list>
 #include <memory>
 #include <string>
 #include <utility>
+
+static_assert(!V8_ENABLE_ASMJS, "The custom runtime must exclude asm.js");
 
 int main(int argc, char **argv) {
   if (argc > 1)
@@ -32,6 +36,25 @@ int main(int argc, char **argv) {
         v8::internal::v8_flags.validate_asm ||
         v8::internal::v8_flags.script_streaming)
       status = 2;
+    {
+      // Source rejection alone cannot prove that the asm.js runtime was cut.
+      // Call the retained runtime ID directly: it must reject before decoding
+      // arguments or attempting the old lazy-JS fallback.
+      auto *internal = reinterpret_cast<v8::internal::Isolate *>(isolate);
+      auto result = v8::internal::Runtime_InstantiateAsmJs(0, nullptr, internal);
+      if (result != v8::internal::ReadOnlyRoots(internal).exception().ptr() ||
+          !internal->has_exception()) {
+        status = 2;
+      } else {
+        auto exception = v8::Utils::ToLocal(
+            v8::internal::handle(internal->exception(), internal));
+        internal->clear_exception();
+        v8::String::Utf8Value message(isolate, exception);
+        if (!*message ||
+            std::string(*message) != "TypeError: asm.js is disabled")
+          status = 2;
+      }
+    }
     // No test setup may compile JavaScript: exercise Wasm through native APIs.
     for (const char *text : {"42", "function f() { return 42; }", "/x/"}) {
       v8::TryCatch caught(isolate);
