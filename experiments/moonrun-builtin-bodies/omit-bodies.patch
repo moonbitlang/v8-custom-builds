@@ -63,7 +63,7 @@ Base: rusty_v8 v0.106.0, V8 12.9.202.13.
      "src/builtins/builtins-promise.h",
 --- /dev/null
 +++ b/v8/src/builtins/moonrun-omitted-builtins.h
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,75 @@
 +// Experimental moonrun profile: explicit JS library entry points only.
 +// Keep this list synchronized with the dependency rationale in the experiment.
 +// Do not infer eligibility from JS linkage, a prefix, or an unused registration.
@@ -120,7 +120,23 @@ Base: rusty_v8 v0.106.0, V8 12.9.202.13.
 +  V(SetPrototypeUnion, Set, "union") \
 +  V(SetPrototypeIsDisjointFrom, Set, "isDisjointFrom") \
 +  V(SetPrototypeIsSubsetOf, Set, "isSubsetOf") \
-+  V(SetPrototypeIsSupersetOf, Set, "isSupersetOf")
++  V(SetPrototypeIsSupersetOf, Set, "isSupersetOf") \
++  V(IteratorPrototypeMap, Iterator, "map") \
++  V(IteratorPrototypeFilter, Iterator, "filter") \
++  V(IteratorPrototypeTake, Iterator, "take") \
++  V(IteratorPrototypeDrop, Iterator, "drop") \
++  V(IteratorPrototypeFlatMap, Iterator, "flatMap") \
++  V(IteratorPrototypeReduce, Iterator, "reduce") \
++  V(IteratorPrototypeToArray, Iterator, "toArray") \
++  V(IteratorPrototypeForEach, Iterator, "forEach") \
++  V(IteratorPrototypeSome, Iterator, "some") \
++  V(IteratorPrototypeEvery, Iterator, "every") \
++  V(IteratorPrototypeFind, Iterator, "find") \
++  V(PromiseAll, Promise, "all") \
++  V(PromiseAllSettled, Promise, "allSettled") \
++  V(PromiseAny, Promise, "any") \
++  V(PromiseRace, Promise, "race") \
++  V(PromiseWithResolvers, Promise, "withResolvers")
 +
 +#endif  // V8_BUILTINS_MOONRUN_OMITTED_BUILTINS_H_
 --- a/v8/src/builtins/setup-builtins-internal.cc

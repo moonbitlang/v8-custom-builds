@@ -20,7 +20,7 @@ for label, probe in [('before', args.before.resolve()), ('after', args.after.res
     result = subprocess.run([str(probe), '--inspect'], capture_output=True,
                             text=True, check=True, timeout=60)
     rows = list(csv.reader(io.StringIO(result.stdout)))
-    assert len(rows) == 50, f'{label}: incomplete explicit selection'
+    assert len(rows) == 66, f'{label}: incomplete explicit selection'
     reports[label] = {row[0]: list(map(int, row[1:])) for row in rows}
     assert len(reports[label]) == len(rows), f'{label}: duplicate builtin name'
     for name in reports[label]:
@@ -37,7 +37,8 @@ for label, probe in [('before', args.before.resolve()), ('after', args.after.res
                  '--wasm-lazy-compilation',
                  '--wasm-sync-tier-up --wasm-tiering-budget=1']:
         subprocess.run([str(probe), mode], check=True, timeout=60)
-    print(f'{label}: registrations, identities, 50 invocations and four Wasm modes passed')
+        subprocess.run([str(probe), "--retained=" + mode], check=True, timeout=60)
+    print(f'{label}: registrations, identities, 66 invocations and four Wasm modes passed')
 assert reports['before'].keys() == reports['after'].keys()
 for name, before in reports['before'].items():
     after = reports['after'][name]

@@ -4,50 +4,50 @@
   "v8": "12.9.202.13",
   "artifact_target": "aarch64-apple-darwin",
   "production_enabled": false,
-  "omitted_builtin_count": 50,
+  "omitted_builtin_count": 66,
   "total_builtin_labels": 2169,
   "unselected_builtin_body_lengths_unchanged": true,
   "sizes": {
     "archive": {
       "before": 60774168,
-      "after": 60571912,
-      "saved_bytes": 202256,
-      "saved_percent": 0.333
+      "after": 60552760,
+      "saved_bytes": 221408,
+      "saved_percent": 0.364
     },
     "stripped_consumer": {
       "before": 15640144,
-      "after": 15441936,
-      "saved_bytes": 198208,
-      "saved_percent": 1.267
+      "after": 15425408,
+      "saved_bytes": 214736,
+      "saved_percent": 1.373
     },
     "embedded_code": {
       "before": 1741728,
-      "after": 1553280,
-      "saved_bytes": 188448,
-      "saved_percent": 10.82
+      "after": 1529696,
+      "saved_bytes": 212032,
+      "saved_percent": 12.174
     },
     "embedded_data": {
       "before": 88844,
-      "after": 85176,
-      "saved_bytes": 3668,
-      "saved_percent": 4.129
+      "after": 83516,
+      "saved_bytes": 5328,
+      "saved_percent": 5.997
     },
     "snapshot": {
       "before": 406456,
-      "after": 404478,
-      "saved_bytes": 1978,
-      "saved_percent": 0.487
+      "after": 403367,
+      "saved_bytes": 3089,
+      "saved_percent": 0.76
     }
   },
   "archive_sha256": {
     "before": "a89c9cd69cb364a59df64fdd3c4d26e63c7b06fa6a1b419617eee5ed0403a817",
-    "after": "f7306b4f269a0fd99d3260e175611b4190e8417c2cbc55d82e643f74364aac17"
+    "after": "1f1df87ed80fea928500ae3f56ecd7f7512c551272171fd8b49f0f210a422bb5"
   },
   "validation": {
     "opt_out_archive_byte_identical": true,
-    "all_50_ids_argument_metadata_and_registrations_preserved": true,
-    "all_50_control_invocations_returned": true,
-    "all_50_candidate_invocations_trapped": true,
+    "all_66_ids_argument_metadata_and_registrations_preserved": true,
+    "all_66_control_invocations_returned": true,
+    "all_66_candidate_invocations_trapped": true,
     "baseline_and_candidate_four_wasm_modes": true,
     "candidate_c_api_tests": true,
     "candidate_rust_tests": true,
@@ -55,7 +55,10 @@
     "ci_native_experiment": false,
     "production_and_experiment_patch_application": true,
     "gn_header_dependency_checks": true,
-    "default_toolchain_experiment_define_absent": true
+    "default_toolchain_experiment_define_absent": true,
+    "retained_array_iteration": true,
+    "retained_promise_resolution_and_reactions": true,
+    "wasm_iterable_import_multi_results_four_modes": true
   },
   "moonrun_audited_commit": "efda7a5737998d5af78bdaafbd69a6966e8405d9"
 }

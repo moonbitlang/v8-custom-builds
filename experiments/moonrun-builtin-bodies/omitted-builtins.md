@@ -75,3 +75,33 @@ See the Set dependency rationale in [README.md](README.md#selection-and-dependen
 | `SetPrototypeIsDisjointFrom` | `isDisjointFrom` | 2,924 | 24 |
 | `SetPrototypeIsSubsetOf` | `isSubsetOf` | 1,724 | 24 |
 | `SetPrototypeIsSupersetOf` | `isSupersetOf` | 2,220 | 24 |
+
+## Iterator
+
+See the Iterator dependency rationale in [README.md](README.md#selection-and-dependency-rationale). Shared helpers and continuations remain.
+
+| Builtin | Method | Before | After |
+| --- | --- | ---: | ---: |
+| `IteratorPrototypeMap` | `map` | 388 | 24 |
+| `IteratorPrototypeFilter` | `filter` | 388 | 24 |
+| `IteratorPrototypeTake` | `take` | 500 | 24 |
+| `IteratorPrototypeDrop` | `drop` | 500 | 24 |
+| `IteratorPrototypeFlatMap` | `flatMap` | 404 | 24 |
+| `IteratorPrototypeReduce` | `reduce` | 1,740 | 24 |
+| `IteratorPrototypeToArray` | `toArray` | 1,564 | 24 |
+| `IteratorPrototypeForEach` | `forEach` | 1,080 | 24 |
+| `IteratorPrototypeSome` | `some` | 1,364 | 24 |
+| `IteratorPrototypeEvery` | `every` | 1,360 | 24 |
+| `IteratorPrototypeFind` | `find` | 1,372 | 24 |
+
+## Promise
+
+See the Promise dependency rationale in [README.md](README.md#selection-and-dependency-rationale). Shared helpers and continuations remain.
+
+| Builtin | Method | Before | After |
+| --- | --- | ---: | ---: |
+| `PromiseAll` | `all` | 4,132 | 24 |
+| `PromiseAllSettled` | `allSettled` | 4,464 | 24 |
+| `PromiseAny` | `any` | 2,696 | 24 |
+| `PromiseRace` | `race` | 1,536 | 24 |
+| `PromiseWithResolvers` | `withResolvers` | 332 | 24 |

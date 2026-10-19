@@ -2,7 +2,7 @@
 
 This is an opt-in experiment, outside the production patch stack. Recipe CI
 checks that it still applies after the production patches, without enabling it. It replaces
-50 explicitly selected JavaScript standard-library entry bodies with intentional
+66 explicitly selected JavaScript standard-library entry bodies with intentional
 machine traps. It preserves their IDs, registrations, argument descriptors,
 bootstrap references and distinct Code objects. Calling an omitted method is
 unsupported and terminates the process; it does not return a fake result or a
@@ -48,12 +48,25 @@ list and measured per-body sizes are recorded in `omitted-builtins.md`.
   Keep Set construction, add/delete/has, iteration and the shared ordered-hash
   implementation. These methods are not Wasm table operations.
 
+- **Iterator conveniences (11):** map/filter/take/drop/flatMap and terminal
+  reduce/toArray/forEach/some/every/find methods. Keep the iterator constructor,
+  Iterator.from, next/return protocol, iterator-helper resume bodies, accessors,
+  and all Array/Map/Set/String iterators. Wasm's JS-facing multi-result import
+  conversion directly calls IterableToFixedArrayForWasm; that conversion and
+  its core iterator machinery remain.
+- **Promise conveniences (5):** all/allSettled/any/race/withResolvers. Keep the
+  constructor, resolve/reject, then/catch/finally, reaction closures, jobs and
+  microtask machinery. Async Wasm compilation uses Promise resolvers, and Wasm
+  promise integration directly calls PerformPromiseThen. Neither calls these
+  five convenience entry points. Promise combinator resolve/reject closures
+  remain too: removing their internal bodies is outside this entry-point cut.
+
 The pinned-source reference audit covers `src` and `third_party/v8/builtins`,
 including both Torque names and C++ `Builtin::kName` forms. References fall into
 library declarations/implementations, bootstrap registration, JS compiler and
 Maglev handling, and debugger side-effect classification. No direct reference
 was found in Wasm, C API or native wrapper code. The list does not contain
-constructors, iterators, promises, string operations, conversion primitives,
+constructors, core iterator/promise operations, string operations, conversion primitives,
 Wasm wrappers, interpreter entries, or linkage/stack-management stubs.
 
 This audit is evidence for this pinned configuration, not a general proof that
@@ -87,11 +100,12 @@ python3 experiments/moonrun-builtin-bodies/check.py \
   --before BEFORE_PROBE --after AFTER_PROBE --output identities.json
 ```
 
-The comparison runner is POSIX-specific. It checks all 50 registrations and
+The comparison runner is POSIX-specific. It checks all 66 registrations and
 unique identities, compares builtin IDs and argument metadata, and invokes each
 method in a separate process: the control must return normally (including a
 caught argument error), while the candidate must reach the identified method
-and terminate with SIGTRAP or SIGILL. It also reuses the producer's runtime
+and terminate with SIGTRAP or SIGILL. Each process also checks retained Array
+iteration and native Promise resolution, reactions and microtask execution. It reuses the producer's runtime
 probe in all four Wasm tier configurations. Core dumps are disabled for these
 intentional trap tests.
 
@@ -120,17 +134,19 @@ are identical. These are artifact measurements, not a full moonrun executable.
 
 | Artifact component | Before (bytes) | After (bytes) | Saved |
 | --- | ---: | ---: | ---: |
-| Embedded code | 1,741,728 | 1,553,280 | 188,448 (10.82%) |
-| Embedded metadata | 88,844 | 85,176 | 3,668 (4.13%) |
-| Snapshot payload | 406,456 | 404,478 | 1,978 (0.49%) |
-| Static archive | 60,774,168 | 60,571,912 | 202,256 (0.33%) |
-| Stripped consumer | 15,640,144 | 15,441,936 | 198,208 (1.27%) |
+| Embedded code | 1,741,728 | 1,529,696 | 212,032 (12.17%) |
+| Embedded metadata | 88,844 | 83,516 | 5,328 (6.00%) |
+| Snapshot payload | 406,456 | 403,367 | 3,089 (0.76%) |
+| Static archive | 60,774,168 | 60,552,760 | 221,408 (0.36%) |
+| Stripped consumer | 15,640,144 | 15,425,408 | 214,736 (1.37%) |
 
 Validation passed: the disabled experiment produced a byte-identical control
-archive; all 50 selected registrations/IDs/argument metadata matched; Code
-objects were distinct and did not alias Illegal; all 50 control invocations
-returned and all 50 candidate invocations trapped; baseline and candidate each
-passed four runtime tier modes; candidate C API and Rust tests passed. Every
+archive; all 66 selected registrations/IDs/argument metadata matched; Code
+objects were distinct and did not alias Illegal; all 66 control invocations
+returned and all 66 candidate invocations trapped; baseline and candidate each
+passed four runtime tier modes; candidate C API and Rust tests passed; retained Array iteration and native
+Promise resolution/reactions and iterable host-import multi-results passed in
+both configurations, including all four Wasm modes. Every
 unselected builtin retained its embedded body length. The blob and snapshot were
 regenerated together, and both isolate and context initialization passed.
 
@@ -151,3 +167,27 @@ python3 experiments/moonrun-builtin-bodies/measure.py \
 supports keeping this as a narrow optional body-generation cut. Removing shared
 helpers, C++ dispatch targets, or string support would require separate dependency
 and behavior checks; this experiment does not establish those cuts as safe.
+
+## Candidate CI and release boundary
+
+Dispatch **Build and test** on the PR head with target
+`x86_64-unknown-linux-gnu` and `builtin_experiment=true`. This builds only
+custom wee8, applies the experiment after the production patches, and uses
+incremental rebuilds for the disabled and enabled experiment. It verifies that
+the disabled archive matches production, then runs all 66 identity/trap tests,
+retained protocol checks, four Wasm modes and candidate C API/Rust tests.
+The separate `builtin-experiment` artifact records before/after sizes and the
+exact validated commit. The ordinary native artifact remains the control;
+experiment output is never saved to the production artifact cache.
+
+This completes the explicit public-entry body selection for Array, TypedArray,
+Set algebra, iterator conveniences and Promise conveniences. It is not a claim
+that all unused generated code has been removed. Internal helper bodies and
+continuations remain deliberately intact; Date C++ removal is a separate cut.
+RegExp and Intl are already disabled by the underlying production profile.
+
+A release containing these savings still requires enabling this optional profile
+in the release recipe and validating its intended platforms. A release of the
+unchanged production recipe would not include this reduction. The selected APIs
+must be documented as process-trapping unsupported operations, not described as
+fully compatible JS APIs. This PR does not publish a release.
