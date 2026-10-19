@@ -60,8 +60,8 @@ without copying upstream target definitions. The producer currently supports
 native builds; cross compilation needs a corresponding snapshot-toolchain scope.
 The profile disables ICU, Maglev and Sparkplug through GN settings.
 Within this profile, `no-js-optimizer.patch` fixes JavaScript optimizing-tier flags to false, while
-retaining shared compiler infrastructure needed by Wasm. `no-asmjs.patch`
-disables the specialized asm.js-to-Wasm path.
+retaining shared compiler infrastructure needed by Wasm. `wee8-without-asmjs.patch`
+excludes the specialized asm.js-to-Wasm implementation.
 
 `no-regexp.patch` adds `v8_enable_regexp` (default `true`). The custom profile sets it to `false`, guarding the JavaScript RegExp library at its
 registration and call-site boundaries:
@@ -111,9 +111,28 @@ run the custom runtime/consumer probes. CI does not compile ordinary wee8.
 
 The patches keep separate concerns: `no-source-parser.patch` adds the optional
 parsing capability, `wee8-profile.patch` supplies the profile marker used by the
-existing tier/asm.js cuts, and `native-target.patch` connects the build driver
+existing tier cuts, and `native-target.patch` connects the build driver
 and probes. The profile settings live in the added GN file rather than global
 `GN_ARGS`.
+
+`wee8-without-asmjs.patch` adds `v8_enable_asmjs` (default `true`), disabled
+only in `custom_wee8`. GN excludes the four asm.js translation units while
+preserving the upstream implementation. Compiler guards remove the compilation
+job entry point, and the retained `InstantiateAsmJs` runtime ID throws
+`TypeError: asm.js is disabled` instead of falling back to JS compilation.
+A small selected source retains the export-name constant used by shared Wasm
+instantiation. Shared Wasm origins, opcodes, metadata and builtin IDs remain;
+removing those is a separate, broader change. Validation is read-only false
+when this capability is disabled.
+
+For upgrades, audit direct `AsmJs` callers and all sources under `src/asmjs`.
+Check both GN scopes without compiling ordinary wee8: the custom scope must
+exclude `asm-js.cc`, `asm-parser.cc`, `asm-scanner.cc` and `asm-types.cc`, while
+the default scope must retain them. Inspect the custom archive for translation
+and instantiation implementation symbols. The runtime probe calls the retained
+runtime entry directly and checks its explicit exception; source rejection alone
+would only prove the earlier JS parser cut. Existing binary Wasm tests then
+check that the runtime remains usable after the error.
 
 ## Parser-cut validation
 
