@@ -1,0 +1,47 @@
+# Keep the complete V8 configuration, including generated code and snapshots,
+# in one toolchain scope. Ordinary //v8:wee8 keeps its default capabilities.
+# This producer builds natively; cross builds need a matching snapshot scope.
+assert(target_os == host_os && target_cpu == host_cpu,
+       "custom_wee8 currently requires a native build")
+
+profile_args = {
+  v8_custom_wee8 = true
+  v8_enable_javascript_parser = false
+  v8_enable_regexp = false
+  v8_enable_i18n_support = false
+  icu_use_data_file = false
+  v8_enable_maglev = false
+  v8_enable_sparkplug = false
+}
+
+if (is_mac) {
+  import("//build/config/mac/mac_sdk.gni")
+  import("//build/toolchain/apple/toolchain.gni")
+  apple_toolchain("custom_wee8") {
+    bin_path = mac_bin_path
+    toolchain_args = {
+      forward_variables_from(profile_args, "*")
+      current_os = "mac"
+      current_cpu = target_cpu
+    }
+  }
+} else if (is_linux) {
+  import("//build/toolchain/gcc_toolchain.gni")
+  clang_toolchain("custom_wee8") {
+    toolchain_args = {
+      forward_variables_from(profile_args, "*")
+      current_os = "linux"
+      current_cpu = target_cpu
+    }
+  }
+} else if (is_win) {
+  import("//build/toolchain/win/toolchain.gni")
+  win_toolchains("custom_wee8") {
+    toolchain_arch = target_cpu
+    cl_toolchain_prefix = "msvc_"
+    clang_toolchain_prefix = ""
+    toolchain_args = profile_args
+  }
+} else {
+  assert(false, "Unsupported custom_wee8 platform")
+}

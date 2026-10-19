@@ -48,13 +48,22 @@ as WASI belong to the embedder.
 
 ## Runtime cuts
 
-The normal build disables ICU, Maglev and Sparkplug through GN settings.
-`no-js-optimizer.patch` fixes JavaScript optimizing-tier flags to false, while
+The producer builds `//:custom_wee8`, an entry point for `//v8:wee8` in a
+separate GN toolchain scope. `gn/custom_wee8/BUILD.gn` owns the profile settings
+and reuses the upstream platform toolchain templates. Ordinary `//v8:wee8`
+remains available in the same build with its default capabilities. Only requested
+targets are compiled; building the custom target does not build both runtimes.
+The two archives are alternative implementations and must not be linked together.
+
+This scope keeps compile definitions, Torque outputs and snapshots consistent
+without copying upstream target definitions. The producer currently supports
+native builds; cross compilation needs a corresponding snapshot-toolchain scope.
+The profile disables ICU, Maglev and Sparkplug through GN settings.
+Within this profile, `no-js-optimizer.patch` fixes JavaScript optimizing-tier flags to false, while
 retaining shared compiler infrastructure needed by Wasm. `no-asmjs.patch`
 disables the specialized asm.js-to-Wasm path.
 
-`no-regexp.patch` adds `v8_enable_regexp` (default `true`). The normal wee8
-recipe sets it to `false`, guarding the JavaScript RegExp library at its
+`no-regexp.patch` adds `v8_enable_regexp` (default `true`). The custom profile sets it to `false`, guarding the JavaScript RegExp library at its
 registration and call-site boundaries:
 
 - Context initialization does not install `RegExp` or String's `match`,
@@ -75,11 +84,57 @@ registration and call-site boundaries:
 
 Removing IDs requires fresh generated tables and snapshots. Do not mix generated
 files or snapshots from different recipes. This runtime is not a general-purpose
-JavaScript implementation. The JS parser, object machinery and other libraries
-still exist because this is one library boundary cut, not a complete JS removal.
+JavaScript implementation. The object machinery and other libraries still exist;
+the source-parser boundary below removes JavaScript parsing separately.
 Temporal, JSON and Date require separate dependency analysis. Platform clocks,
 Wasm memory, traps, interrupts and debug machinery are outside this RegExp cut.
 A custom debugger and fuel controls are not implemented yet.
+
+`no-source-parser.patch` adds `v8_enable_javascript_parser` (default `true`).
+The custom profile sets it to `false`. GN selects a separate
+`v8_javascript_parser_disabled` target and excludes the parser, preparser,
+scanner, source character streams, literal buffer, rewriter and name inferrer
+from compilation. The original parser
+implementations and enabled source list remain intact. The alternate parsing
+entry points report an explicit unsupported-source compilation error, including
+when called by debugger or error-reporting code. One shared compiler call site
+guards direct background parsing; script streaming is read-only disabled.
+
+This capability does not remove the JavaScript object model, native builtins,
+Ignition or AST metadata. Wasm continues to consume
+binary modules. V8 public APIs and execution of existing builtins and Wasm
+wrappers remain; source-compilation APIs report an unsupported-source error.
+Snapshot generation and native context creation must work without
+parsing JavaScript. For upgrades, audit direct parser callers and the source list,
+then inspect both targets' GN sources and definitions for profile leakage and
+run the custom runtime/consumer probes. CI does not compile ordinary wee8.
+
+The patches keep separate concerns: `no-source-parser.patch` adds the optional
+parsing capability, `wee8-profile.patch` supplies the profile marker used by the
+existing tier/asm.js cuts, and `native-target.patch` connects the build driver
+and probes. The profile settings live in the added GN file rather than global
+`GN_ARGS`.
+
+## Parser-cut validation
+
+CI builds and tests the custom artifact only. The runtime probe checks the
+changed boundary rather than retesting ordinary V8 language semantics:
+
+| Contract | Check | Regression caught |
+| --- | --- | --- |
+| JS source is unavailable | Script, module, function, `eval` and `Function` entry points return the explicit parser-disabled exception | A source-compilation path still accepts text, crashes, or reports an unrelated failure |
+| Streaming is unavailable | `StartStreaming` returns no task and does not read the supplied stream | Background parsing remains reachable |
+| Runtime execution remains available | Create a context from the generated snapshot; compile binary Wasm; instantiate through the retained `WebAssembly.Instance` builtin and call exported functions | Snapshot/runtime mismatch or accidental removal of JS API execution machinery |
+| GC survives host calls | WasmGC retains objects across a native callback that requests collection | Broken wrappers or rooting after the build cuts |
+| Wasm tiers still work | Run the probe with baseline-only, optimizing-only, lazy compilation and synchronous tier-up | A shared Wasm compiler path was disabled with the JS frontend |
+
+The existing packaged C API and Rust tests are reused for callbacks, ownership,
+memory, traps, serialization and start functions. They link the candidate archive;
+passing the published rusty_v8 library's tests would not validate this artifact.
+The native producer already reuses rusty_v8's pinned toolchain/bootstrap. Its
+full Rust adapter and source-based JS test suite are not part of this profile's
+test target. Debugger protocol behavior and precompiled JS cache compatibility
+are not claimed by these checks.
 
 ## C API scope
 
@@ -105,8 +160,8 @@ macOS x86_64/ARM64, and Windows x86_64.
 
 Native validation uses the freshly built artifacts:
 
-- A GN-built runtime probe checks absent RegExp registrations, rejection paths,
-  retained string/TypedArray behavior, and Wasm execution under Liftoff,
+- A GN-built runtime probe checks JavaScript script/module/function rejection,
+  absent RegExp/Intl registrations, forced GC, and Wasm execution under Liftoff,
   optimizing, lazy-compilation and synchronous tier-up settings.
 - The C API consumer checks calls, callbacks, ownership/finalization, vectors,
   traps, silent instantiation failures and memory growth.

@@ -19,13 +19,9 @@ done
 cp ci/runtime/probe.cc rusty_v8/wee8-runtime-check.cc
 cp ci/runtime/gc-bytes.h rusty_v8/gc-bytes.h
 unset DOCS_RS DENO_TRYBUILD V8_FORCE_DEBUG EXTRA_GN_ARGS
-export GN_ARGS='
-  v8_enable_regexp=false
-  v8_enable_i18n_support=false
-  icu_use_data_file=false
-  v8_enable_maglev=false
-  v8_enable_sparkplug=false
-'
+mkdir -p rusty_v8/custom_wee8
+cp gn/custom_wee8/BUILD.gn rusty_v8/custom_wee8/BUILD.gn
+unset GN_ARGS
 cargo build -vv --release --locked --manifest-path tools/native/Cargo.toml \
   --target "$target" --target-dir "$root/build"
 
@@ -35,9 +31,9 @@ case "$target" in
 esac
 gn_out="$root/build/$target/release/gn_out"
 mkdir -p "$out"
-gzip -9nc "$gn_out/obj/v8/$c_api.$ext" > "$out/${c_api}_release_$target.$ext.gz"
+gzip -9nc "$gn_out/custom_wee8/obj/v8/$c_api.$ext" > "$out/${c_api}_release_$target.$ext.gz"
 mkdir -p "$root/target/native-checks/$target"
-cp "$gn_out/wee8-runtime-check$exe" "$root/target/native-checks/$target/"
+cp "$gn_out/custom_wee8/wee8-runtime-check$exe" "$root/target/native-checks/$target/"
 cp rusty_v8/v8/third_party/wasm-api/wasm.h "$out/wasm_c_api_$target.h"
 cp "$root/licenses/wasm-c-api.txt" "$out/WASM_API_LICENSE_$target.txt"
 
