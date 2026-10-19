@@ -89,7 +89,7 @@ jobs:
       - name: Native cache key
         id: native-key
         env:
-          RECIPE: ${{ hashFiles('build.sh', 'tools/native/**', 'patches/*.patch', 'licenses/*', 'ci/runtime/**') }}
+          RECIPE: ${{ hashFiles('build.sh', 'tools/native/**', 'gn/**', 'patches/*.patch', 'licenses/*', 'ci/runtime/**') }}
         run: echo "key=native-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$(git rev-parse HEAD:rusty_v8)-$RECIPE" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: native

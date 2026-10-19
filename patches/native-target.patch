@@ -35,25 +35,40 @@ the same bootstrap with the wee8 build group and does not compile that crate.
  fn print_gn_args(gn_out_dir: &Path) {
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -48,3 +48,21 @@
+@@ -48,3 +48,36 @@
      ]
    }
  }
 +
 +# Build the Wasm C API and its native regression probe with identical settings.
 +group("wee8-build") {
-+  deps = [ "//v8:wee8", ":wee8-runtime-check" ]
++  deps = [ ":custom_wee8", ":wee8-runtime-check(//custom_wee8:custom_wee8)" ]
++}
++
++# Public entry point for the isolated native Wasm profile.
++group("custom_wee8") {
++  deps = [ "//v8:wee8(//custom_wee8:custom_wee8)" ]
 +}
 +
 +executable("wee8-runtime-check") {
 +  sources = [ "wee8-runtime-check.cc" ]
-+  deps = [ "//v8:wee8" ]
++  deps = [
++    "//v8:wee8",
++    "//v8:v8_libplatform",
++    "//v8:v8_internal_headers",
++    "//v8:v8_abseil",
++  ]
 +  configs += [ ":wee8_probe_config" ]
 +}
 +
 +# Follow the upstream config wrapper for V8's private toolchain config, but
 +# keep normal executable CRT linkage instead of the Rust adapter's /Zl flag.
 +config("wee8_probe_config") {
-+  configs = [ "//v8:external_config", "//v8:toolchain", "//v8:features" ]
++  configs = [
++    "//v8:internal_config",
++    "//v8:external_config",
++    "//v8:toolchain",
++    "//v8:features",
++  ]
 +  include_dirs = [ "v8" ]
 +}

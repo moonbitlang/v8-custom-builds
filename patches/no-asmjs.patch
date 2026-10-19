@@ -1,36 +1,26 @@
-Subject: Disable asm.js translation while retaining JavaScript fallback
+Subject: Disable asm.js translation in the custom wee8 profile
 
-Base: rusty_v8 v0.106.0, V8 12.9.202.13
-(V8 revision 245ce17ed8483e6bc3de7f668635f46c5bfdd8a0).
+Base: rusty_v8 v0.106.0, V8 12.9.202.13.
 
-Moonrun loads Wasm directly and does not need asm.js-to-Wasm translation.
-Make validate_asm a compile-time false constant, following no-js-optimizer.patch.
-UseAsmWasm then rejects specialization before the compilation job is created,
-allowing ordinary C++ optimization and final-link dead stripping to discard the
-asm.js parser and scanner. A mutable flag defaulting to false would retain that
-compilation path. This does not require C++ LTO.
-
-JavaScript with a "use asm" directive still executes as ordinary JavaScript.
-Wasm compilation, GC and Inspector remain enabled; the separate RegExp patch
-removes that library. Keep source lists
-and implementations intact: unused code can remain in the archive, and this
-does not reduce its compilation cost. InstantiateAsmJs and related runtime
-metadata remain; this is not complete removal of every asm.js component.
-
-The consumer checks valid asm.js arithmetic and verifies that its module was
-not specialized, alongside the existing baseline/optimizing Wasm tests. On a
-V8 upgrade, recheck UseAsmWasm, compilation-job callers and flag implications;
-new references can retain translation code. Measure the final executable on
-each linker rather than treating a passing runtime test as evidence of size.
+V8_CUSTOM_WEE8 selects read-only false flags so ordinary optimization and
+final-link dead stripping can discard unreachable JavaScript compilation paths.
+The original flags and implementations remain intact outside this profile.
+Shared Wasm compiler infrastructure stays enabled. On upgrade, audit flag
+implications and compilation-job callers; measure linked consumers rather than
+assuming every unreachable object disappears from the static archive.
 
 --- a/v8/src/flags/flag-definitions.h
 +++ b/v8/src/flags/flag-definitions.h
-@@ -1641,7 +1641,7 @@
+@@ -1641,7 +1641,12 @@
      experimental_wasm_pgo_from_file, false,
      "experimental: read and use Wasm PGO data from a local file (for testing)")
  
--DEFINE_BOOL(validate_asm, true,
++#if defined(V8_CUSTOM_WEE8)
 +DEFINE_BOOL_READONLY(validate_asm, false,
++            "validate asm.js modules and translate them to Wasm")
++#else
+ DEFINE_BOOL(validate_asm, true,
              "validate asm.js modules and translate them to Wasm")
++#endif
  // Directly interpret asm.js code as regular JavaScript code.
  // asm.js validation is disabled since it triggers wasm code generation.

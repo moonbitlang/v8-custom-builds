@@ -1,66 +1,48 @@
-Subject: Disable JavaScript optimization through constant tier flags
+Subject: Disable JavaScript optimization in the custom wee8 profile
 
-Base: rusty_v8 v0.106.0, V8 12.9.202.13
-(V8 revision 245ce17ed8483e6bc3de7f668635f46c5bfdd8a0).
-Requires v8_enable_maglev=false and v8_enable_sparkplug=false in build.sh.
+Base: rusty_v8 v0.106.0, V8 12.9.202.13.
 
-Moonrun executes Wasm but retains JavaScript parsing, Ignition and Inspector
-for embedding and debugging. Make the JavaScript flags turbofan, its opt alias
-and turboshaft_from_maglev read-only false. V8 declares read-only flags as
-compile-time constants, so ordinary C++ optimization can remove the call from
-ShouldOptimize/GetOrCompileOptimized into the JavaScript optimizing job.
-Final-link dead stripping can then discard the unreachable job and compiler
-passes. Runtime command-line flags alone would leave that call reachable.
-
-Keep the compiler implementations and GN source lists intact. Unused code may
-remain in the distributed archive; this patch targets the linked executable's
-size. It does not require C++ LTO or remove that code's compilation cost.
-Consumers need dead stripping enabled in their final link. Retaining all
-implementations also lets linkers resolve symbols before discarding sections.
-
-Keep V8_ENABLE_TURBOFAN and V8_ENABLE_TURBOFAN_BOOL unchanged: they describe
-shared capabilities needed by Wasm, host-call wrappers and snapshot builtin
-generation. Wasm's Liftoff, TurboFan and Turboshaft paths remain. JavaScript
-executes in Ignition, and runtime flags cannot enable its optimizing tiers.
-The JavaScript parser and Inspector remain; no-regexp.patch separately removes
-the RegExp library from the combined recipe.
-
-Validation: the native runtime probe checks disabled JS tiers and numeric
-Wasm/WasmGC across compilation modes. This is not an Inspector protocol suite.
-Check final-binary size and retained symbols on each linker; passing runtime
-tests alone does not establish dead stripping.
-
-On upgrade, recheck the read-only flag expansion, implications, JS tier
-scheduling, job-factory callers and Maglev/Turboshaft frontend callers. New
-references can keep unused code live despite these flags. Do not disable the
-shared TurboFan build capability as a substitute. Upstream entry path:
-https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/src/codegen/compiler.cc
+V8_CUSTOM_WEE8 selects read-only false flags so ordinary optimization and
+final-link dead stripping can discard unreachable JavaScript compilation paths.
+The original flags and implementations remain intact outside this profile.
+Shared Wasm compiler infrastructure stays enabled. On upgrade, audit flag
+implications and compilation-job callers; measure linked consumers rather than
+assuming every unreachable object disappears from the static archive.
 
 --- a/v8/src/flags/flag-definitions.h
 +++ b/v8/src/flags/flag-definitions.h
-@@ -1120,10 +1120,12 @@
+@@ -1120,10 +1120,20 @@
  // Flags for TurboFan.
  #ifdef V8_ENABLE_TURBOFAN
  #define V8_ENABLE_TURBOFAN_BOOL true
--DEFINE_BOOL(turbofan, true, "use the Turbofan optimizing compiler")
++#if defined(V8_CUSTOM_WEE8)
 +// Keep the shared compiler enabled for Wasm and builtin generation, but do
 +// not schedule JavaScript optimization jobs in this Wasm runtime.
 +DEFINE_BOOL_READONLY(turbofan, false, "JavaScript optimization is disabled")
++#else
+ DEFINE_BOOL(turbofan, true, "use the Turbofan optimizing compiler")
++#endif
  // TODO(leszeks): Temporary alias until we make sure all our infra is passing
  // --turbofan instead of --opt.
--DEFINE_ALIAS_BOOL(opt, turbofan)
++#if defined(V8_CUSTOM_WEE8)
 +DEFINE_BOOL_READONLY(opt, false, "JavaScript optimization is disabled")
++#else
+ DEFINE_ALIAS_BOOL(opt, turbofan)
++#endif
  #else
  #define V8_ENABLE_TURBOFAN_BOOL false
  DEFINE_BOOL_READONLY(turbofan, false, "use the Turbofan optimizing compiler")
-@@ -1422,8 +1424,8 @@
+@@ -1422,8 +1424,13 @@
  DEFINE_BOOL(turboshaft_wasm_instruction_selection_staged, false,
              "run instruction selection on Turboshaft IR directly for wasm, on "
              "architectures where we are staging the feature")
--DEFINE_EXPERIMENTAL_FEATURE(turboshaft_from_maglev,
--                            "build the Turboshaft graph from Maglev")
++#if defined(V8_CUSTOM_WEE8)
 +DEFINE_BOOL_READONLY(turboshaft_from_maglev, false,
 +                     "the JavaScript Maglev frontend is disabled")
++#else
+ DEFINE_EXPERIMENTAL_FEATURE(turboshaft_from_maglev,
+                             "build the Turboshaft graph from Maglev")
++#endif
  // inline_api_calls are not supported by the Turboshaft->Maglev translation.
  DEFINE_NEG_IMPLICATION(turboshaft_from_maglev, maglev_inline_api_calls)
  

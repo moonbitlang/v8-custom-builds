@@ -1,0 +1,24 @@
+Subject: Scope existing tier and asm.js cuts to the custom target
+
+--- a/v8/BUILD.gn
++++ b/v8/BUILD.gn
+@@ -26,6 +26,8 @@
+ emit_builtins_as_inline_asm = is_win && is_clang
+ 
+ declare_args() {
++  v8_custom_wee8 = false
++
+   # Disable JavaScript source parsing for native Wasm embedders.
+   v8_enable_javascript_parser = true
+ 
+@@ -1084,6 +1086,10 @@
+ 
+   defines =
+       [ "V8_TYPED_ARRAY_MAX_SIZE_IN_HEAP=${v8_typed_array_max_size_in_heap}" ]
++
++  if (v8_custom_wee8) {
++    defines += [ "V8_CUSTOM_WEE8" ]
++  }
+ 
+   if (v8_enable_javascript_parser) {
+     defines += [ "V8_ENABLE_JAVASCRIPT_PARSER=1" ]
