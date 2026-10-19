@@ -130,12 +130,43 @@ int main(int argc, char** argv) {
     if (!run->Call(context, v8::Undefined(isolate), 0, nullptr).ToLocal(&sum) ||
         sum->Int32Value(context).FromMaybe(0) != 42) return 9;
 
+    auto global_object = [&](const char* name) {
+      return context->Global()->Get(context,
+          v8::String::NewFromUtf8(isolate, name).ToLocalChecked())
+              .ToLocalChecked().As<v8::Object>();
+    };
+    auto ArrayConstructor = global_object("Array");
+    auto MapConstructor = global_object("Map");
+    auto ObjectConstructor = global_object("Object");
+    auto DateConstructor = global_object("Date");
+    auto Reflect = global_object("Reflect");
+    auto JSON = global_object("JSON");
+    auto Date = v8::Date::New(context, 0).ToLocalChecked().As<v8::Object>();
+    auto Number = v8::NumberObject::New(isolate, 42).As<v8::Object>();
+    auto String = v8::StringObject::New(isolate,
+        v8::String::NewFromUtf8Literal(isolate, "abc")).As<v8::Object>();
+    // JS convenience entries are separate from the embedding API and coercion
+    // primitives. Keep native JSON, property enumeration and Date coercion live.
+    v8::Local<v8::Value> parsed;
+    v8::Local<v8::String> serialized;
+    v8::Local<v8::Array> names;
+    if (!v8::JSON::Parse(context,
+            v8::String::NewFromUtf8Literal(isolate, "{\"x\":42}"))
+             .ToLocal(&parsed) ||
+        !v8::JSON::Stringify(context, parsed).ToLocal(&serialized) ||
+        !parsed.As<v8::Object>()->GetOwnPropertyNames(context).ToLocal(&names) ||
+        names->Length() != 1 ||
+        Date->NumberValue(context).FromMaybe(-1) != 0) return 11;
+    v8::String::Utf8Value json_text(isolate, serialized);
+    if (!*json_text || std::string(*json_text) != "{\"x\":42}") return 11;
     std::set<v8::internal::Address> identities;
     const bool inspect = std::string(argv[1]) == "--inspect";
 #define CHECK_BUILTIN(Name, Receiver, Method)                                  \
     {                                                                          \
       auto id = v8::internal::Builtin::k##Name;                                  \
       auto code = internal->builtins()->code(id);                               \
+      if (v8::internal::Builtins::KindOf(id) == v8::internal::Builtins::CPP && \
+          v8::internal::Builtins::CppEntryOf(id) == 0) return 10;                \
       auto key = v8::String::NewFromUtf8Literal(isolate, Method);                \
       v8::Local<v8::Value> value;                                               \
       if (code->builtin_id() != id || !identities.insert(code.ptr()).second ||   \
@@ -148,7 +179,8 @@ int main(int argc, char** argv) {
         return 3;                                                              \
       if (inspect) {                                                           \
         std::printf("%s,%d,%d,%u,%d\n", #Name, static_cast<int>(id),             \
-                    v8::internal::Builtins::GetStackParameterCount(id),         \
+                    (v8::internal::Builtins::KindOf(id) == v8::internal::Builtins::TFJ \
+                         ? v8::internal::Builtins::GetStackParameterCount(id) : -1),         \
                     code->parameter_count(), code->instruction_size());         \
       } else if (std::string(argv[1]) == "--invoke=" #Name) {                    \
         invoked = true;                                                        \

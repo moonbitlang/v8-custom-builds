@@ -102,8 +102,8 @@ guards direct background parsing; script streaming is read-only disabled.
 
 This capability does not remove the JavaScript object model, native builtins,
 Ignition or AST metadata. Wasm continues to consume
-binary modules. V8 public APIs and execution of existing builtins and Wasm
-wrappers remain; source-compilation APIs report an unsupported-source error.
+binary modules. Subject to the library profile below, V8 public APIs and
+execution of retained builtins and Wasm wrappers remain; source-compilation APIs report an unsupported-source error.
 Snapshot generation and native context creation must work without
 parsing JavaScript. For upgrades, audit direct parser callers and the source list,
 then inspect both targets' GN sources and definitions for profile leakage and
@@ -133,6 +133,18 @@ and instantiation implementation symbols. The runtime probe calls the retained
 runtime entry directly and checks its explicit exception; source rejection alone
 would only prove the earlier JS parser cut. Existing binary Wasm tests then
 check that the runtime remains usable after the error.
+
+## Unsupported JS library methods
+
+`wee8-without-library-bodies.patch` makes 149 named JS library entry points
+unsupported in custom wee8 by emitting distinct trap bodies. IDs, descriptors,
+registrations, object layouts and C++ dispatch tables remain. Invoking an omitted
+method terminates the process; preserving interface structure does not preserve
+that method's functionality. Ordinary V8 retains the original implementations.
+
+See [the selection and retained dependencies](ci/library-builtins/README.md) and
+[the exact method list](ci/library-builtins/omitted-builtins.md). Native candidate
+CI checks every omitted entry and retained Wasm/iterator/Promise behavior.
 
 ## Parser-cut validation
 

@@ -48,7 +48,9 @@ for label, folder in [('before', args.before), ('after', args.after)]:
 assert body_sizes['before'].keys() == body_sizes['after'].keys(), 'Builtin labels changed'
 changed = {name for name, size in body_sizes['before'].items()
            if size != body_sizes['after'][name]}
-assert changed == identities['before'].keys(), 'Unexpected body-size changes'
+# Tiny CPP adaptors and their trap replacements can occupy the same aligned
+# slot. check.py compares actual instruction sizes for every selected builtin.
+assert changed <= identities['before'].keys(), 'An unselected body changed size'
 result = {
     'sizes': {name: {
         'before': before,

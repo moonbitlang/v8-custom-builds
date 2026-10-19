@@ -17,6 +17,7 @@ for patch in "$root"/patches/*.patch; do
 done
 
 cp ci/runtime/probe.cc rusty_v8/wee8-runtime-check.cc
+cp ci/library-builtins/probe.cc rusty_v8/wee8-library-check.cc
 cp ci/runtime/gc-bytes.h rusty_v8/gc-bytes.h
 unset DOCS_RS DENO_TRYBUILD V8_FORCE_DEBUG EXTRA_GN_ARGS
 mkdir -p rusty_v8/custom_wee8
@@ -34,6 +35,7 @@ mkdir -p "$out"
 gzip -9nc "$gn_out/custom_wee8/obj/v8/$c_api.$ext" > "$out/${c_api}_release_$target.$ext.gz"
 mkdir -p "$root/target/native-checks/$target"
 cp "$gn_out/custom_wee8/wee8-runtime-check$exe" "$root/target/native-checks/$target/"
+cp "$gn_out/custom_wee8/wee8-library-check$exe" "$root/target/native-checks/$target/"
 cp rusty_v8/v8/third_party/wasm-api/wasm.h "$out/wasm_c_api_$target.h"
 cp "$root/licenses/wasm-c-api.txt" "$out/WASM_API_LICENSE_$target.txt"
 
