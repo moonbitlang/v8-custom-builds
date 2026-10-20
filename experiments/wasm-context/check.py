@@ -18,6 +18,8 @@ parser.add_argument("--cxx", default="clang++")
 parser.add_argument("--linker", help="explicit linker executable")
 parser.add_argument("--thin-lto", action="store_true")
 parser.add_argument("--lto-opt-level", type=int, choices=range(4), default=2)
+parser.add_argument("--cpp-entry-contract", action="store_true",
+                    help="validate candidate C++ entry selection and named traps")
 parser.add_argument("--probes", nargs="+",
                     choices=("empty", "initialize", "isolate", "context",
                              "c-api", "c-api-gc"),
@@ -108,5 +110,37 @@ for variant, archive in (("baseline", baseline), ("candidate", candidate)):
     results[variant]["wasm_modes_passed"] = (
         4 if any(name in args.probes for name in ("c-api", "c-api-gc")) else 0
     )
+    (work / "results.json").write_text(json.dumps(results, indent=2) + "\n")
+if args.cpp_entry_contract:
+    import resource
+    import signal
+
+    output = work / "candidate"
+    obj, exe = output / "entries.o", output / "entries"
+    with (output / "entries.build.log").open("w") as log:
+        subprocess.run([args.cxx, *flags, "-I" + str(assets), "-c",
+                        str(assets / "cpp-entry-contract.cc"), "-o", str(obj)],
+                       cwd=out, env=env, stdout=log,
+                       stderr=subprocess.STDOUT, check=True)
+        subprocess.run([args.cxx, *link_flags, str(obj), str(candidate),
+                        "-o", str(exe)], cwd=out, env=env, stdout=log,
+                       stderr=subprocess.STDOUT, check=True)
+    results["candidate"]["cpp_entry_contract"] = subprocess.run(
+        [str(exe)], capture_output=True, text=True, check=True, timeout=60
+    ).stdout.strip()
+    # Deliberate unsupported-entry death tests must identify their own builtin.
+    # Disable core dumps for these child processes.
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    negative_cases = ("DateConstructor", "TemporalPlainDateConstructor",
+                      "JsonStringify", "ArrayBufferConstructor",
+                      "StringPrototypeToLowerCase")
+    for name in negative_cases:
+        result = subprocess.run([str(exe), name], capture_output=True,
+                                text=True, timeout=60)
+        if (result.returncode not in (-signal.SIGABRT, -signal.SIGTRAP,
+                                      -signal.SIGILL) or
+                "Unsupported Wasm-context C++ builtin: " + name not in result.stderr):
+            raise RuntimeError(f"Unexpected unsupported-entry outcome: {name}")
+    results["candidate"]["unsupported_cpp_traps_passed"] = list(negative_cases)
     (work / "results.json").write_text(json.dumps(results, indent=2) + "\n")
 print(json.dumps(results, indent=2))

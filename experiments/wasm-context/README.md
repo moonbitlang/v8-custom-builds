@@ -8,8 +8,11 @@ installation, or the miscellaneous library installer.
 
 The prototype executes native Wasm calls, callbacks, traps, memory growth, and
 WasmGC without initializing the public JS standard library. This establishes a
-useful bootstrap seam. It does **not** establish the minimum possible runtime,
-or remove implementations rooted by builtin tables.
+useful bootstrap seam. The bootstrap alone does **not** establish the minimum
+possible runtime or remove implementations rooted by builtin tables.
+The subsequent [C++ entry allowlist](CPP-ENTRIES.md) removes 455 such table
+references while preserving their identities, bringing the C API probe to
+**12.91 MB**.
 
 ## Draft implementation
 
@@ -156,16 +159,16 @@ reviewing the new initializer and its shared helpers.
    Preserve the layouts consumed by native Wasm factories while omitting
    JS-facing constructors and methods. The native adapter should choose this
    context explicitly.
-2. Define a single positive selection of supported builtin implementations.
-   Apply it consistently to builtin generation, C++ entry metadata and external
-   references. Unselected builtin IDs retain their descriptors and explicit
-   unsupported code bodies, without pointers to the omitted C++ implementation.
-   Keep the snapshot and tables generated from exactly the same selection.
+2. Extend the [positive CPP entry selection](CPP-ENTRIES.md) to remaining builtin
+   kinds and runtime registrations after auditing their native Wasm callers.
+   Unselected builtin IDs retain their descriptors and explicit unsupported code
+   bodies. Keep the snapshot and tables generated from the same selection.
 3. Audit runtime tables and transitive references. A builtin's name or JS linkage
    is not a dependency proof; generated Wasm code can call shared helpers.
    Unknown additions on a V8 bump must require classification.
 4. Run moonrun's native interface tests and missing feature/error/GC cases against
    the candidate, then measure the final linked moonrun binary under release LTO.
 
-The final size is unknown until those roots are changed and the consumer is
-linked. The measured 13.58 MB is the current prototype, not a floor or a target.
+The final size is unknown until the remaining roots are changed and the consumer
+is linked. The context-only C API probe measured 13.58 MB; the subsequent CPP
+entry selection measures 12.91 MB. Neither is a floor or a target.

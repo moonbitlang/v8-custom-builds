@@ -1,0 +1,110 @@
+{
+  "measurement_date": "2026-10-20",
+  "context_baseline_revision": "805a6c2",
+  "target": "aarch64-apple-darwin",
+  "native_lto": false,
+  "selection": {
+    "cpp_entries": 488,
+    "retained": 33,
+    "omitted": 455,
+    "inventory_sha256": "cc6d25f4623b9e9836266307d492ef5ea563b82a1ee0ccb8e4eec6b26ec6e963"
+  },
+  "probes": {
+    "baseline": {
+      "context": {
+        "stripped_bytes": 13542480
+      },
+      "c-api": {
+        "stripped_bytes": 13575888
+      },
+      "c-api-gc": {
+        "stripped_bytes": 13575888
+      },
+      "heap": [
+        "used_heap_size=335496 total_heap_size=1884160",
+        "used_heap_size=335496 total_heap_size=1884160",
+        "used_heap_size=335496 total_heap_size=1884160"
+      ],
+      "wasm_modes_passed": 4
+    },
+    "candidate": {
+      "context": {
+        "stripped_bytes": 12880160
+      },
+      "c-api": {
+        "stripped_bytes": 12913584
+      },
+      "c-api-gc": {
+        "stripped_bytes": 12913568
+      },
+      "heap": [
+        "used_heap_size=335528 total_heap_size=1884160",
+        "used_heap_size=335528 total_heap_size=1884160",
+        "used_heap_size=335528 total_heap_size=1884160"
+      ],
+      "wasm_modes_passed": 4,
+      "cpp_entry_contract": "identities=2169 retained=33 omitted=455 unique_cpp_entries=488",
+      "unsupported_cpp_traps_passed": [
+        "DateConstructor",
+        "TemporalPlainDateConstructor",
+        "JsonStringify",
+        "ArrayBufferConstructor",
+        "StringPrototypeToLowerCase"
+      ]
+    }
+  },
+  "rust_wrapper": {
+    "unit_and_integration_passed": 20,
+    "doctests_passed": 4,
+    "failed": 0
+  },
+  "snapshot_payload_bytes": {
+    "baseline": 316920,
+    "candidate": 316920
+  },
+  "link_map": {
+    "baseline": {
+      "live_symbol_bytes": 13428873,
+      "selected_objects": {
+        "builtins-temporal.o": 107674,
+        "temporal-parser.o": 30764,
+        "js-temporal-objects.o": 225131,
+        "builtins-date.o": 20375,
+        "dateparser.o": 1288,
+        "date.o": 19413,
+        "json-stringifier.o": 54422,
+        "json-parser.o": 68256,
+        "builtins-arraybuffer.o": 7470,
+        "builtins-string.o": 16112,
+        "builtins.o": 128491,
+        "external-reference-table.o": 19583,
+        "embedded.o": 1556160,
+        "snapshot.o": 330433
+      }
+    },
+    "candidate": {
+      "live_symbol_bytes": 12789120,
+      "selected_objects": {
+        "builtins-temporal.o": 0,
+        "temporal-parser.o": 0,
+        "js-temporal-objects.o": 1056,
+        "builtins-date.o": 0,
+        "dateparser.o": 0,
+        "date.o": 3908,
+        "json-stringifier.o": 0,
+        "json-parser.o": 66276,
+        "builtins-arraybuffer.o": 0,
+        "builtins-string.o": 0,
+        "builtins.o": 144753,
+        "external-reference-table.o": 19583,
+        "embedded.o": 1556160,
+        "snapshot.o": 330433
+      }
+    }
+  },
+  "limits": [
+    "Probe sizes, not a full moonrun application measurement.",
+    "No platform matrix, shared memory, exception-tag or debugger validation.",
+    "No new native LTO measurement; previous measured LTO settings increased size."
+  ]
+}
