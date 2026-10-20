@@ -1,23 +1,31 @@
 unsafe extern "C" {
+    fn wee8_exception_probe(bytes: *const u8, len: usize);
     fn wee8_probe(bytes: *const u8, len: usize, start_bytes: *const u8, start_len: usize);
 }
 
 fn main() {
+    if std::env::args().nth(1).as_deref() == Some("--exceptions") {
+        let bytes = wat::parse_str(include_str!("exceptions.wat")).unwrap();
+        unsafe { wee8_exception_probe(bytes.as_ptr(), bytes.len()) };
+        return;
+    }
     if std::env::args().nth(1).as_deref() != Some("--child") {
-        let output = std::process::Command::new(std::env::current_exe().unwrap())
-            .arg("--child")
-            .output()
-            .unwrap();
-        assert!(output.status.success(), "probe failed: {output:?}");
-        assert!(
-            output.stdout.is_empty(),
-            "unexpected native stdout: {output:?}"
-        );
-        assert!(
-            output.stderr.is_empty(),
-            "unexpected native stderr: {output:?}"
-        );
-        println!("Wasm C API calls, callbacks, ownership, traps and memory passed");
+        for probe in ["--child", "--exceptions"] {
+            let output = std::process::Command::new(std::env::current_exe().unwrap())
+                .arg(probe)
+                .output()
+                .unwrap();
+            assert!(output.status.success(), "probe failed: {output:?}");
+            assert!(
+                output.stdout.is_empty(),
+                "unexpected native stdout: {output:?}"
+            );
+            assert!(
+                output.stderr.is_empty(),
+                "unexpected native stderr: {output:?}"
+            );
+        }
+        println!("Wasm C API calls, callbacks, ownership, traps, memory, tags and catchable exceptions passed");
         return;
     }
 

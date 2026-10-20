@@ -1,0 +1,627 @@
+Subject: Expose native Wasm tag identities and catchable exceptions through wee8
+
+Base: V8 245ce17ed8483e6bc3de7f668635f46c5bfdd8a0 (rusty_v8 0.106.0),
+after wasm-c-api.patch. No generated code or source lists are changed.
+
+The pinned C API aborts when describing an imported/exported tag, even though
+V8 executes exception handling internally. Implement the upstream header's
+TagType declarations, add runtime tag handles and casts, and enable the pinned
+experimental_wasm_exnref flag before engine initialization for try_table and
+throw_ref. Tag identities use WasmExceptionTag and the existing canonical type
+registry, exactly as V8's WebAssembly.Tag constructor does; equal signatures
+never make independently created tags equal.
+
+The wasm_tag_* runtime functions and wee8_exception_* functions are wee8
+extensions, not a claim that wasm-c-api standardizes exception transport.
+Exceptions use the existing owned wasm_trap_t callback return channel, carrying
+WasmExceptionPackage rather than an Error with wasm_uncatchable_symbol. The
+existing FuncData trampoline already throws the retained native object. Thus
+explicit guest exceptions are catchable, while wasm_trap_new host failures stay
+uncatchable. No JavaScript source evaluation or new object representation is used.
+
+Construction validates store identity, payload arity and kinds. Payloads support
+scalar numbers and nullable externref. Reading requires the matching tag and
+returns independently owned reference roots. Unsupported payload types return
+NULL/false; import/export metadata keeps the C API's existing scalar/nullable
+reference limit. The Rust validator rejects unsupported metadata before calling
+native introspection. GC values, v128 and exception references are not exposed
+as host payload values. Tags and exceptions must be destroyed before their store.
+
+The packaged C consumer checks import/export metadata, tag identity, matching
+and wrong-tag catches, catch_all, guest throws, throw_ref, payloads, ordinary
+host failure behavior, and continued execution. Candidate Rust tests additionally
+check reference rooting/finalization, start-section exceptions, cross-store and
+stale handles, malformed payloads, callback panics, pending exception cleanup,
+serialization and unsupported boundary rejection. Published-release tests still
+use the old ABI; the opt-in exceptions feature requires this candidate header
+and archive until a native release is published.
+
+Review/remove this patch when upgrading to a V8 C API providing equivalent tag
+and exception support. It does not add Moonrun's test driver or host imports.
+
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -34,6 +34,7 @@
+ #include "src/objects/call-site-info-inl.h"
+ #include "src/objects/js-collection-inl.h"
+ #include "src/objects/managed-inl.h"
++#include "src/wasm/canonical-types.h"
+ #include "src/wasm/leb-helper.h"
+ #include "src/wasm/module-instantiate.h"
+ #include "src/wasm/serialized-signature-inl.h"
+@@ -189,7 +190,7 @@
+       return GlobalType::make(std::move(content), mutability);
+     }
+     case i::wasm::kExternalTag:
+-      UNREACHABLE();
++      return TagType::make(FunctionSigToFuncType(module->tags[index].sig));
+   }
+ }
+ 
+@@ -413,6 +414,8 @@
+ auto Engine::make(own<Config>&& config) -> own<Engine> {
+   auto engine = new (std::nothrow) EngineImpl;
+   if (!engine) return own<Engine>();
++  // The pinned V8 gates the standardized try_table/throw_ref instructions.
++  i::v8_flags.experimental_wasm_exnref = true;
+   engine->platform = v8::platform::NewDefaultPlatform();
+   v8::V8::InitializePlatform(engine->platform.get());
+   v8::V8::Initialize();
+@@ -635,6 +638,8 @@
+       return table()->copy();
+     case EXTERN_MEMORY:
+       return memory()->copy();
++    case EXTERN_TAG:
++      return tag()->copy();
+   }
+ }
+ 
+@@ -830,6 +835,42 @@
+ auto ExternType::memory() const -> const MemoryType* {
+   return kind() == EXTERN_MEMORY
+              ? seal<MemoryType>(static_cast<const MemoryTypeImpl*>(impl(this)))
++             : nullptr;
++}
++
++// Tag Types
++
++struct TagTypeImpl : ExternTypeImpl {
++  own<FuncType> function;
++  explicit TagTypeImpl(own<FuncType>&& function)
++      : ExternTypeImpl(EXTERN_TAG), function(std::move(function)) {}
++};
++
++template <>
++struct implement<TagType> {
++  using type = TagTypeImpl;
++};
++
++TagType::~TagType() = default;
++
++auto TagType::make(own<FuncType>&& function) -> own<TagType> {
++  if (!function || function->results().size() != 0) return nullptr;
++  return own<TagType>(
++      seal<TagType>(new (std::nothrow) TagTypeImpl(std::move(function))));
++}
++
++auto TagType::copy() const -> own<TagType> { return make(functype()->copy()); }
++auto TagType::functype() const -> const FuncType* {
++  return impl(this)->function.get();
++}
++auto ExternType::tag() -> TagType* {
++  return kind() == EXTERN_TAG
++             ? seal<TagType>(static_cast<TagTypeImpl*>(impl(this)))
++             : nullptr;
++}
++auto ExternType::tag() const -> const TagType* {
++  return kind() == EXTERN_TAG
++             ? seal<TagType>(static_cast<const TagTypeImpl*>(impl(this)))
+              : nullptr;
+ }
+ 
+@@ -1353,6 +1394,7 @@
+   if (IsWasmGlobalObject(*obj)) return wasm::EXTERN_GLOBAL;
+   if (IsWasmTableObject(*obj)) return wasm::EXTERN_TABLE;
+   if (IsWasmMemoryObject(*obj)) return wasm::EXTERN_MEMORY;
++  if (IsWasmTagObject(*obj)) return wasm::EXTERN_TAG;
+   UNREACHABLE();
+ }
+ 
+@@ -1366,6 +1408,8 @@
+       return table()->type();
+     case EXTERN_MEMORY:
+       return memory()->type();
++    case EXTERN_TAG:
++      return tag()->type();
+   }
+ }
+ 
+@@ -1399,6 +1443,13 @@
+ 
+ auto Extern::memory() const -> const Memory* {
+   return kind() == EXTERN_MEMORY ? static_cast<const Memory*>(this) : nullptr;
++}
++
++auto Extern::tag() -> Tag* {
++  return kind() == EXTERN_TAG ? static_cast<Tag*>(this) : nullptr;
++}
++auto Extern::tag() const -> const Tag* {
++  return kind() == EXTERN_TAG ? static_cast<const Tag*>(this) : nullptr;
+ }
+ 
+ auto extern_to_v8(const Extern* ex) -> i::Handle<i::JSReceiver> {
+@@ -2243,6 +2294,171 @@
+   return old != -1;
+ }
+ 
++// Tag Instances and catchable exceptions
++
++template <>
++struct implement<Tag> {
++  using type = RefImpl<Tag, i::WasmTagObject>;
++};
++
++Tag::~Tag() = default;
++auto Tag::copy() const -> own<Tag> { return impl(this)->copy(); }
++auto Tag::same(const Tag* other) const -> bool {
++  if (impl(this)->store() != impl(other)->store()) return false;
++  PtrComprCageAccessScope scope(impl(this)->isolate());
++  return impl(this)->v8_object()->tag() == impl(other)->v8_object()->tag();
++}
++
++auto Tag::make(Store* store_abs, const TagType* type) -> own<Tag> {
++  StoreImpl* store = impl(store_abs);
++  i::Isolate* isolate = store->i_isolate();
++  v8::Isolate::Scope isolate_scope(reinterpret_cast<v8::Isolate*>(isolate));
++  i::HandleScope handle_scope(isolate);
++  CheckAndHandleInterrupts(isolate);
++  const auto& params = type->functype()->params();
++  std::vector<i::wasm::ValueType> types;
++  for (size_t n = 0; n < params.size(); ++n) {
++    types.push_back(WasmValKindToV8(params[n]->kind()));
++  }
++  i::wasm::FunctionSig sig(0, types.size(), types.data());
++  uint32_t canonical_index =
++      i::wasm::GetWasmEngine()->type_canonicalizer()->AddRecursiveGroup(&sig);
++  auto identity = i::WasmExceptionTag::New(isolate, 0);
++  auto object = i::WasmTagObject::New(isolate, &sig, canonical_index, identity,
++                                      i::Handle<i::WasmTrustedInstanceData>());
++  return implement<Tag>::type::make(store, object);
++}
++
++auto Tag::type() const -> own<TagType> {
++  i::Isolate* isolate = impl(this)->isolate();
++  v8::Isolate::Scope isolate_scope(reinterpret_cast<v8::Isolate*>(isolate));
++  i::HandleScope handle_scope(isolate);
++  auto signature = impl(this)->v8_object()->serialized_signature();
++  ownvec<ValType> params =
++      ownvec<ValType>::make_uninitialized(signature->length());
++  for (int n = 0; n < signature->length(); ++n) {
++    params[n] = ValType::make(V8ValueTypeToWasm(signature->get(n)));
++  }
++  return TagType::make(FuncType::make(std::move(params)));
++}
++
++// Unlike Trap::make, these objects do not have wasm_uncatchable_symbol. The
++// existing host-callback trampoline throws their native identity unchanged.
++auto MakeException(Store* store_abs, const Tag* tag,
++                   const vec<Val>& args) -> own<Trap> {
++  StoreImpl* store = impl(store_abs);
++  if (impl(tag)->store() != store) return nullptr;
++  i::Isolate* isolate = store->i_isolate();
++  v8::Isolate::Scope isolate_scope(reinterpret_cast<v8::Isolate*>(isolate));
++  i::HandleScope handle_scope(isolate);
++  CheckAndHandleInterrupts(isolate);
++  auto object = impl(tag)->v8_object();
++  i::Handle<i::PodArray<i::wasm::ValueType>> signature(
++      object->serialized_signature(), isolate);
++  if (args.size() != static_cast<size_t>(signature->length())) return nullptr;
++  for (size_t n = 0; n < args.size(); ++n) {
++    auto type = signature->get(static_cast<int>(n));
++    if (type != i::wasm::kWasmI32 && type != i::wasm::kWasmI64 &&
++        type != i::wasm::kWasmF32 && type != i::wasm::kWasmF64 &&
++        type != i::wasm::kWasmExternRef)
++      return nullptr;
++    if (args[n].kind() != V8ValueTypeToWasm(type)) return nullptr;
++    if (args[n].kind() == ANYREF && args[n].ref() &&
++        impl(args[n].ref())->store() != store)
++      return nullptr;
++  }
++  i::wasm::WasmTagSig sig(
++      0, signature->length(),
++      reinterpret_cast<i::wasm::ValueType*>(signature->begin()));
++  auto exception = i::WasmExceptionPackage::New(
++      isolate, i::handle(i::Cast<i::WasmExceptionTag>(object->tag()), isolate),
++      i::WasmExceptionPackage::GetEncodedSize(&sig));
++  auto values = i::Cast<i::FixedArray>(
++      i::WasmExceptionPackage::GetExceptionValues(isolate, exception));
++  uint32_t index = 0;
++  for (size_t n = 0; n < args.size(); ++n) {
++    const auto& arg = args[n];
++    switch (arg.kind()) {
++      case I32:
++        i::EncodeI32ExceptionValue(values, &index, arg.i32());
++        break;
++      case I64:
++        i::EncodeI64ExceptionValue(values, &index, arg.i64());
++        break;
++      case F32:
++        i::EncodeI32ExceptionValue(values, &index,
++                                   v8::base::bit_cast<int32_t>(arg.f32()));
++        break;
++      case F64:
++        i::EncodeI64ExceptionValue(values, &index,
++                                   v8::base::bit_cast<int64_t>(arg.f64()));
++        break;
++      case ANYREF:
++        values->set(index++, *WasmRefToV8(isolate, arg.ref()));
++        break;
++      default:
++        UNREACHABLE();
++    }
++  }
++  return implement<Trap>::type::make(store, exception);
++}
++
++bool IsException(const Trap* trap) {
++  PtrComprCageAccessScope scope(impl(trap)->isolate());
++  return i::IsWasmExceptionPackage(*impl(trap)->v8_object());
++}
++
++bool ExceptionIs(const Trap* trap, const Tag* tag) {
++  if (impl(trap)->store() != impl(tag)->store()) return false;
++  i::Isolate* isolate = impl(trap)->isolate();
++  v8::Isolate::Scope isolate_scope(reinterpret_cast<v8::Isolate*>(isolate));
++  i::HandleScope handle_scope(isolate);
++  if (!IsException(trap)) return false;
++  auto identity = i::WasmExceptionPackage::GetExceptionTag(
++      isolate, i::Cast<i::WasmExceptionPackage>(impl(trap)->v8_object()));
++  return *identity == impl(tag)->v8_object()->tag();
++}
++
++auto ExceptionArgs(const Trap* trap, const Tag* tag) -> vec<Val> {
++  if (!ExceptionIs(trap, tag)) return vec<Val>::invalid();
++  StoreImpl* store = impl(trap)->store();
++  i::Isolate* isolate = store->i_isolate();
++  v8::Isolate::Scope isolate_scope(reinterpret_cast<v8::Isolate*>(isolate));
++  i::HandleScope handle_scope(isolate);
++  i::Handle<i::PodArray<i::wasm::ValueType>> signature(
++      impl(tag)->v8_object()->serialized_signature(), isolate);
++  auto values =
++      i::Cast<i::FixedArray>(i::WasmExceptionPackage::GetExceptionValues(
++          isolate, i::Cast<i::WasmExceptionPackage>(impl(trap)->v8_object())));
++  auto args = vec<Val>::make_uninitialized(signature->length());
++  uint32_t index = 0;
++  for (size_t n = 0; n < args.size(); ++n) {
++    auto type = signature->get(static_cast<int>(n));
++    if (type == i::wasm::kWasmI32 || type == i::wasm::kWasmF32) {
++      uint32_t bits;
++      i::DecodeI32ExceptionValue(values, &index, &bits);
++      args[n] = type == i::wasm::kWasmI32
++                    ? Val(static_cast<int32_t>(bits))
++                    : Val(v8::base::bit_cast<float>(bits));
++    } else if (type == i::wasm::kWasmI64 || type == i::wasm::kWasmF64) {
++      uint64_t bits;
++      i::DecodeI64ExceptionValue(values, &index, &bits);
++      args[n] = type == i::wasm::kWasmI64
++                    ? Val(static_cast<int64_t>(bits))
++                    : Val(v8::base::bit_cast<double>(bits));
++    } else if (type == i::wasm::kWasmExternRef) {
++      i::Handle<i::Object> value(values->get(index++), isolate);
++      if (!i::IsNull(*value, isolate) && !i::IsJSReceiver(*value)) {
++        return vec<Val>::invalid();
++      }
++      args[n] = Val(V8RefValueToWasm(store, value));
++    } else {
++      return vec<Val>::invalid();
++    }
++  }
++  return args;
++}
++
+ // Module Instances
+ 
+ template <>
+@@ -2372,6 +2588,10 @@
+       case EXTERN_MEMORY: {
+         exports[i] = implement<Memory>::type::make(
+             store, i::Cast<i::WasmMemoryObject>(obj));
++      } break;
++      case EXTERN_TAG: {
++        exports[i] =
++            implement<Tag>::type::make(store, i::Cast<i::WasmTagObject>(obj));
+       } break;
+     }
+   }
+@@ -2731,6 +2951,17 @@
+   return hide_limits(mt->limits());
+ }
+ 
++// Tag Types
++
++WASM_DEFINE_TYPE(tagtype, wasm::TagType)
++
++wasm_tagtype_t* wasm_tagtype_new(wasm_functype_t* function) {
++  return release_tagtype(wasm::TagType::make(adopt_functype(function)));
++}
++const wasm_functype_t* wasm_tagtype_functype(const wasm_tagtype_t* type) {
++  return hide_functype(type->functype());
++}
++
+ // Extern Types
+ 
+ WASM_DEFINE_TYPE(externtype, wasm::ExternType)
+@@ -2749,6 +2980,9 @@
+   return hide_externtype(static_cast<wasm::ExternType*>(tt));
+ }
+ wasm_externtype_t* wasm_memorytype_as_externtype(wasm_memorytype_t* mt) {
++  return hide_externtype(static_cast<wasm::ExternType*>(mt));
++}
++wasm_externtype_t* wasm_tagtype_as_externtype(wasm_tagtype_t* mt) {
+   return hide_externtype(static_cast<wasm::ExternType*>(mt));
+ }
+ 
+@@ -2766,6 +3000,10 @@
+ }
+ const wasm_externtype_t* wasm_memorytype_as_externtype_const(
+     const wasm_memorytype_t* mt) {
++  return hide_externtype(static_cast<const wasm::ExternType*>(mt));
++}
++const wasm_externtype_t* wasm_tagtype_as_externtype_const(
++    const wasm_tagtype_t* mt) {
+   return hide_externtype(static_cast<const wasm::ExternType*>(mt));
+ }
+ 
+@@ -2791,6 +3029,11 @@
+   return et->kind() == wasm::EXTERN_MEMORY
+              ? hide_memorytype(
+                    static_cast<wasm::MemoryType*>(reveal_externtype(et)))
++             : nullptr;
++}
++wasm_tagtype_t* wasm_externtype_as_tagtype(wasm_externtype_t* et) {
++  return et->kind() == wasm::EXTERN_TAG
++             ? hide_tagtype(static_cast<wasm::TagType*>(reveal_externtype(et)))
+              : nullptr;
+ }
+ 
+@@ -2820,6 +3063,13 @@
+   return et->kind() == wasm::EXTERN_MEMORY
+              ? hide_memorytype(
+                    static_cast<const wasm::MemoryType*>(reveal_externtype(et)))
++             : nullptr;
++}
++const wasm_tagtype_t* wasm_externtype_as_tagtype_const(
++    const wasm_externtype_t* et) {
++  return et->kind() == wasm::EXTERN_TAG
++             ? hide_tagtype(
++                   static_cast<const wasm::TagType*>(reveal_externtype(et)))
+              : nullptr;
+ }
+ 
+@@ -3339,6 +3589,37 @@
+   return memory->grow(delta);
+ }
+ 
++// Tags and catchable exceptions (wee8 extension).
++
++WASM_DEFINE_REF(tag, wasm::Tag)
++
++wasm_tag_t* wasm_tag_new(wasm_store_t* store, const wasm_tagtype_t* type) {
++  return release_tag(wasm::Tag::make(store, type));
++}
++wasm_tagtype_t* wasm_tag_type(const wasm_tag_t* tag) {
++  return release_tagtype(tag->type());
++}
++wasm_trap_t* wee8_exception_new(wasm_store_t* store, const wasm_tag_t* tag,
++                                const wasm_val_vec_t* args) {
++  return release_trap(wasm::MakeException(store, tag, borrow_val_vec(args).it));
++}
++bool wee8_trap_is_exception(const wasm_trap_t* trap) {
++  return wasm::IsException(trap);
++}
++bool wee8_exception_is(const wasm_trap_t* trap, const wasm_tag_t* tag) {
++  return wasm::ExceptionIs(trap, tag);
++}
++bool wee8_exception_get_args(const wasm_trap_t* trap, const wasm_tag_t* tag,
++                             wasm_val_vec_t* out) {
++  auto args = wasm::ExceptionArgs(trap, tag);
++  if (!args) {
++    wasm_val_vec_new_empty(out);
++    return false;
++  }
++  *out = release_val_vec(std::move(args));
++  return true;
++}
++
+ // Externals
+ 
+ WASM_DEFINE_REF(extern, wasm::Extern)
+@@ -3363,6 +3644,9 @@
+ wasm_extern_t* wasm_memory_as_extern(wasm_memory_t* memory) {
+   return hide_extern(static_cast<wasm::Extern*>(reveal_memory(memory)));
+ }
++wasm_extern_t* wasm_tag_as_extern(wasm_tag_t* tag) {
++  return hide_extern(static_cast<wasm::Extern*>(reveal_tag(tag)));
++}
+ 
+ const wasm_extern_t* wasm_func_as_extern_const(const wasm_func_t* func) {
+   return hide_extern(static_cast<const wasm::Extern*>(reveal_func(func)));
+@@ -3376,6 +3660,9 @@
+ const wasm_extern_t* wasm_memory_as_extern_const(const wasm_memory_t* memory) {
+   return hide_extern(static_cast<const wasm::Extern*>(reveal_memory(memory)));
+ }
++const wasm_extern_t* wasm_tag_as_extern_const(const wasm_tag_t* tag) {
++  return hide_extern(static_cast<const wasm::Extern*>(reveal_tag(tag)));
++}
+ 
+ wasm_func_t* wasm_extern_as_func(wasm_extern_t* external) {
+   return hide_func(external->func());
+@@ -3388,6 +3675,9 @@
+ }
+ wasm_memory_t* wasm_extern_as_memory(wasm_extern_t* external) {
+   return hide_memory(external->memory());
++}
++wasm_tag_t* wasm_extern_as_tag(wasm_extern_t* external) {
++  return hide_tag(external->tag());
+ }
+ 
+ const wasm_func_t* wasm_extern_as_func_const(const wasm_extern_t* external) {
+@@ -3403,6 +3693,9 @@
+ const wasm_memory_t* wasm_extern_as_memory_const(
+     const wasm_extern_t* external) {
+   return hide_memory(external->memory());
++}
++const wasm_tag_t* wasm_extern_as_tag_const(const wasm_extern_t* external) {
++  return hide_tag(external->tag());
+ }
+ 
+ // Module Instances
+--- a/v8/third_party/wasm-api/wasm.h
++++ b/v8/third_party/wasm-api/wasm.h
+@@ -496,6 +496,27 @@
+ WASM_API_EXTERN bool wasm_memory_grow(wasm_memory_t*, wasm_memory_pages_t delta);
+ 
+ 
++// Tag instances and exceptions are wee8 extensions, not portable wasm-c-api.
++// Handles are store-bound roots, following the other reference ownership rules.
++// A tag's signature has no results. Exception payloads support scalar numbers
++// and nullable externref; unsupported signatures/values return NULL/false.
++WASM_DECLARE_REF(tag)
++WASM_API_EXTERN own wasm_tag_t* wasm_tag_new(wasm_store_t*, const wasm_tagtype_t*);
++WASM_API_EXTERN own wasm_tagtype_t* wasm_tag_type(const wasm_tag_t*);
++
++// A catchable Wasm exception uses the existing trap return channel. Return this
++// owned handle from a host callback to throw it; wasm_trap_new still creates an
++// uncatchable host failure. Copies, deletion and message inspection use trap APIs.
++// Construction validates store identity, argument count and types, returning
++// NULL on mismatch. All input handles and values are borrowed.
++WASM_API_EXTERN own wasm_trap_t* wee8_exception_new(
++  wasm_store_t*, const wasm_tag_t*, const wasm_val_vec_t*);
++WASM_API_EXTERN bool wee8_trap_is_exception(const wasm_trap_t*);
++WASM_API_EXTERN bool wee8_exception_is(const wasm_trap_t*, const wasm_tag_t*);
++// On success returns an owned value vector; on failure returns an empty vector.
++WASM_API_EXTERN bool wee8_exception_get_args(
++  const wasm_trap_t*, const wasm_tag_t*, own wasm_val_vec_t* out);
++
+ // Externals
+ 
+ WASM_DECLARE_REF(extern)
+@@ -508,21 +529,25 @@
+ WASM_API_EXTERN wasm_extern_t* wasm_global_as_extern(wasm_global_t*);
+ WASM_API_EXTERN wasm_extern_t* wasm_table_as_extern(wasm_table_t*);
+ WASM_API_EXTERN wasm_extern_t* wasm_memory_as_extern(wasm_memory_t*);
++WASM_API_EXTERN wasm_extern_t* wasm_tag_as_extern(wasm_tag_t*);
+ 
+ WASM_API_EXTERN wasm_func_t* wasm_extern_as_func(wasm_extern_t*);
+ WASM_API_EXTERN wasm_global_t* wasm_extern_as_global(wasm_extern_t*);
+ WASM_API_EXTERN wasm_table_t* wasm_extern_as_table(wasm_extern_t*);
+ WASM_API_EXTERN wasm_memory_t* wasm_extern_as_memory(wasm_extern_t*);
++WASM_API_EXTERN wasm_tag_t* wasm_extern_as_tag(wasm_extern_t*);
+ 
+ WASM_API_EXTERN const wasm_extern_t* wasm_func_as_extern_const(const wasm_func_t*);
+ WASM_API_EXTERN const wasm_extern_t* wasm_global_as_extern_const(const wasm_global_t*);
+ WASM_API_EXTERN const wasm_extern_t* wasm_table_as_extern_const(const wasm_table_t*);
+ WASM_API_EXTERN const wasm_extern_t* wasm_memory_as_extern_const(const wasm_memory_t*);
++WASM_API_EXTERN const wasm_extern_t* wasm_tag_as_extern_const(const wasm_tag_t*);
+ 
+ WASM_API_EXTERN const wasm_func_t* wasm_extern_as_func_const(const wasm_extern_t*);
+ WASM_API_EXTERN const wasm_global_t* wasm_extern_as_global_const(const wasm_extern_t*);
+ WASM_API_EXTERN const wasm_table_t* wasm_extern_as_table_const(const wasm_extern_t*);
+ WASM_API_EXTERN const wasm_memory_t* wasm_extern_as_memory_const(const wasm_extern_t*);
++WASM_API_EXTERN const wasm_tag_t* wasm_extern_as_tag_const(const wasm_extern_t*);
+ 
+ 
+ // Module Instances
+--- a/v8/third_party/wasm-api/wasm.hh
++++ b/v8/third_party/wasm-api/wasm.hh
+@@ -255,13 +255,18 @@
+ // External Types
+ 
+ enum ExternKind : uint8_t {
+-  EXTERN_FUNC, EXTERN_GLOBAL, EXTERN_TABLE, EXTERN_MEMORY
++  EXTERN_FUNC,
++  EXTERN_GLOBAL,
++  EXTERN_TABLE,
++  EXTERN_MEMORY,
++  EXTERN_TAG
+ };
+ 
+ class FuncType;
+ class GlobalType;
+ class TableType;
+ class MemoryType;
++class TagType;
+ 
+ class ExternType {
+ public:
+@@ -277,11 +282,13 @@
+   auto global() -> GlobalType*;
+   auto table() -> TableType*;
+   auto memory() -> MemoryType*;
++  auto tag() -> TagType*;
+ 
+   auto func() const -> const FuncType*;
+   auto global() const -> const GlobalType*;
+   auto table() const -> const TableType*;
+   auto memory() const -> const MemoryType*;
++  auto tag() const -> const TagType*;
+ };
+ 
+ 
+@@ -347,6 +354,16 @@
+   auto limits() const -> const Limits&;
+ };
+ 
++// Tag Types
++
++class TagType : public ExternType {
++ public:
++  TagType() = delete;
++  ~TagType();
++  static auto make(own<FuncType>&&) -> own<TagType>;
++  auto copy() const -> own<TagType>;
++  auto functype() const -> const FuncType*;
++};
+ 
+ // Import Types
+ 
+@@ -606,6 +623,7 @@
+ class Global;
+ class Table;
+ class Memory;
++class Tag;
+ 
+ class Extern : public Ref {
+ public:
+@@ -621,11 +639,13 @@
+   auto global() -> Global*;
+   auto table() -> Table*;
+   auto memory() -> Memory*;
++  auto tag() -> Tag*;
+ 
+   auto func() const -> const Func*;
+   auto global() const -> const Global*;
+   auto table() const -> const Table*;
+   auto memory() const -> const Memory*;
++  auto tag() const -> const Tag*;
+ };
+ 
+ 
+@@ -710,6 +730,17 @@
+   auto grow(pages_t delta) -> bool;
+ };
+ 
++// Tag Instances (wee8 extension)
++
++class Tag : public Extern {
++ public:
++  Tag() = delete;
++  ~Tag();
++  static auto make(Store*, const TagType*) -> own<Tag>;
++  auto copy() const -> own<Tag>;
++  auto same(const Tag*) const -> bool;
++  auto type() const -> own<TagType>;
++};
+ 
+ // Module Instances
+ 

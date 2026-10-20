@@ -60,10 +60,11 @@ expressions. This pinned V8 C API represents reference values with `JSReceiver`
 handles, while externalizing an `i31ref` can produce a native immediate. The
 wrapper cannot safely expose every result of that operation yet. Thus this is
 internal GC support, not support for every GC module or GC values at the host
-boundary. Exceptions/tags, relaxed SIMD, shared memory and other unlisted
-proposals remain excluded. Function imports are supplied in declaration order.
+boundary. Relaxed SIMD, shared memory and other unlisted proposals remain
+excluded. Exceptions/tags require the opt-in feature below. Imports are supplied
+in declaration order.
 
-A store owns its native objects; their Rust handles borrow the store and stay on
+A store owns its native objects; native-root handles borrow the store and stay on
 its creating thread. `Compiled` may move between threads and create modules in
 fresh stores, but its serialized bytes are private. A process-wide V8 engine is
 retained for the lifetime of the process because V8 cannot be reinitialized after
@@ -89,3 +90,56 @@ parsing, and public API examples using the published archive.
 The Rust-crate workflow runs these checks on Linux, macOS, and Windows without
 building V8. Native archive production remains in the separately dispatched
 build workflow.
+
+## Exception tags (candidate native archive)
+
+The `exceptions` feature requires `WEE8_ARCHIVE` and `WEE8_HEADER` from a matching
+source build of this revision. The pinned published release has no tag/exception
+symbols, so enabling this feature without those overrides fails before download.
+It enables standardized `try_table`/`throw_ref` handling; legacy EH instructions
+remain outside the Rust validator's allowlist. The native build workflow tests
+the feature against its freshly built archive. Published-release consumer CI
+continues to test the default interface.
+
+`Tag::new(context, params)` creates an identity owned by that store. Following
+Wasmtime's store-owned tag model, `Tag` is a copyable handle that can be retained
+in host callback captures; every use checks the store identity. Its native root
+is released before store teardown, regardless of callback finalization order.
+Export lookup reuses an existing tag slot for the same native identity. This
+tag table is separate from externrefs, whose roots and payloads remain in V8.
+
+`Module::import_types` describes function/tag imports, and
+`instantiate_with_imports` accepts `Extern::Func` and `Extern::Tag`.
+`Instance::tag` retrieves an exported tag. Existing function-only `imports` and
+`instantiate` remain available for existing consumers.
+
+```rust,ignore
+let tag = wee8::Tag::new(store.as_context(), &[])?;
+let throw = store.host_func(&[], &[], move |caller, _| {
+    let exception = wee8::Exception::new(caller.as_context(), tag, &[])?;
+    Err(caller.throw(&exception))
+})?;
+let mut instance = module.instantiate_with_imports(&[
+    wee8::Extern::Tag(tag), wee8::Extern::Func(&throw),
+])?;
+```
+
+`Exception` owns a native root and borrows its store. Payloads may contain scalar
+numbers and nullable externref. `Caller::throw` returns an error marker while
+the store roots the exception until the callback trampoline takes it. Returning
+another outcome discards that pending root. A guest may catch the exception;
+ordinary host errors and callback panics still bypass Wasm catches.
+
+An uncaught exception from a call or start section returns
+`Error::ThrownException`. `Store::take_exception` transfers its root to the
+caller; `Exception::is` tests tag identity and `Exception::args` reads the payload
+only with the matching tag. The next guest execution discards an untaken
+exception. This follows Wasmtime's separation of an error marker from the
+store-owned pending exception, without exposing raw native pointers.
+
+These changes supply exception transport, not an embedder's test driver, and do
+not relax the existing start-section memory or guest-reentry restrictions.
+Wasm-defined start functions may throw or call throwing host callbacks. Using a
+host import directly as the start function remains unsupported by the pinned
+V8 C API: that entry goes through a JS call and aborts. This patch does not change
+that separate entry-path limitation.

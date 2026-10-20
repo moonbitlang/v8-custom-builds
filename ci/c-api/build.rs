@@ -3,6 +3,7 @@ use std::{env, path::PathBuf};
 fn main() {
     println!("cargo:rerun-if-env-changed=WEE8_DIR");
     println!("cargo:rerun-if-changed=probe.cc");
+    println!("cargo:rerun-if-changed=exceptions.cc");
     let dir = PathBuf::from(env::var_os("WEE8_DIR").expect("set WEE8_DIR"));
     println!("cargo:rerun-if-changed={}", dir.display());
     cc::Build::new()
@@ -11,6 +12,7 @@ fn main() {
         .define("LIBWASM_STATIC", None)
         .include(&dir)
         .file("probe.cc")
+        .file("exceptions.cc")
         .compile("wee8_probe");
     println!("cargo:rustc-link-search=native={}", dir.display());
     println!("cargo:rustc-link-lib=static=wee8");
