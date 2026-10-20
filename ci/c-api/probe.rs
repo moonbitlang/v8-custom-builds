@@ -3,6 +3,8 @@ unsafe extern "C" {
 }
 
 fn main() {
+    // Capture native output to enforce silent failure reporting. Exception
+    // behavior is tested directly under cargo test, without a subprocess.
     if std::env::args().nth(1).as_deref() != Some("--child") {
         let output = std::process::Command::new(std::env::current_exe().unwrap())
             .arg("--child")
@@ -17,7 +19,9 @@ fn main() {
             output.stderr.is_empty(),
             "unexpected native stderr: {output:?}"
         );
-        println!("Wasm C API calls, callbacks, ownership, traps and memory passed");
+        println!(
+            "Packaged C API compatibility, calls, callbacks, ownership, traps and memory passed"
+        );
         return;
     }
 

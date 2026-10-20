@@ -25,7 +25,8 @@ without it, consumers cannot resolve Chromium's std::__Cr symbols by linking
 their system C++ library. Host-tool libc++ dependencies do not fill that gap.
 
 This is a core-interface MVP, not full implementation of every header declaration:
-new tag APIs and WasmGC values crossing the host boundary remain unsupported.
+tag APIs are completed/extended separately by wasm-exceptions.patch; WasmGC
+values crossing the host boundary remain unsupported.
 Review/remove this adapter on a V8 upgrade that implements the same header ABI.
 
 --- a/v8/src/wasm/c-api.cc

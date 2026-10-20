@@ -173,12 +173,19 @@ are not claimed by these checks.
 [Wasm C API header at 9d6b937](https://github.com/WebAssembly/wasm-c-api/blob/9d6b93764ac96cdd9db51081c363e09d2d488b4d/include/wasm.h).
 It validates sized argument/import vectors, retains callback arities and
 finalizers, fixes value copying, returns start-function exceptions as traps
-without unsolicited output, and records Windows link dependencies. The internal
-C++ Wasm API remains pinned.
+without unsolicited output, and records Windows link dependencies.
 
-This is not full implementation of every header declaration. Tag APIs and WasmGC
-values crossing the host boundary remain unsupported; some modern types reach
-unimplemented V8 conversions. The legacy `ANYREF` corresponds to `externref`.
+`wasm-exceptions.patch` builds on that ABI: it implements tag types and adds
+store-owned runtime tag handles plus explicit catchable exception construction,
+matching and payload access. The runtime tag/exception functions are wee8
+extensions. The pinned V8's `experimental_wasm_exnref` flag is enabled before
+initialization for `try_table` and `throw_ref`. Host-created exceptions carry
+native V8 tag identity; ordinary host traps remain uncatchable. Payloads support
+scalar numbers and nullable externref. The matching header is required.
+
+This is not full implementation of every header declaration. WasmGC values and
+SIMD vectors crossing the host boundary remain unsupported; some modern types
+reach unimplemented V8 conversions. The legacy `ANYREF` corresponds to `externref`.
 The runtime still uses internal V8 contexts and objects. It does not promise a
 stable cross-engine ABI or full Wasm conformance.
 
@@ -195,9 +202,13 @@ Native validation uses the freshly built artifacts:
   absent RegExp/Intl registrations, forced GC, and Wasm execution under Liftoff,
   optimizing, lazy-compilation and synchronous tier-up settings.
 - The C API consumer checks calls, callbacks, ownership/finalization, vectors,
-  traps, silent instantiation failures and memory growth.
+  traps, silent instantiation failures and memory growth. Its minimal exception
+  round trip checks that the packaged header and archive agree.
 - The Rust wrapper suite includes numeric calls of all four scalar kinds,
   serialization into fresh stores, start callbacks, growth and trap recovery.
+  With `exceptions` enabled, it also verifies tag matching, catch/rethrow, payload
+  ownership and store safety, and that host errors bypass guest catches. Those
+  behaviors are tested here once, without a separate C++ exception suite.
 - Linux x86_64 additionally links the C API consumer against glibc 2.23 using Zig
   and inspects its dynamic symbol-version requirements.
 

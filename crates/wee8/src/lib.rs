@@ -49,6 +49,10 @@
 //! module.instantiate(&[]).unwrap();
 //! ```
 
+#[cfg(feature = "exceptions")]
+mod exceptions;
+#[cfg(feature = "exceptions")]
+pub use exceptions::{Exception, Tag};
 mod ffi;
 mod references;
 pub use references::ExternRef;
@@ -71,6 +75,10 @@ pub enum Error {
     Host(String),
     #[error("{0}")]
     Trap(String),
+    /// The store holds a catchable Wasm exception. Retrieve it with take_exception.
+    #[cfg(feature = "exceptions")]
+    #[error("uncaught Wasm exception")]
+    ThrownException,
 }
 
 impl From<String> for Error {
@@ -247,6 +255,8 @@ struct StoreOpaque {
     executing: Cell<bool>,
     memory: Cell<*mut ffi::wasm_memory_t>,
     host_error: RefCell<Option<String>>,
+    #[cfg(feature = "exceptions")]
+    exceptions: exceptions::Exceptions,
 }
 
 // Both instantiation (which can run a start function) and exported calls enter
@@ -259,6 +269,8 @@ impl StoreOpaque {
         if self.executing.replace(true) {
             return Err("wee8 does not support guest re-entry from a host callback yet".into());
         }
+        #[cfg(feature = "exceptions")]
+        self.exceptions.pending.borrow_mut().take();
         Ok(Execution(self))
     }
 }
@@ -359,6 +371,8 @@ impl<T> Store<T> {
                     executing: Cell::new(false),
                     memory: Cell::new(ptr::null_mut()),
                     host_error: RefCell::new(None),
+                    #[cfg(feature = "exceptions")]
+                    exceptions: exceptions::Exceptions::new(),
                 },
                 data: RefCell::new(data),
             }),
@@ -377,6 +391,12 @@ impl<T> Store<T> {
     }
 
     fn take_trap(&self, trap: *mut ffi::wasm_trap_t) -> Error {
+        #[cfg(feature = "exceptions")]
+        if unsafe { ffi::wee8_trap_is_exception(trap) } {
+            *self.state.inner.exceptions.pending.borrow_mut() =
+                Some(exceptions::ExceptionRoot(NonNull::new(trap).unwrap()));
+            return Error::ThrownException;
+        }
         let message = unsafe { take_trap(trap) };
         match self.state.inner.host_error.borrow_mut().take() {
             Some(error) => Error::Host(error),
@@ -387,6 +407,8 @@ impl<T> Store<T> {
 
 impl<T> Drop for Store<T> {
     fn drop(&mut self) {
+        #[cfg(feature = "exceptions")]
+        self.state.inner.exceptions.clear();
         // Native finalizers still have their own Rc to Rust state during teardown.
         unsafe { ffi::wasm_store_delete(self.state.inner.raw.as_ptr()) }
     }
@@ -495,6 +517,16 @@ unsafe extern "C" fn call_host<T>(
             }
             Ok::<(), Error>(())
         }));
+        #[cfg(feature = "exceptions")]
+        {
+            let pending = env.state.inner.exceptions.pending.borrow_mut().take();
+            if matches!(&outcome, Ok(Err(Error::ThrownException)))
+                && let Some(exception) = pending
+            {
+                return exception.into_raw();
+            }
+            // A bare marker without Caller::throw must never swallow failure.
+        }
         let mut error = match outcome {
             Ok(Ok(())) => return ptr::null_mut(),
             Ok(Err(error)) => error.to_string(),
@@ -526,6 +558,8 @@ impl<T: 'static> Store<T> {
             | wasmparser::WasmFeatures::REFERENCE_TYPES
             | wasmparser::WasmFeatures::GC
             | wasmparser::WasmFeatures::FUNCTION_REFERENCES;
+        #[cfg(feature = "exceptions")]
+        let features = features | wasmparser::WasmFeatures::EXCEPTIONS;
         let types = wasmparser::Validator::new_with_features(features)
             .validate_all(bytes)
             .map_err(|error| {
@@ -545,7 +579,7 @@ impl<T: 'static> Store<T> {
         // The native C API only describes scalar numbers and nullable externref/
         // funcref. Unsupported GC/SIMD boundary types abort inside V8's type
         // conversion, so reject them before any C API introspection.
-        let supported = |ty: wasmparser::ValType| {
+        let scalar_or_externref = |ty: wasmparser::ValType| {
             matches!(
                 ty,
                 wasmparser::ValType::I32
@@ -553,8 +587,8 @@ impl<T: 'static> Store<T> {
                     | wasmparser::ValType::F32
                     | wasmparser::ValType::F64
             ) || ty == wasmparser::ValType::EXTERNREF
-                || ty == wasmparser::ValType::FUNCREF
         };
+        let supported = |ty| scalar_or_externref(ty) || ty == wasmparser::ValType::FUNCREF;
         for (name, ty) in imports.chain(exports) {
             let unsupported = match ty {
                 wasmparser::types::EntityType::Func(id) => {
@@ -565,6 +599,16 @@ impl<T: 'static> Store<T> {
                         .chain(function.results())
                         .copied()
                         .find(|ty| !supported(*ty))
+                }
+                wasmparser::types::EntityType::Tag(id) => {
+                    // Tag payloads must also pass through Value and the native
+                    // exception encoder/decoder, which do not support funcref.
+                    types[id]
+                        .unwrap_func()
+                        .params()
+                        .iter()
+                        .copied()
+                        .find(|ty| !scalar_or_externref(*ty))
                 }
                 wasmparser::types::EntityType::Global(global) => {
                     (!supported(global.content_type)).then_some(global.content_type)
@@ -700,9 +744,55 @@ pub struct Import {
     pub results: Vec<Kind>,
 }
 
+/// Import type information, preserving declaration order and native kind.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ExternType {
+    Func {
+        params: Vec<Kind>,
+        results: Vec<Kind>,
+    },
+    #[cfg(feature = "exceptions")]
+    Tag { params: Vec<Kind> },
+}
+
+#[derive(Debug)]
+pub struct ImportType {
+    pub module: String,
+    pub name: String,
+    pub ty: ExternType,
+}
+
+/// Borrowed function or store-owned tag supplied to an instance.
+pub enum Extern<'a, T> {
+    Func(&'a HostFunc<'a, T>),
+    #[cfg(feature = "exceptions")]
+    Tag(Tag),
+}
+
 impl<T> Module<'_, T> {
-    /// Describe numeric function imports; reject imports unsupported by this wrapper.
+    /// Describe function imports. Kept for consumers without tag support.
     pub fn imports(&self) -> Result<Vec<Import>> {
+        self.import_types()?
+            .into_iter()
+            .map(|import| match import.ty {
+                ExternType::Func { params, results } => Ok(Import {
+                    module: import.module,
+                    name: import.name,
+                    params,
+                    results,
+                }),
+                #[cfg(feature = "exceptions")]
+                ExternType::Tag { .. } => Err(format!(
+                    "tag import {}::{} requires import_types",
+                    import.module, import.name
+                )
+                .into()),
+            })
+            .collect()
+    }
+
+    /// Describe function and tag imports; reject other unsupported imports.
+    pub fn import_types(&self) -> Result<Vec<ImportType>> {
         unsafe {
             let mut imports = ffi::wasm_importtype_vec_t {
                 size: 0,
@@ -725,11 +815,22 @@ impl<T> Module<'_, T> {
                     };
                     let module = read_name(ffi::wasm_importtype_module(import));
                     let name = read_name(ffi::wasm_importtype_name(import));
-                    let function =
-                        ffi::wasm_externtype_as_functype_const(ffi::wasm_importtype_type(import));
+                    let ty = ffi::wasm_importtype_type(import);
+                    let function = ffi::wasm_externtype_as_functype_const(ty);
+                    #[cfg(feature = "exceptions")]
+                    let function = if function.is_null() {
+                        let tag = ffi::wasm_externtype_as_tagtype_const(ty);
+                        if tag.is_null() {
+                            ptr::null()
+                        } else {
+                            ffi::wasm_tagtype_functype(tag)
+                        }
+                    } else {
+                        function
+                    };
                     if function.is_null() {
                         return Err(Error::Interface(format!(
-                            "unsupported non-function import {module}::{name}"
+                            "unsupported import {module}::{name}"
                         )));
                     }
                     let read_kinds = |types: *const ffi::wasm_valtype_vec_t| {
@@ -737,11 +838,22 @@ impl<T> Module<'_, T> {
                             .map(|i| Kind::from_raw(ffi::wasm_valtype_kind(*(*types).data.add(i))))
                             .collect::<Result<Vec<_>>>()
                     };
-                    Ok(Import {
+                    let params = read_kinds(ffi::wasm_functype_params(function))?;
+                    let results = read_kinds(ffi::wasm_functype_results(function))?;
+                    #[cfg(not(feature = "exceptions"))]
+                    let kind = ExternType::Func { params, results };
+                    #[cfg(feature = "exceptions")]
+                    let kind = if ffi::wasm_externtype_kind(ty)
+                        == ffi::wasm_externkind_enum_WASM_EXTERN_TAG as u8
+                    {
+                        ExternType::Tag { params }
+                    } else {
+                        ExternType::Func { params, results }
+                    };
+                    Ok(ImportType {
                         module,
                         name,
-                        params: read_kinds(ffi::wasm_functype_params(function))?,
-                        results: read_kinds(ffi::wasm_functype_results(function))?,
+                        ty: kind,
                     })
                 })
                 .collect();
@@ -778,10 +890,45 @@ impl<T> Drop for Module<'_, T> {
 impl<'store, T> Module<'store, T> {
     /// Imports follow module declaration order. The MVP accepts function imports.
     pub fn instantiate(&self, imports: &[&HostFunc<'_, T>]) -> Result<Instance<'store, T>> {
-        let _execution = self.store.state.inner.enter()?;
         if imports.iter().any(|f| !ptr::eq(f.store, self.store)) {
             return Err("imports must belong to the module's store".into());
         }
+        let raw = imports
+            .iter()
+            .map(|f| unsafe { ffi::wasm_func_as_extern(f.raw.as_ptr()) })
+            .collect();
+        self.instantiate_raw(raw)
+    }
+
+    /// Instantiate with typed imports in declaration order. Every handle is
+    /// checked against this module's store before entering the native adapter.
+    pub fn instantiate_with_imports(
+        &self,
+        imports: &[Extern<'_, T>],
+    ) -> Result<Instance<'store, T>> {
+        let raw = imports
+            .iter()
+            .map(|import| match import {
+                Extern::Func(function) => {
+                    if !ptr::eq(function.store, self.store) {
+                        return Err("imports must belong to the module's store".into());
+                    }
+                    Ok(unsafe { ffi::wasm_func_as_extern(function.raw.as_ptr()) })
+                }
+                #[cfg(feature = "exceptions")]
+                Extern::Tag(tag) => Ok(unsafe {
+                    ffi::wasm_tag_as_extern(tag.raw(&self.store.state.inner)?.as_ptr())
+                }),
+            })
+            .collect::<Result<Vec<_>>>()?;
+        self.instantiate_raw(raw)
+    }
+
+    fn instantiate_raw(
+        &self,
+        mut raw_imports: Vec<*mut ffi::wasm_extern_t>,
+    ) -> Result<Instance<'store, T>> {
+        let _execution = self.store.state.inner.enter()?;
         unsafe {
             let mut types = ffi::wasm_importtype_vec_t {
                 size: 0,
@@ -790,13 +937,9 @@ impl<'store, T> Module<'store, T> {
             ffi::wasm_module_imports(self.raw.as_ptr(), &mut types);
             let count = types.size;
             ffi::wasm_importtype_vec_delete(&mut types);
-            if count != imports.len() {
+            if count != raw_imports.len() {
                 return Err("import count mismatch".into());
             }
-            let mut raw_imports: Vec<_> = imports
-                .iter()
-                .map(|f| ffi::wasm_func_as_extern(f.raw.as_ptr()))
-                .collect();
             let imports = ffi::wasm_extern_vec_t {
                 size: raw_imports.len(),
                 data: raw_imports.as_mut_ptr(),
