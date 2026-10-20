@@ -1,0 +1,54 @@
+{
+  "baseline": {
+    "empty": {
+      "stripped_bytes": 49936
+    },
+    "initialize": {
+      "stripped_bytes": 13707472
+    },
+    "isolate": {
+      "stripped_bytes": 13724032
+    },
+    "context": {
+      "stripped_bytes": 13724032
+    },
+    "c-api": {
+      "stripped_bytes": 13757456
+    },
+    "c-api-gc": {
+      "stripped_bytes": 13757440
+    },
+    "heap": [
+      "used_heap_size=462568 total_heap_size=1884160",
+      "used_heap_size=462568 total_heap_size=1884160",
+      "used_heap_size=462568 total_heap_size=1884160"
+    ],
+    "wasm_modes_passed": 4
+  },
+  "candidate": {
+    "empty": {
+      "stripped_bytes": 49936
+    },
+    "initialize": {
+      "stripped_bytes": 13542272
+    },
+    "isolate": {
+      "stripped_bytes": 13542320
+    },
+    "context": {
+      "stripped_bytes": 13542320
+    },
+    "c-api": {
+      "stripped_bytes": 13575744
+    },
+    "c-api-gc": {
+      "stripped_bytes": 13575728
+    },
+    "heap": [
+      "used_heap_size=335528 total_heap_size=1884160",
+      "used_heap_size=335528 total_heap_size=1884160",
+      "used_heap_size=335528 total_heap_size=1884160"
+    ],
+    "wasm_modes_passed": 4
+  }
+}

@@ -1,0 +1,76 @@
+--- a/v8/src/init/bootstrapper.cc
++++ b/v8/src/init/bootstrapper.cc
+@@ -242,6 +242,8 @@
+   // global proxy.
+   void InstallGlobalThisBinding();
+   // New context initialization.  Used for creating a context from scratch.
++  void InitializeWasmContext(Handle<JSGlobalObject> global_object,
++                             Handle<JSFunction> empty_function);
+   void InitializeGlobal(Handle<JSGlobalObject> global_object,
+                         Handle<JSFunction> empty_function);
+   void InitializeExperimentalGlobal();
+@@ -6520,7 +6522,11 @@
+   }
+ 
+ #if V8_ENABLE_WEBASSEMBLY
++#ifdef V8_WASM_CONTEXT_PROTOTYPE
++  WasmJs::Install(isolate, false);
++#else
+   WasmJs::Install(isolate, v8_flags.expose_wasm);
++#endif
+ #endif  // V8_ENABLE_WEBASSEMBLY
+ 
+ #ifdef V8_ENABLE_MEMORY_CORRUPTION_API
+@@ -6906,6 +6912,10 @@
+   return initial_map;
+ }
+ 
++#ifdef V8_WASM_CONTEXT_PROTOTYPE
++#include "wasm-context-bootstrap.inc"
++#endif
++
+ Genesis::Genesis(Isolate* isolate,
+                  MaybeHandle<JSGlobalProxy> maybe_global_proxy,
+                  v8::Local<v8::ObjectTemplate> global_proxy_template,
+@@ -6989,6 +6999,17 @@
+     DCHECK_EQ(0u, context_snapshot_index);
+     // We get here if there was no context snapshot.
+     CreateRoots();
++#ifdef V8_WASM_CONTEXT_PROTOTYPE
++    Handle<JSFunction> empty_function = CreateEmptyFunction();
++    CreateSloppyModeFunctionMaps(empty_function);
++    CreateStrictModeFunctionMaps(empty_function);
++    CreateObjectFunction(empty_function);
++    Handle<JSGlobalObject> global_object =
++        CreateNewGlobals(global_proxy_template, global_proxy);
++    InitializeMapCaches();
++    InitializeWasmContext(global_object, empty_function);
++    if (!ConfigureGlobalObject(global_proxy_template)) return;
++#else
+     MathRandom::InitializeContext(isolate, native_context());
+     Handle<JSFunction> empty_function = CreateEmptyFunction();
+     CreateSloppyModeFunctionMaps(empty_function);
+@@ -7008,6 +7029,7 @@
+     if (!InstallExtrasBindings()) return;
+     if (!ConfigureGlobalObject(global_proxy_template)) return;
+ 
++#endif  // V8_WASM_CONTEXT_PROTOTYPE
+ #ifdef V8_ENABLE_WEBASSEMBLY
+     WasmJs::PrepareForSnapshot(isolate);
+ #endif  // V8_ENABLE_WEBASSEMBLY
+@@ -7026,6 +7048,7 @@
+   // snapshot as we should be able to turn them off at runtime. Re-installing
+   // them after they have already been deserialized would also fail.
+   if (!isolate->serializer_enabled()) {
++#ifndef V8_WASM_CONTEXT_PROTOTYPE
+     InitializeExperimentalGlobal();
+ 
+     // Store String.prototype's map again in case it has been changed by
+@@ -7037,6 +7060,7 @@
+     DCHECK(string_function_prototype->HasFastProperties());
+     native_context()->set_string_function_prototype_map(
+         string_function_prototype->map());
++#endif  // V8_WASM_CONTEXT_PROTOTYPE
+   }
+ 
+   if (v8_flags.disallow_code_generation_from_strings) {
