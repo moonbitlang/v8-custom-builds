@@ -1,0 +1,46 @@
+{
+  "sizes": {
+    "archive": {
+      "before": 60484120,
+      "after": 60460408,
+      "saved_bytes": 23712,
+      "saved_percent": 0.039
+    },
+    "stripped_consumer": {
+      "before": 15359312,
+      "after": 15342768,
+      "saved_bytes": 16544,
+      "saved_percent": 0.108
+    },
+    "embedded_code": {
+      "before": 1469888,
+      "after": 1469888,
+      "saved_bytes": 0,
+      "saved_percent": 0.0
+    },
+    "embedded_data": {
+      "before": 81684,
+      "after": 81684,
+      "saved_bytes": 0,
+      "saved_percent": 0.0
+    },
+    "snapshot": {
+      "before": 402096,
+      "after": 402096,
+      "saved_bytes": 0,
+      "saved_percent": 0.0
+    }
+  },
+  "archive_sha256": {
+    "before": "7b15dd1c08444fe259c5efb85fa00ff14b0149a33a3dc31f4fa4595bc703a5b4",
+    "after": "64823d7d1a4a425a97921e59d983bd62e172ea4037914a1de0999db34936fc9c"
+  },
+  "total_builtin_labels": 2169,
+  "unselected_builtin_body_lengths_unchanged": true,
+  "base_commit": "83f1ae6c1cef728fe65b0c615711d8aca7af24a4",
+  "artifact_target": "aarch64-apple-darwin",
+  "original_cpp_bodies_removed": 25,
+  "v8_thin_lto": false,
+  "embedded_source_and_snapshot_byte_identical": true,
+  "full_date_control_object_byte_identical": true
+}

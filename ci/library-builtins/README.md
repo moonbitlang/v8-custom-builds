@@ -8,7 +8,9 @@ supported profile boundary, not preservation of the omitted APIs' functionality.
 `patches/wee8-without-library-bodies.patch` is part of the production patch stack.
 The GN argument `v8_moonrun_omit_library_builtin_bodies` defaults to the custom
 wee8 marker, so ordinary V8 keeps its original bodies. Override it to `false`
-for a matching control build. Its define is confined to `v8_initializers`.
+for a matching control build, together with
+`v8_wee8_omit_date_method_implementations=false`. Its define is confined to
+`v8_initializers`.
 The selected names remain explicit and independent of prefixes or linkage.
 
 ## Generation boundary
@@ -19,8 +21,9 @@ The selected names remain explicit and independent of prefixes or linkage.
   builtin ID, name and argc, but generate `Unreachable` (an intentional trap).
 - The 34 CPP entries use the ordinary adaptor builder and Code metadata, but
   preserve the architecture-specific entry landing pad and emit `DebugBreak`
-  instead of entering the C++ function. Their implementation
-  functions and the external-reference/function-pointer tables remain intact.
+  instead of entering the C++ function. The external-reference/function-pointer tables remain intact. A separate
+  [Date implementation cut](date-implementations.md) replaces 25 already-disabled
+  C++ implementations with explicit fatal stubs; the other implementations remain.
 
 Kind checks reject a version upgrade that changes a selected entry's linkage.
 Every entry has its own Code object and builtin identity; none aliases Illegal.
@@ -47,7 +50,7 @@ alone cannot establish that arbitrary JS programs will never call these APIs.
 | Promise conveniences | 5 | all/allSettled/any/race/withResolvers; keep constructor, resolution, then/catch/finally, reactions, combinator closures and microtasks. |
 | Object statics | 6 | assign/entries/values/keys/fromEntries/groupBy; keep object creation, property primitives and conversions. These JS methods are separate from internal enumeration helpers. |
 | Reflect | 11 | Property/prototype convenience entries; keep apply/construct and the underlying property, prototype and call machinery. |
-| Date | 43 | Calendar getters/setters, formatting and now/parse/UTC; keep constructor, valueOf, toString and Symbol.toPrimitive for conversion. Native clocks and Date C++ implementations remain. |
+| Date | 43 | Calendar getters/setters, formatting and now/parse/UTC; keep constructor, valueOf, toString and Symbol.toPrimitive for conversion. Native clocks remain; 25 already-disabled Date C++ implementations are replaced by stubs. |
 | Number formatting | 4 | toExponential/toFixed/toPrecision/toLocaleString; keep number conversion, toString/valueOf and arithmetic. |
 | JSON | 2 | JS parse/stringify entry adaptors; keep internal JSON parsing/stringification and the public C++ JSON API. |
 | Map grouping | 1 | groupBy; keep Map storage, lookup, mutation and iteration. |
@@ -69,8 +72,8 @@ Important retained paths:
 
 This is a broad entry-body cut, not a claim that every unused generated helper
 is gone. DataView, ArrayBuffer, shared-memory/Atomics, core strings, constructors,
-conversions, Math and execution machinery remain. Date implementation removal
-and C++ dispatch-table pruning are separate work.
+conversions, Math and execution machinery remain. The separate [Date implementation cut](date-implementations.md) removes 25
+already-disabled C++ bodies. C++ dispatch-table pruning remains separate work.
 
 ## Validation
 
@@ -87,8 +90,9 @@ archive. Every native candidate CI run invokes `check.py --after PROBE`:
   optimizing-only, lazy and synchronous tier-up modes.
 - The existing C API and Rust adapter suites run against the same candidate.
 
-For a before/after comparison, build `wee8-build` first with the GN argument
-`false`, preserve the artifacts, then rebuild with the custom default. Preserve
+For a before/after comparison, build `wee8-build` first with both GN arguments
+`v8_moonrun_omit_library_builtin_bodies=false` and
+`v8_wee8_omit_date_method_implementations=false`, preserve the artifacts, then rebuild with the custom default. Preserve
 `libwee8.a`, `wee8-library-check` as `probe`, `embedded.S`, `snapshot.cc` and an
 identically built/stripped consumer from each configuration. Never mix blobs
 and snapshots from different configurations.
@@ -105,11 +109,12 @@ reduction for every selected entry. Tiny CPP adaptor replacements may occupy the
 same aligned embedded slot; unchanged slot size is not a failure. All unselected
 embedded body lengths must remain unchanged.
 
-## Measured result and landing gates
+## Generated-body measurement (before the Date implementation cut)
 
 The recorded artifact target is `aarch64-apple-darwin`, against the merged
 asm.js-cut baseline. This is a matched test consumer, not a complete moonrun
-executable. `results.json` records the scope, sizes and archive hashes.
+executable. `results.json` records the scope, sizes and archive hashes for that original cut.
+The incremental Date measurements are in [date-implementations.md](date-implementations.md).
 
 | Component | Before | After | Saved |
 | --- | ---: | ---: | ---: |
@@ -122,11 +127,11 @@ executable. `results.json` records the scope, sizes and archive hashes.
 All 149 comparison/trap tests, retained protocol checks in four Wasm modes and
 C API/Rust adapter tests passed for the measured artifact. Native JSON, property enumeration and Date coercion also passed. The disabled
 profile produces a byte-identical pre-cut archive, and the production-default
-archive matches the measured candidate. Targeted native CI must validate the
-final PR head before landing; the earlier 66-entry run is not evidence for this
-149-entry version. Windows trap handling and other release platforms still need
-native CI validation before publishing their artifacts. No runtime speedup is
-claimed. The existing release workflow requires a successful five-platform run.
+archive matches the measured candidate. The final generated-body profile passed
+[five-platform native validation](https://github.com/moonbitlang/v8-custom-builds/actions/runs/39356580659)
+before publication as `v0.106.0-moonbit.2`. The Date follow-up requires its own
+candidate validation. No runtime speedup is claimed. The release workflow requires
+a successful five-platform run.
 
 The requested moonrun main was inspected at
 `efda7a5737998d5af78bdaafbd69a6966e8405d9`. It uses rusty_v8 and compiles JS glue;
