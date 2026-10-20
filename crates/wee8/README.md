@@ -101,6 +101,20 @@ remain outside the Rust validator's allowlist. The native build workflow tests
 the feature against its freshly built archive. Published-release consumer CI
 continues to test the default interface.
 
+The feature's integration tests exercise real Wasm through this crate's public
+API. Their goals are:
+
+- **Correct propagation:** only matching tags catch an exception, and throws and
+  rethrows preserve its payload across the host/guest boundary.
+- **Safe ownership:** payload references remain alive while owned, roots are
+  released at store teardown, and stale or foreign handles are rejected.
+- **Failure separation:** ordinary host errors and panics cannot be swallowed by
+  guest `catch_all`; pending exceptions do not contaminate later execution.
+
+These are ordinary `cargo test --features exceptions` tests. The packaged C API
+consumer has only a small additional header/archive compatibility check for the
+new functions; it does not duplicate the exception behavior tests.
+
 `Tag::new(context, params)` creates an identity owned by that store. Following
 Wasmtime's store-owned tag model, `Tag` is a copyable handle that can be retained
 in host callback captures; every use checks the store identity. Its native root

@@ -129,6 +129,24 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   wasm_memory_data(memory)[65536] = 7;
   assert(wasm_memory_data(memory)[65536] == 7);
 
+  // Header/archive compatibility for the wee8 extensions. Detailed exception
+  // behavior belongs in crates/wee8/tests/exceptions.rs.
+  wasm_tagtype_t* tag_type = wasm_tagtype_new(wasm_functype_new_0_0());
+  assert(tag_type);
+  wasm_tag_t* tag = wasm_tag_new(store, tag_type);
+  assert(tag);
+  wasm_tagtype_delete(tag_type);
+  wasm_val_vec_t payload = {0, nullptr};
+  wasm_trap_t* exception = wee8_exception_new(store, tag, &payload);
+  assert(exception && wee8_trap_is_exception(exception));
+  assert(wee8_exception_is(exception, tag));
+  wasm_val_vec_t decoded;
+  assert(wee8_exception_get_args(exception, tag, &decoded));
+  assert(decoded.size == 0);
+  wasm_val_vec_delete(&decoded);
+  wasm_trap_delete(exception);
+  wasm_tag_delete(tag);
+
   wasm_extern_vec_delete(&exports);
   wasm_instance_delete(instance);
   wasm_store_delete(store);

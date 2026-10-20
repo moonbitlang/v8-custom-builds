@@ -202,9 +202,13 @@ Native validation uses the freshly built artifacts:
   absent RegExp/Intl registrations, forced GC, and Wasm execution under Liftoff,
   optimizing, lazy-compilation and synchronous tier-up settings.
 - The C API consumer checks calls, callbacks, ownership/finalization, vectors,
-  traps, silent instantiation failures and memory growth.
+  traps, silent instantiation failures and memory growth. Its minimal exception
+  round trip checks that the packaged header and archive agree.
 - The Rust wrapper suite includes numeric calls of all four scalar kinds,
   serialization into fresh stores, start callbacks, growth and trap recovery.
+  With `exceptions` enabled, it also verifies tag matching, catch/rethrow, payload
+  ownership and store safety, and that host errors bypass guest catches. Those
+  behaviors are tested here once, without a separate C++ exception suite.
 - Linux x86_64 additionally links the C API consumer against glibc 2.23 using Zig
   and inspects its dynamic symbol-version requirements.
 

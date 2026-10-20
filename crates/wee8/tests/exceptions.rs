@@ -1,5 +1,13 @@
 #![cfg(feature = "exceptions")]
 
+//! Exception behavior is tested through the public Rust API and real Wasm:
+//! - Tags match by identity; guest catches and rethrows preserve the payload.
+//! - Payload roots stay alive while owned and are released during store teardown.
+//! - Invalid or foreign handles fail safely before reaching native code.
+//! - Explicit throws are catchable; host failures and panics remain host errors.
+//! The packaged C consumer only checks the new header/archive ABI; it does not
+//! repeat these exception scenarios.
+
 use std::{cell::Cell, rc::Rc};
 use wee8::{Error, Exception, Extern, ExternRef, ExternType, Kind, Store, Tag, Value};
 
@@ -16,7 +24,7 @@ fn catches_by_identity_and_preserves_uncaught_and_rethrown_payloads() {
         })
         .unwrap();
     let module = store
-        .compile(&wat::parse_str(include_str!("../../../ci/c-api/exceptions.wat")).unwrap())
+        .compile(&wat::parse_str(include_str!("fixtures/exceptions.wat")).unwrap())
         .unwrap();
     let imports = module.import_types().unwrap();
     assert_eq!(

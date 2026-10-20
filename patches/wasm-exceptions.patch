@@ -27,14 +27,13 @@ reference limit. The Rust validator rejects unsupported metadata before calling
 native introspection. GC values, v128 and exception references are not exposed
 as host payload values. Tags and exceptions must be destroyed before their store.
 
-The packaged C consumer checks import/export metadata, tag identity, matching
-and wrong-tag catches, catch_all, guest throws, throw_ref, payloads, ordinary
-host failure behavior, and continued execution. Candidate Rust tests additionally
-check reference rooting/finalization, start-section exceptions, cross-store and
-stale handles, malformed payloads, callback panics, pending exception cleanup,
-serialization and unsupported boundary rejection. Published-release tests still
-use the old ABI; the opt-in exceptions feature requires this candidate header
-and archive until a native release is published.
+The packaged C consumer compiles and links a minimal tag/exception round trip
+against the shipped header and archive. Behavioral coverage lives in the Rust
+integration tests: tag identity and catch/rethrow, payload rooting/finalization,
+store safety, start exceptions, host-error separation and recovery. These tests
+execute real Wasm against the candidate archive; they do not mock the native API.
+Published-release tests still use the old ABI; the opt-in exceptions feature
+requires this candidate header and archive until a native release is published.
 
 Review/remove this patch when upgrading to a V8 C API providing equivalent tag
 and exception support. It does not add Moonrun's test driver or host imports.
