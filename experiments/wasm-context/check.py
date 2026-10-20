@@ -20,6 +20,9 @@ parser.add_argument("--thin-lto", action="store_true")
 parser.add_argument("--lto-opt-level", type=int, choices=range(4), default=2)
 parser.add_argument("--cpp-entry-contract", action="store_true",
                     help="validate candidate C++ entry selection and named traps")
+parser.add_argument("--runtime-checks", action="store_true",
+                    help="validate runtime registry and Wasm boundary guests")
+parser.add_argument("--wasm-tools", default="wasm-tools")
 parser.add_argument("--probes", nargs="+",
                     choices=("empty", "initialize", "isolate", "context",
                              "c-api", "c-api-gc"),
@@ -111,36 +114,71 @@ for variant, archive in (("baseline", baseline), ("candidate", candidate)):
         4 if any(name in args.probes for name in ("c-api", "c-api-gc")) else 0
     )
     (work / "results.json").write_text(json.dumps(results, indent=2) + "\n")
+contracts = []
 if args.cpp_entry_contract:
+    contracts.append((
+        "cpp-entry-contract", "cpp_entry_contract", "unsupported_cpp_traps_passed",
+        "Unsupported Wasm-context C++ builtin: ",
+        ("DateConstructor", "TemporalPlainDateConstructor", "JsonStringify",
+         "ArrayBufferConstructor", "StringPrototypeToLowerCase")))
+if args.runtime_checks:
+    contracts.append((
+        "runtime-entry-contract", "runtime_entry_contract", "unsupported_runtime_traps_passed",
+        "Unsupported Wasm-context runtime: ",
+        ("DateCurrentTime", "IsInvalidTemporalCalendarField", "DynamicImportCall",
+         "AsyncFunctionAwait", "DebugBreakOnBytecode", "LoadLookupSlotForCall")))
+for name, result_key, trap_key, diagnostic, negative_cases in contracts:
     import resource
     import signal
 
     output = work / "candidate"
-    obj, exe = output / "entries.o", output / "entries"
-    with (output / "entries.build.log").open("w") as log:
+    obj, exe = output / (name + ".o"), output / name
+    with (output / (name + ".build.log")).open("w") as log:
         subprocess.run([args.cxx, *flags, "-I" + str(assets), "-c",
-                        str(assets / "cpp-entry-contract.cc"), "-o", str(obj)],
+                        str(assets / (name + ".cc")), "-o", str(obj)],
                        cwd=out, env=env, stdout=log,
                        stderr=subprocess.STDOUT, check=True)
         subprocess.run([args.cxx, *link_flags, str(obj), str(candidate),
                         "-o", str(exe)], cwd=out, env=env, stdout=log,
                        stderr=subprocess.STDOUT, check=True)
-    results["candidate"]["cpp_entry_contract"] = subprocess.run(
+    results["candidate"][result_key] = subprocess.run(
         [str(exe)], capture_output=True, text=True, check=True, timeout=60
     ).stdout.strip()
-    # Deliberate unsupported-entry death tests must identify their own builtin.
+    # Deliberate unsupported-entry death tests must identify their own entry.
     # Disable core dumps for these child processes.
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    negative_cases = ("DateConstructor", "TemporalPlainDateConstructor",
-                      "JsonStringify", "ArrayBufferConstructor",
-                      "StringPrototypeToLowerCase")
-    for name in negative_cases:
-        result = subprocess.run([str(exe), name], capture_output=True,
+    for entry_name in negative_cases:
+        result = subprocess.run([str(exe), entry_name], capture_output=True,
                                 text=True, timeout=60)
         if (result.returncode not in (-signal.SIGABRT, -signal.SIGTRAP,
                                       -signal.SIGILL) or
-                "Unsupported Wasm-context C++ builtin: " + name not in result.stderr):
-            raise RuntimeError(f"Unexpected unsupported-entry outcome: {name}")
-    results["candidate"]["unsupported_cpp_traps_passed"] = list(negative_cases)
+                diagnostic + entry_name not in result.stderr):
+            raise RuntimeError(f"Unexpected unsupported-entry outcome: {entry_name}")
+    results["candidate"][trap_key] = list(negative_cases)
     (work / "results.json").write_text(json.dumps(results, indent=2) + "\n")
+if args.runtime_checks:
+    guests = []
+    for name in ("runtime-boundaries", "runtime-shared-memory"):
+        guest = work / (name + ".wasm")
+        subprocess.run([args.wasm_tools, "parse", str(assets / (name + ".wat")),
+                        "-o", str(guest)], check=True)
+        guests.append(str(guest))
+    for variant, archive in (("baseline", baseline), ("candidate", candidate)):
+        output = work / variant
+        obj, exe = output / "boundaries.o", output / "boundaries"
+        with (output / "boundaries.build.log").open("w") as log:
+            subprocess.run([args.cxx, *flags, "-c",
+                            str(assets / "runtime-boundaries.cc"), "-o", str(obj)],
+                           cwd=out, env=env, stdout=log,
+                           stderr=subprocess.STDOUT, check=True)
+            subprocess.run([args.cxx, *link_flags, str(obj), str(archive),
+                            "-o", str(exe)], cwd=out, env=env, stdout=log,
+                           stderr=subprocess.STDOUT, check=True)
+        for mode in ("--liftoff-only --no-wasm-lazy-compilation",
+                     "--no-liftoff --no-wasm-lazy-compilation",
+                     "--wasm-lazy-compilation",
+                     "--wasm-sync-tier-up --wasm-tiering-budget=1"):
+            subprocess.run([str(exe), mode, *guests], check=True, timeout=60)
+        results[variant]["runtime_boundary_modes_passed"] = 4
+        (work / "results.json").write_text(json.dumps(results, indent=2) + "\n")
 print(json.dumps(results, indent=2))

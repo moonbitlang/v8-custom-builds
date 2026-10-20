@@ -1,0 +1,135 @@
+{
+  "measurement_date": "2026-10-20",
+  "cpp_selection_baseline_revision": "567d328",
+  "target": "aarch64-apple-darwin",
+  "native_lto": false,
+  "selection": {
+    "canonical_runtime_entries": 619,
+    "retained": 144,
+    "omitted": 475,
+    "inline_aliases": 19,
+    "pair_return_entries": 2,
+    "inventory_sha256": "c4b8ce03ba2fc0648fd2b8ebbdfe77e01d67d047af914ea856741c51de10e9a9"
+  },
+  "probes": {
+    "baseline": {
+      "context": {
+        "stripped_bytes": 12880160
+      },
+      "c-api": {
+        "stripped_bytes": 12913584
+      },
+      "c-api-gc": {
+        "stripped_bytes": 12913568
+      },
+      "heap": [
+        "used_heap_size=335496 total_heap_size=1884160",
+        "used_heap_size=335496 total_heap_size=1884160",
+        "used_heap_size=335496 total_heap_size=1884160"
+      ],
+      "wasm_modes_passed": 4,
+      "runtime_boundary_modes_passed": 4
+    },
+    "candidate": {
+      "context": {
+        "stripped_bytes": 12182336
+      },
+      "c-api": {
+        "stripped_bytes": 12199264
+      },
+      "c-api-gc": {
+        "stripped_bytes": 12199248
+      },
+      "heap": [
+        "used_heap_size=335528 total_heap_size=1884160",
+        "used_heap_size=335528 total_heap_size=1884160",
+        "used_heap_size=335528 total_heap_size=1884160"
+      ],
+      "wasm_modes_passed": 4,
+      "cpp_entry_contract": "identities=2169 retained=33 omitted=455 unique_cpp_entries=488",
+      "unsupported_cpp_traps_passed": [
+        "DateConstructor",
+        "TemporalPlainDateConstructor",
+        "JsonStringify",
+        "ArrayBufferConstructor",
+        "StringPrototypeToLowerCase"
+      ],
+      "runtime_entry_contract": "runtime_entries=619 retained=144 omitted=475 aliases=19 pairs=2",
+      "unsupported_runtime_traps_passed": [
+        "DateCurrentTime",
+        "IsInvalidTemporalCalendarField",
+        "DynamicImportCall",
+        "AsyncFunctionAwait",
+        "DebugBreakOnBytecode",
+        "LoadLookupSlotForCall"
+      ],
+      "runtime_boundary_modes_passed": 4
+    }
+  },
+  "rust_wrapper": {
+    "unit_and_integration_passed": 20,
+    "doctests_passed": 4,
+    "failed": 0
+  },
+  "snapshot_payload_bytes": {
+    "baseline": 316920,
+    "candidate": 316920
+  },
+  "embedded_assembly_sha256": {
+    "baseline": "95490b4feed9a7a62a1ef154823d6589b682c6c5457ff3babefa4b75c064f3eb",
+    "candidate": "95490b4feed9a7a62a1ef154823d6589b682c6c5457ff3babefa4b75c064f3eb"
+  },
+  "link_map": {
+    "baseline": {
+      "live_symbol_bytes": 12789120,
+      "selected_objects": {
+        "random-module-generation.o": 178709,
+        "wasm-module-builder.o": 36988,
+        "ic.o": 57665,
+        "liveedit.o": 32952,
+        "debug-coverage.o": 25852,
+        "runtime-test.o": 27611,
+        "runtime-test-wasm.o": 13570,
+        "runtime-compiler.o": 7990,
+        "runtime-scopes.o": 15174,
+        "runtime-literals.o": 10082,
+        "runtime-temporal.o": 152,
+        "js-temporal-objects.o": 1056,
+        "json-parser.o": 66276,
+        "date.o": 3908,
+        "runtime.o": 32864,
+        "embedded.o": 1556160
+      }
+    },
+    "candidate": {
+      "live_symbol_bytes": 12079903,
+      "selected_objects": {
+        "random-module-generation.o": 208,
+        "wasm-module-builder.o": 0,
+        "ic.o": 2404,
+        "liveedit.o": 752,
+        "debug-coverage.o": 60,
+        "runtime-test.o": 603,
+        "runtime-test-wasm.o": 1553,
+        "runtime-compiler.o": 164,
+        "runtime-scopes.o": 0,
+        "runtime-literals.o": 0,
+        "runtime-temporal.o": 0,
+        "js-temporal-objects.o": 0,
+        "json-parser.o": 66276,
+        "date.o": 3908,
+        "runtime.o": 49900,
+        "embedded.o": 1556160
+      }
+    }
+  },
+  "limits": [
+    "Probe sizes, not a full moonrun application measurement.",
+    "No supported-platform matrix, full debugger suite or production GN integration.",
+    "Shared memory stays inside the guest; no multithreaded wakeup stress or Rust shared-memory import/export validation.",
+    "One Wasm tag throw/catch case; no full exception-handling or JavaScript interoperation coverage.",
+    "No arbitrary JavaScript execution, Promise integration or JITless support.",
+    "No new native LTO measurement; previous measured LTO settings increased size.",
+    "Original archive objects remain; reductions are in the linked probes."
+  ]
+}

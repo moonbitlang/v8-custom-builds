@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply the C++ builtin allowlist to an existing Wasm-context prototype."""
+"""Select builtin and optional runtime entries for the Wasm-context prototype."""
 import argparse
 import difflib
 import json
@@ -17,6 +17,8 @@ parser.add_argument("--context", type=Path, required=True,
 parser.add_argument("--work", type=Path, required=True)
 parser.add_argument("--cxx", default="clang++")
 parser.add_argument("--ar", default="llvm-ar")
+parser.add_argument("--runtime-allowlist", action="store_true",
+                    help="also select runtime implementations and inline fallbacks")
 args = parser.parse_args()
 source, out, context, work = (
     p.resolve() for p in (args.source, args.out, args.context, args.work)
@@ -64,6 +66,15 @@ edits = {
          "WASM_CONTEXT_CPP_ENTRY(Name), #Name,"),
     ],
 }
+if args.runtime_allowlist:
+    edits["runtime.cc"] = [
+        ('#include "src/runtime/runtime.h"',
+         '#include "src/runtime/runtime.h"\n#include "runtime-selection.h"'),
+        ("Runtime::k##name, Runtime::RUNTIME, #name, FUNCTION_ADDR(Runtime_##name)",
+         "Runtime::k##name, Runtime::RUNTIME, #name, WASM_CONTEXT_RUNTIME_ENTRY(name)"),
+        ("FUNCTION_ADDR(Runtime_##name), number_of_args, result_size",
+         "WASM_CONTEXT_RUNTIME_ENTRY(name), number_of_args, result_size"),
+    ]
 replacement_objects = {}
 patches = []
 for filename, changes in edits.items():
@@ -91,12 +102,15 @@ for filename, changes in edits.items():
     if "-MF" in command:
         command[command.index("-MF") + 1] = str(obj.with_suffix(".d"))
     command += ["-DV8_WASM_CONTEXT_CPP_ALLOWLIST", "-I" + str(assets)]
+    if args.runtime_allowlist:
+        command += ["-DV8_WASM_CONTEXT_RUNTIME_ALLOWLIST"]
     with (work / (src.stem + ".log")).open("w") as log:
         subprocess.run(command, cwd=out, env=env, stdout=log,
                        stderr=subprocess.STDOUT, check=True)
     replacement_objects[entry["output"]] = str(obj)
     print(f"Compiled {filename}", flush=True)
-(work / "cpp-entry-selection.patch").write_text("".join(patches))
+(work / ("runtime-entry-selection.patch" if args.runtime_allowlist else
+         "cpp-entry-selection.patch")).write_text("".join(patches))
 
 # Derive the inventory from V8's own macro expansion, not source-name patterns.
 # A checked-in inventory makes new/renamed entries require review on a V8 bump.
@@ -110,15 +124,19 @@ for name in ("v8_base_without_compiler", "mksnapshot", "v8_snapshot"):
     configs[name] = config
 config = configs["v8_base_without_compiler"]
 flags = sum((config[k] for k in ("defines", "include_dirs", "cflags", "cflags_cc")), [])
-catalog = work / "cpp-builtin-catalog"
-with (work / "catalog.log").open("w") as log:
-    subprocess.run([args.cxx, *flags, "-I" + str(assets),
-                    str(assets / "cpp-builtin-catalog.cc"), "-o", str(catalog)],
-                   cwd=out, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
-inventory = subprocess.check_output([str(catalog)], text=True)
-(work / "cpp-builtins.tsv").write_text(inventory)
-if inventory != (assets / "cpp-builtins.tsv").read_text():
-    raise SystemExit("C++ builtin inventory changed; review the generated catalog")
+catalogs = [("cpp-builtin-catalog.cc", "cpp-builtins.tsv")]
+if args.runtime_allowlist:
+    catalogs += [("runtime-catalog.cc", "runtime-entries.tsv")]
+for filename, inventory_name in catalogs:
+    catalog = work / Path(filename).stem
+    with catalog.with_suffix(".log").open("w") as log:
+        subprocess.run([args.cxx, *flags, "-I" + str(assets),
+                        str(assets / filename), "-o", str(catalog)],
+                       cwd=out, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+    inventory = subprocess.check_output([str(catalog)], text=True)
+    (work / inventory_name).write_text(inventory)
+    if inventory != (assets / inventory_name).read_text():
+        raise SystemExit(f"Inventory changed; review {inventory_name}")
 
 link_rule = next(line for line in
                 (out / "custom_wee8/obj/v8/mksnapshot.ninja").read_text().splitlines()
@@ -155,5 +173,6 @@ subprocess.run([
     args.ar, "r", str(archive),
     *[str(work / name) for name in
       ("builtins.o", "external-reference-table.o", "snapshot.o", "embedded.o")],
+    *([str(work / "runtime.o")] if args.runtime_allowlist else []),
 ], check=True)
-print("C++ builtin selection and matching snapshot generated.", flush=True)
+print("Entry selection and matching snapshot generated.", flush=True)

@@ -143,7 +143,7 @@ Start with the context-only `build.py` output and the matching custom_wee8 GN
 build. The scripts rebuild only affected objects and regenerate the snapshot.
 
 ```sh
-python3 experiments/wasm-context/prune-cpp-builtins.py \
+python3 experiments/wasm-context/build-entry-allowlists.py \
   --source "$RUSTY_V8_SOURCE" --out "$GN_OUT" \
   --context "$EXPERIMENT_OUT" --work "$CPP_OUT" \
   --cxx "$CXX" --ar "$LLVM_AR"

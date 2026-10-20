@@ -10,9 +10,10 @@ The prototype executes native Wasm calls, callbacks, traps, memory growth, and
 WasmGC without initializing the public JS standard library. This establishes a
 useful bootstrap seam. The bootstrap alone does **not** establish the minimum
 possible runtime or remove implementations rooted by builtin tables.
-The subsequent [C++ entry allowlist](CPP-ENTRIES.md) removes 455 such table
-references while preserving their identities, bringing the C API probe to
-**12.91 MB**.
+The subsequent [C++ entry allowlist](CPP-ENTRIES.md) and
+[runtime entry allowlist](RUNTIME-ENTRIES.md) remove unused implementation
+references while preserving identities, bringing the C API probe to
+**12.20 MB**.
 
 ## Draft implementation
 
@@ -108,7 +109,11 @@ also cannot remove them: its own directly retained code is about 26 KB.
 
 ## Validation
 
-Passed for both archives:
+The checks below describe the context-only stage. The subsequent
+[runtime entry report](RUNTIME-ENTRIES.md#validation) extends coverage to
+shared memory, exception tags, runtime identities and the Rust wrapper.
+
+Passed for both context-stage archives:
 
 - Empty, initialization, isolate and context lifecycle probes.
 - Native C API import/export calls, callbacks with environment ownership and
@@ -128,8 +133,8 @@ The snapshot and embedded blob were regenerated together. The blob is
 byte-for-byte identical to the baseline.
 
 No full moonrun integration suite, debugger suite, platform matrix, shared-memory
-test, Wasm exception-tag test, externref stress test or production release has
-been run for this prototype. Public JS object APIs are not a supported interface
+test, Wasm exception-tag test, externref stress test or production release had
+been run at this stage. Public JS object APIs are not a supported interface
 for the candidate. Absent native-context slots still need a broader invariant
 audit before this can be offered as a supported build.
 
@@ -159,8 +164,9 @@ reviewing the new initializer and its shared helpers.
    Preserve the layouts consumed by native Wasm factories while omitting
    JS-facing constructors and methods. The native adapter should choose this
    context explicitly.
-2. Extend the [positive CPP entry selection](CPP-ENTRIES.md) to remaining builtin
-   kinds and runtime registrations after auditing their native Wasm callers.
+2. Extend the positive [CPP](CPP-ENTRIES.md) and
+   [runtime](RUNTIME-ENTRIES.md) entry selections to remaining builtin kinds
+   and independent external references after auditing their native Wasm callers.
    Unselected builtin IDs retain their descriptors and explicit unsupported code
    bodies. Keep the snapshot and tables generated from the same selection.
 3. Audit runtime tables and transitive references. A builtin's name or JS linkage
@@ -170,5 +176,5 @@ reviewing the new initializer and its shared helpers.
    the candidate, then measure the final linked moonrun binary under release LTO.
 
 The final size is unknown until the remaining roots are changed and the consumer
-is linked. The context-only C API probe measured 13.58 MB; the subsequent CPP
-entry selection measures 12.91 MB. Neither is a floor or a target.
+is linked. The context-only C API probe measured 13.58 MB, CPP entry selection
+12.91 MB, and runtime entry selection 12.20 MB. None is a floor or a target.

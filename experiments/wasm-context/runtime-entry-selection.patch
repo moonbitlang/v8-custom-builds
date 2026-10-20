@@ -1,0 +1,28 @@
+--- a/v8/src/runtime/runtime.cc
++++ b/v8/src/runtime/runtime.cc
+@@ -3,6 +3,7 @@
+ // found in the LICENSE file.
+ 
+ #include "src/runtime/runtime.h"
++#include "runtime-selection.h"
+ 
+ #include "src/base/hashmap.h"
+ #include "src/execution/isolate.h"
+@@ -27,7 +28,7 @@
+ 
+ #define F(name, number_of_args, result_size)                                  \
+   {                                                                           \
+-    Runtime::k##name, Runtime::RUNTIME, #name, FUNCTION_ADDR(Runtime_##name), \
++    Runtime::k##name, Runtime::RUNTIME, #name, WASM_CONTEXT_RUNTIME_ENTRY(name), \
+         number_of_args, result_size                                           \
+   }                                                                           \
+   ,
+@@ -36,7 +37,7 @@
+ #define I(name, number_of_args, result_size)                       \
+   {                                                                \
+     Runtime::kInline##name, Runtime::INLINE, "_" #name,            \
+-        FUNCTION_ADDR(Runtime_##name), number_of_args, result_size \
++        WASM_CONTEXT_RUNTIME_ENTRY(name), number_of_args, result_size \
+   }                                                                \
+   ,
+ 
