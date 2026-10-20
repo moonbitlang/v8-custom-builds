@@ -5,6 +5,7 @@
 //! - Payload roots stay alive while owned and are released during store teardown.
 //! - Invalid or foreign handles fail safely before reaching native code.
 //! - Explicit throws are catchable; host failures and panics remain host errors.
+//!
 //! The packaged C consumer only checks the new header/archive ABI; it does not
 //! repeat these exception scenarios.
 
@@ -314,4 +315,53 @@ fn exported_tags_can_be_reimported_and_unsupported_tag_payloads_fail_validation(
     ] {
         assert!(store.compile(&wat::parse_str(source).unwrap()).is_err());
     }
+}
+
+#[test]
+fn rejects_funcref_tag_imports_and_exports() {
+    let store = Store::new(()).unwrap();
+    for (source, boundary) in [
+        (
+            r#"(module (import "e" "tag" (tag (param funcref))))"#,
+            "import `e::tag`",
+        ),
+        (
+            r#"(module (tag (export "tag") (param funcref)))"#,
+            "export `tag`",
+        ),
+    ] {
+        let result = store.compile(&wat::parse_str(source).unwrap());
+        assert!(
+            matches!(result, Err(Error::Interface(ref message))
+                if message.contains("funcref") && message.contains(boundary)),
+            "must reject funcref payloads at {boundary} before native introspection"
+        );
+    }
+}
+
+#[test]
+fn guest_internal_funcref_tag_payloads_can_be_caught() {
+    let store = Store::new(()).unwrap();
+    // The tag and its non-null function reference stay inside Wasm. Only the
+    // scalar result crosses the host boundary.
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+        (tag $tag (param funcref))
+        (func $payload)
+        (elem declare func $payload)
+        (func (export "run") (result i32)
+            (block $caught (result funcref)
+                (try_table (catch $tag $caught)
+                    ref.func $payload
+                    throw $tag)
+                unreachable)
+            ref.is_null))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let mut instance = module.instantiate(&[]).unwrap();
+    assert_eq!(instance.call("run", &[]).unwrap(), [Value::I32(0)]);
 }

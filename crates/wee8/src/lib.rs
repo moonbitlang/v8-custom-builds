@@ -579,7 +579,7 @@ impl<T: 'static> Store<T> {
         // The native C API only describes scalar numbers and nullable externref/
         // funcref. Unsupported GC/SIMD boundary types abort inside V8's type
         // conversion, so reject them before any C API introspection.
-        let supported = |ty: wasmparser::ValType| {
+        let scalar_or_externref = |ty: wasmparser::ValType| {
             matches!(
                 ty,
                 wasmparser::ValType::I32
@@ -587,12 +587,11 @@ impl<T: 'static> Store<T> {
                     | wasmparser::ValType::F32
                     | wasmparser::ValType::F64
             ) || ty == wasmparser::ValType::EXTERNREF
-                || ty == wasmparser::ValType::FUNCREF
         };
+        let supported = |ty| scalar_or_externref(ty) || ty == wasmparser::ValType::FUNCREF;
         for (name, ty) in imports.chain(exports) {
             let unsupported = match ty {
-                wasmparser::types::EntityType::Func(id)
-                | wasmparser::types::EntityType::Tag(id) => {
+                wasmparser::types::EntityType::Func(id) => {
                     let function = types[id].unwrap_func();
                     function
                         .params()
@@ -600,6 +599,16 @@ impl<T: 'static> Store<T> {
                         .chain(function.results())
                         .copied()
                         .find(|ty| !supported(*ty))
+                }
+                wasmparser::types::EntityType::Tag(id) => {
+                    // Tag payloads must also pass through Value and the native
+                    // exception encoder/decoder, which do not support funcref.
+                    types[id]
+                        .unwrap_func()
+                        .params()
+                        .iter()
+                        .copied()
+                        .find(|ty| !scalar_or_externref(*ty))
                 }
                 wasmparser::types::EntityType::Global(global) => {
                     (!supported(global.content_type)).then_some(global.content_type)

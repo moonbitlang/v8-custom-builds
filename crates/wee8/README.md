@@ -139,7 +139,9 @@ let mut instance = module.instantiate_with_imports(&[
 ```
 
 `Exception` owns a native root and borrows its store. Payloads may contain scalar
-numbers and nullable externref. `Caller::throw` returns an error marker while
+numbers and nullable externref. Imported/exported tags with other payload types,
+including `funcref`, are rejected at compilation; guest-internal tags may still
+carry function references. `Caller::throw` returns an error marker while
 the store roots the exception until the callback trampoline takes it. Returning
 another outcome discards that pending root. A guest may catch the exception;
 ordinary host errors and callback panics still bypass Wasm catches.
