@@ -5,6 +5,7 @@
 
 #include "src/builtins/builtins-inl.h"
 #include "src/builtins/moonrun-omitted-builtins.h"
+#include "src/heap/factory-inl.h"
 #include <set>
 
 int main(int argc, char** argv) {
@@ -84,6 +85,16 @@ int main(int argc, char** argv) {
              .FromMaybe(false)) return 8;
     isolate->PerformMicrotaskCheckpoint();
     if (resolved != 42 || chained->State() != v8::Promise::kFulfilled) return 8;
+
+    // Rejection handlers share the reaction queue with fulfillment; neither
+    // path may depend on the omitted combinator element closures.
+    auto rejected = v8::Promise::Resolver::New(context).ToLocalChecked();
+    v8::Local<v8::Promise> recovered;
+    if (!rejected->GetPromise()->Catch(context, callback).ToLocal(&recovered) ||
+        !rejected->Reject(context, v8::Integer::New(isolate, 43))
+             .FromMaybe(false)) return 8;
+    isolate->PerformMicrotaskCheckpoint();
+    if (resolved != 43 || recovered->State() != v8::Promise::kFulfilled) return 8;
 
     // A JS host import returns an iterator for two Wasm results. This covers
     // IterableToFixedArrayForWasm and next(), beyond ordinary Array iteration.
@@ -195,6 +206,37 @@ int main(int argc, char** argv) {
       MOONRUN_OMITTED_JS_BUILTINS(CHECK_BUILTIN)
     }
 #undef CHECK_BUILTIN
+    // These closures have no public property. Verify their real shared-function
+    // roots and invoke only the candidate traps, with no synthetic element
+    // context: a trap must be reached before reading a combinator's state.
+#define CHECK_CLOSURE(Name, Root)                                              \
+    {                                                                         \
+      auto id = v8::internal::Builtin::k##Name;                                 \
+      auto code = internal->builtins()->code(id);                              \
+      auto info = internal->factory()->Root##_shared_fun();                    \
+      if (code->builtin_id() != id || info->builtin_id() != id ||               \
+          !identities.insert(code.ptr()).second ||                             \
+          code == internal->builtins()->code(v8::internal::Builtin::kIllegal))  \
+        return 13;                                                            \
+      if (inspect) {                                                          \
+        std::printf("%s,%d,%d,%u,%d\n", #Name, static_cast<int>(id),            \
+                    v8::internal::Builtins::GetStackParameterCount(id),        \
+                    code->parameter_count(), code->instruction_size());       \
+      } else if (std::string(argv[1]) == "--invoke=" #Name) {                   \
+        invoked = true;                                                       \
+        auto function = v8::internal::Factory::JSFunctionBuilder(              \
+            internal, info, internal->native_context()).Build();              \
+        std::fprintf(stderr, "invoking:%s\n", #Name);                          \
+        std::fflush(stderr);                                                  \
+        auto result = v8::Utils::ToLocal(function)->Call(                      \
+            context, v8::Undefined(isolate), 0, nullptr);                      \
+        if (result.IsEmpty()) status = 14;                                    \
+      }                                                                       \
+    }
+    if (!retained) {
+      MOONRUN_OMITTED_PROMISE_CLOSURES(CHECK_CLOSURE)
+    }
+#undef CHECK_CLOSURE
     if (!inspect && !invoked && !retained) status = 5;
   }
   isolate->Dispose();

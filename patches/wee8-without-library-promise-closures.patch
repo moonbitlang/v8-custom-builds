@@ -1,0 +1,45 @@
+Subject: Omit private closures owned by unsupported Promise combinators
+
+Keep builtin IDs, shared-function roots and descriptors intact.
+
+--- a/v8/src/builtins/moonrun-omitted-builtins.h
++++ b/v8/src/builtins/moonrun-omitted-builtins.h
+@@ -157,6 +157,15 @@
+   V(JsonParse, JSON, "parse") \
+   V(JsonStringify, JSON, "stringify")
+ 
++// Private closures owned only by the omitted all/allSettled/any combinators.
++// Keep their shared-function roots and builtin identities for heap metadata and
++// async stack inspection; no retained operation creates these closures.
++#define MOONRUN_OMITTED_PROMISE_CLOSURES(V) \
++  V(PromiseAllResolveElementClosure, promise_all_resolve_element_closure) \
++  V(PromiseAllSettledResolveElementClosure, promise_all_settled_resolve_element_closure) \
++  V(PromiseAllSettledRejectElementClosure, promise_all_settled_reject_element_closure) \
++  V(PromiseAnyRejectElementClosure, promise_any_reject_element_closure)
++
+ #define MOONRUN_OMITTED_JS_BUILTINS(V) \
+   MOONRUN_OMITTED_TFJ_BUILTINS(V) \
+   MOONRUN_OMITTED_CPP_BUILTINS(V)
+--- a/v8/src/builtins/setup-builtins-internal.cc
++++ b/v8/src/builtins/setup-builtins-internal.cc
+@@ -426,6 +426,10 @@
+   CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::TFJ);
+   MOONRUN_OMITTED_TFJ_BUILTINS(CHECK_OMITTED_KIND)
+ #undef CHECK_OMITTED_KIND
++#define CHECK_CLOSURE_KIND(Name, Root) \
++  CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::TFJ);
++  MOONRUN_OMITTED_PROMISE_CLOSURES(CHECK_CLOSURE_KIND)
++#undef CHECK_CLOSURE_KIND
+ #define CHECK_OMITTED_CPP_KIND(Name, Receiver, Method) \
+   CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::CPP);
+   MOONRUN_OMITTED_CPP_BUILTINS(CHECK_OMITTED_CPP_KIND)
+@@ -438,6 +442,9 @@
+ #define OMITTED_CASE(Name, Receiver, Method) case Builtin::k##Name:
+       MOONRUN_OMITTED_TFJ_BUILTINS(OMITTED_CASE)
+ #undef OMITTED_CASE
++#define OMITTED_CLOSURE_CASE(Name, Root) case Builtin::k##Name:
++      MOONRUN_OMITTED_PROMISE_CLOSURES(OMITTED_CLOSURE_CASE)
++#undef OMITTED_CLOSURE_CASE
+         // Intentional unsupported-API trap, not an Illegal code alias or a
+         // fake return value. The owning builtin ID identifies the omitted API.
+         return +[](compiler::CodeAssemblerState* state) {
