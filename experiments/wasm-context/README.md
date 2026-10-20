@@ -46,6 +46,10 @@ does not replace, renumber, or alias entries in the builtin table.
 
 ## Measurements
 
+See [Native ThinLTO and upstream size comparison](LTO.md) for the subsequent
+measurement against moonrun's upstream rusty_v8 dependency and the effect of
+recompiling the native archive with ThinLTO.
+
 Matched ARM64 macOS stripped probe executables, with the same compiler/linker
 flags and dead stripping, without ThinLTO:
 

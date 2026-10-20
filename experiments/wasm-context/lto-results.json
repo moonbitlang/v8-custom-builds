@@ -1,0 +1,159 @@
+{
+  "measurement_date": "2026-10-20",
+  "units": "bytes",
+  "target": "aarch64-apple-darwin",
+  "linker": "LLVM 18 ld64.lld",
+  "strip": "strip -x",
+  "custom_baseline_revision": "47697b35234e2f4a2f4892b25deb9fcb6c7fed1c",
+  "allowlist_revision": "0894040",
+  "native_compile_optimization": "O2",
+  "upstream": {
+    "0.102.0": {
+      "archive_bytes": 104502224,
+      "archive_sha256": "52982c094e199ffd6615babf588a86f6aa93232f93ae5775fd59da8cfeaf7645",
+      "context_probe_stripped_bytes": 24043920
+    },
+    "0.106.0": {
+      "archive_bytes": 103958448,
+      "archive_sha256": "03797f66c1dd7067ffa939a203f346be848aa3473dedd20306de1d4828455ed7",
+      "context_probe_stripped_bytes": 23483456
+    }
+  },
+  "custom": {
+    "no_native_lto": {
+      "baseline": {
+        "context": {
+          "stripped_bytes": 13724176
+        },
+        "c-api": {
+          "stripped_bytes": 13757600
+        },
+        "c-api-gc": {
+          "stripped_bytes": 13741088
+        },
+        "heap": [
+          "used_heap_size=462568 total_heap_size=1884160",
+          "used_heap_size=462568 total_heap_size=1884160",
+          "used_heap_size=462568 total_heap_size=1884160"
+        ],
+        "wasm_modes_passed": 4
+      },
+      "candidate": {
+        "context": {
+          "stripped_bytes": 13542480
+        },
+        "c-api": {
+          "stripped_bytes": 13575888
+        },
+        "c-api-gc": {
+          "stripped_bytes": 13575888
+        },
+        "heap": [
+          "used_heap_size=335528 total_heap_size=1884160",
+          "used_heap_size=335528 total_heap_size=1884160",
+          "used_heap_size=335528 total_heap_size=1884160"
+        ],
+        "wasm_modes_passed": 4
+      }
+    },
+    "thinlto_o2": {
+      "baseline": {
+        "context": {
+          "stripped_bytes": 14288736
+        },
+        "c-api": {
+          "stripped_bytes": 14322112
+        },
+        "c-api-gc": {
+          "stripped_bytes": 14322112
+        },
+        "heap": [
+          "used_heap_size=462568 total_heap_size=1884160",
+          "used_heap_size=462568 total_heap_size=1884160",
+          "used_heap_size=462568 total_heap_size=1884160"
+        ],
+        "wasm_modes_passed": 4
+      },
+      "candidate": {
+        "context": {
+          "stripped_bytes": 14107056
+        },
+        "c-api": {
+          "stripped_bytes": 14156944
+        },
+        "c-api-gc": {
+          "stripped_bytes": 14140432
+        },
+        "heap": [
+          "used_heap_size=335528 total_heap_size=1884160",
+          "used_heap_size=335528 total_heap_size=1884160",
+          "used_heap_size=335528 total_heap_size=1884160"
+        ],
+        "wasm_modes_passed": 4
+      }
+    },
+    "thinlto_o3": {
+      "baseline": {
+        "context": {
+          "stripped_bytes": 14899568
+        },
+        "c-api": {
+          "stripped_bytes": 14949456
+        },
+        "c-api-gc": {
+          "stripped_bytes": 14932944
+        },
+        "heap": [
+          "used_heap_size=462568 total_heap_size=1884160",
+          "used_heap_size=462568 total_heap_size=1884160",
+          "used_heap_size=462568 total_heap_size=1884160"
+        ],
+        "wasm_modes_passed": 4
+      },
+      "candidate": {
+        "context": {
+          "stripped_bytes": 14717888
+        },
+        "c-api": {
+          "stripped_bytes": 14767776
+        },
+        "c-api-gc": {
+          "stripped_bytes": 14767776
+        },
+        "heap": [
+          "used_heap_size=335528 total_heap_size=1884160",
+          "used_heap_size=335528 total_heap_size=1884160",
+          "used_heap_size=335528 total_heap_size=1884160"
+        ],
+        "wasm_modes_passed": 4
+      }
+    }
+  },
+  "native_thinlto_archive_inputs": {
+    "total": 1235,
+    "bitcode": 1234,
+    "assembly": 1
+  },
+  "moonrun_upstream": {
+    "revision": "efda7a5737998d5af78bdaafbd69a6966e8405d9",
+    "rusty_v8_version": "0.102.0",
+    "build": "cargo build --release --locked",
+    "rust_release_lto": true,
+    "executable_bytes": 26098000,
+    "smoke_tests": [
+      "version",
+      "minimal Wasm _start"
+    ],
+    "comparison_scope": "whole application; no corresponding allowlist moonrun binary measured"
+  },
+  "allowlist_context_text_section": {
+    "no_native_lto": 11750672,
+    "thinlto_o2": 12372816
+  },
+  "comparison_limits": [
+    "Upstream profiles differ from the custom build, including the C++ standard library.",
+    "Upstream 0.102.0 uses an older V8 version and pointer compression.",
+    "Probe results are not full moonrun application size reductions.",
+    "Full LTO, size-oriented compilation, and performance were not measured."
+  ]
+}

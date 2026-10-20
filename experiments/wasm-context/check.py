@@ -15,6 +15,14 @@ parser.add_argument("--baseline", type=Path, required=True)
 parser.add_argument("--candidate", type=Path, required=True)
 parser.add_argument("--work", type=Path, required=True)
 parser.add_argument("--cxx", default="clang++")
+parser.add_argument("--linker", help="explicit linker executable")
+parser.add_argument("--thin-lto", action="store_true")
+parser.add_argument("--lto-opt-level", type=int, choices=range(4), default=2)
+parser.add_argument("--probes", nargs="+",
+                    choices=("empty", "initialize", "isolate", "context",
+                             "c-api", "c-api-gc"),
+                    default=("empty", "initialize", "isolate", "context",
+                             "c-api", "c-api-gc"))
 args = parser.parse_args()
 source, out, baseline, candidate, work = (
     path.resolve() for path in
@@ -30,6 +38,19 @@ flags = sum((config[key] for key in
              ("defines", "include_dirs", "cflags", "cflags_cc")), [])
 flags += ["-I" + str(source / "v8/third_party/wasm-api")]
 link_flags = config["ldflags"] + config["frameworks"] + config["libs"]
+if args.linker:
+    # Apple's warning-suppression option is not implemented by ld64.lld 18.
+    link_flags = [f for f in link_flags if f != "-Wl,-no_warn_duplicate_libraries"]
+    link_flags += ["--ld-path=" + args.linker]
+if args.thin_lto:
+    if not args.linker:
+        raise SystemExit("Specify the LLVM linker matching the bitcode compiler")
+    flags += ["-flto=thin"]
+    cache = work / "thinlto-cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    link_flags += ["-flto=thin", "-Wl,-cache_path_lto," + str(cache),
+                   "-Wl,--thinlto-jobs=6",
+                   "-Wl,--lto-O" + str(args.lto_opt_level)]
 env = {key: value for key, value in os.environ.items()
        if key not in ("CPATH", "CPLUS_INCLUDE_PATH", "C_INCLUDE_PATH",
                       "OBJC_INCLUDE_PATH")}
@@ -40,6 +61,8 @@ for variant, archive in (("baseline", baseline), ("candidate", candidate)):
     results[variant] = {}
     for number, name in enumerate(
             ("empty", "initialize", "isolate", "context", "c-api", "c-api-gc")):
+        if name not in args.probes:
+            continue
         obj, exe = output / (name + ".o"), output / name
         with (output / (name + ".log")).open("w") as log:
             subprocess.run([args.cxx, *flags, f"-DPROBE={number}", "-c",
@@ -80,7 +103,10 @@ for variant, archive in (("baseline", baseline), ("candidate", candidate)):
                  "--wasm-lazy-compilation",
                  "--wasm-sync-tier-up --wasm-tiering-budget=1"):
         for name in ("c-api", "c-api-gc"):
-            subprocess.run([str(output / name), mode], check=True, timeout=60)
-    results[variant]["wasm_modes_passed"] = 4
+            if name in args.probes:
+                subprocess.run([str(output / name), mode], check=True, timeout=60)
+    results[variant]["wasm_modes_passed"] = (
+        4 if any(name in args.probes for name in ("c-api", "c-api-gc")) else 0
+    )
     (work / "results.json").write_text(json.dumps(results, indent=2) + "\n")
 print(json.dumps(results, indent=2))
