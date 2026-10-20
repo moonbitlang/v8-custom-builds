@@ -1,0 +1,53 @@
+{
+  "sizes": {
+    "archive": {
+      "before": 60484120,
+      "after": 60483632,
+      "saved_bytes": 488,
+      "saved_percent": 0.001
+    },
+    "stripped_consumer": {
+      "before": 15359312,
+      "after": 15359312,
+      "saved_bytes": 0,
+      "saved_percent": 0.0
+    },
+    "embedded_code": {
+      "before": 1469888,
+      "after": 1464800,
+      "saved_bytes": 5088,
+      "saved_percent": 0.346
+    },
+    "embedded_data": {
+      "before": 81684,
+      "after": 81588,
+      "saved_bytes": 96,
+      "saved_percent": 0.118
+    },
+    "snapshot": {
+      "before": 402096,
+      "after": 401698,
+      "saved_bytes": 398,
+      "saved_percent": 0.099
+    }
+  },
+  "archive_sha256": {
+    "before": "7b15dd1c08444fe259c5efb85fa00ff14b0149a33a3dc31f4fa4595bc703a5b4",
+    "after": "ab7aa2294668c01d9bc17f20a7bdda505555c120b22536ee2deded429d887880"
+  },
+  "total_builtin_labels": 2169,
+  "unselected_builtin_body_lengths_unchanged": true,
+  "base_commit": "ead61021cee8d2a1a625ce074b740c8a0dfa40c7",
+  "artifact_target": "aarch64-apple-darwin",
+  "v8_thin_lto": false,
+  "private_closure_count": 4,
+  "existing_149_body_sizes_unchanged": true,
+  "baseline_archive_matches_moonbit_2": true,
+  "validation": {
+    "four_wasm_modes": true,
+    "promise_fulfillment_and_rejection": true,
+    "all_153_identities": true,
+    "candidate_153_invocations_trap": true,
+    "c_api_and_rust_adapter": true
+  }
+}

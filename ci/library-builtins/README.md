@@ -4,6 +4,8 @@ The custom wee8 profile replaces 149 explicitly selected JS library entry bodies
 with intentional machine traps. Calling one of these methods terminates the
 process; it does not return a fake result or a catchable JS exception. This is a
 supported profile boundary, not preservation of the omitted APIs' functionality.
+A follow-up also omits [four private Promise combinator closures](promise-closures.md);
+these add no new unsupported public APIs.
 
 `patches/wee8-without-library-bodies.patch` is part of the production patch stack.
 The GN argument `v8_moonrun_omit_library_builtin_bodies` defaults to the custom
@@ -15,7 +17,7 @@ The selected names remain explicit and independent of prefixes or linkage.
 
 `SetupIsolateDelegate::SetupBuiltinsInternal` selects the replacement bodies:
 
-- The 115 TFJ entries use the ordinary CodeStubAssembler builder with the same
+- The 115 public TFJ entries and four private Promise closures use the ordinary CodeStubAssembler builder with the same
   builtin ID, name and argc, but generate `Unreachable` (an intentional trap).
 - The 34 CPP entries use the ordinary adaptor builder and Code metadata, but
   preserve the architecture-specific entry landing pad and emit `DebugBreak`
@@ -44,7 +46,7 @@ alone cannot establish that arbitrary JS programs will never call these APIs.
 | TypedArray methods | 17 | Callback/search/slice/sort conveniences; keep constructors, buffers, element access, set/subarray and shared conversion/copy machinery. Wasm memory is unaffected. |
 | Set algebra | 7 | Set combinations and relation checks; keep construction, add/delete/has, iteration and hash-table machinery. |
 | Iterator conveniences | 11 | map/filter/take/drop/flatMap and terminal conveniences; keep next/return, Iterator.from, helper resume bodies and concrete collection iterators. |
-| Promise conveniences | 5 | all/allSettled/any/race/withResolvers; keep constructor, resolution, then/catch/finally, reactions, combinator closures and microtasks. |
+| Promise conveniences | 5 | all/allSettled/any/race/withResolvers and their four private element closures are omitted; keep constructor, resolution, then/catch/finally, reactions and microtasks. |
 | Object statics | 6 | assign/entries/values/keys/fromEntries/groupBy; keep object creation, property primitives and conversions. These JS methods are separate from internal enumeration helpers. |
 | Reflect | 11 | Property/prototype convenience entries; keep apply/construct and the underlying property, prototype and call machinery. |
 | Date | 43 | Calendar getters/setters, formatting and now/parse/UTC; keep constructor, valueOf, toString and Symbol.toPrimitive for conversion. Native clocks and Date C++ implementations remain. |
@@ -77,9 +79,9 @@ and C++ dispatch-table pruning are separate work.
 `wee8-build` builds `wee8-library-check` in the same custom toolchain as the
 archive. Every native candidate CI run invokes `check.py --after PROBE`:
 
-- All 149 property registrations resolve to their expected builtin IDs and
+- All 149 public property registrations and four private shared-function roots resolve to their expected builtin IDs and
   distinct Code objects, with no Illegal alias. CPP dispatch entries remain.
-- Each omitted method runs in its own process and must reach its named entry
+- Each omitted method or private closure runs in its own process and must reach its named entry
   before an intentional trap. POSIX and Windows trap statuses are explicit.
 - Retained Array iteration, Promise resolution/reactions/microtasks and a Wasm
   host import returning an iterator for two results are exercised.
@@ -99,6 +101,11 @@ python3 ci/library-builtins/check.py --before BEFORE/probe --after AFTER/probe \
 python3 ci/library-builtins/measure.py --before BEFORE --after AFTER \
   --identities identities.json --output sizes.json
 ```
+
+Control builds inspect the four private closures without calling them: their
+original implementations need combinator-specific contexts. Candidate calls
+must trap before reading such contexts. The Promise-only comparison procedure
+is documented in [promise-closures.md](promise-closures.md).
 
 The comparison also verifies original IDs/argument metadata and instruction-size
 reduction for every selected entry. Tiny CPP adaptor replacements may occupy the
