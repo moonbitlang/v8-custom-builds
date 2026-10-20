@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and header
-from `v0.106.0-moonbit.1`. It verifies the release SHA-256 manifest and a separately
+from `v0.106.0-moonbit.2`. It verifies the release SHA-256 manifest and a separately
 pinned header hash, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
