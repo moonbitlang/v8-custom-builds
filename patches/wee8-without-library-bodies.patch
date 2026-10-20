@@ -1,0 +1,349 @@
+Subject: Omit unsupported JS library builtin bodies in custom wee8
+
+Enabled for custom wee8; ordinary V8 retains its original bodies.
+Base: rusty_v8 v0.106.0, V8 12.9.202.13.
+
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -51,7 +51,11 @@
+ 
+ # Build the Wasm C API and its native regression probe with identical settings.
+ group("wee8-build") {
+-  deps = [ ":custom_wee8", ":wee8-runtime-check(//custom_wee8:custom_wee8)" ]
++  deps = [
++    ":custom_wee8",
++    ":wee8-runtime-check(//custom_wee8:custom_wee8)",
++    ":wee8-library-check(//custom_wee8:custom_wee8)",
++  ]
+ }
+ 
+ # Public entry point for the isolated native Wasm profile.
+@@ -81,3 +85,16 @@
+   ]
+   include_dirs = [ "v8" ]
+ }
++
++executable("wee8-library-check") {
++  sources = [ "wee8-library-check.cc" ]
++  deps = [
++    # This probe includes the retained probe with its entry point renamed.
++    ":wee8-runtime-check",
++    "//v8:wee8",
++    "//v8:v8_libplatform",
++    "//v8:v8_internal_headers",
++    "//v8:v8_abseil",
++  ]
++  configs += [ ":wee8_probe_config" ]
++}
+--- a/v8/BUILD.gn
++++ b/v8/BUILD.gn
+@@ -27,6 +27,12 @@
+ 
+ declare_args() {
+   v8_custom_wee8 = false
++}
++
++declare_args() {
++  # Custom wee8 omits selected JS library bodies; ordinary V8 keeps them.
++  # Override to false for a matching control build.
++  v8_moonrun_omit_library_builtin_bodies = v8_custom_wee8
+ 
+   # Keep asm.js translation optional independently of binary Wasm support.
+   v8_enable_asmjs = true
+@@ -3128,6 +3134,10 @@
+     sources -= [ "src/builtins/builtins-intl-gen.cc" ]
+   }
+ 
++  if (v8_custom_wee8 && v8_moonrun_omit_library_builtin_bodies) {
++    defines = [ "V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES" ]
++  }
++
+   configs = [ ":internal_config" ]
+ }
+ 
+@@ -3361,6 +3371,7 @@
+     "src/builtins/accessors.h",
+     "src/builtins/builtins-constructor.h",
+     "src/builtins/builtins-definitions.h",
++    "src/builtins/moonrun-omitted-builtins.h",
+     "src/builtins/builtins-descriptors.h",
+     "src/builtins/builtins-inl.h",
+     "src/builtins/builtins-promise.h",
+--- /dev/null
++++ b/v8/src/builtins/moonrun-omitted-builtins.h
+@@ -0,0 +1,164 @@
++// Explicit unsupported JS library entry points for custom wee8.
++// Keep this list synchronized with the dependency rationale and probes.
++// Eligibility is never inferred from linkage, a prefix, or registration alone.
++#ifndef V8_BUILTINS_MOONRUN_OMITTED_BUILTINS_H_
++#define V8_BUILTINS_MOONRUN_OMITTED_BUILTINS_H_
++
++#define MOONRUN_OMITTED_TFJ_BUILTINS(V) \
++  V(ArrayEvery, Array, "every") \
++  V(ArrayFilter, Array, "filter") \
++  V(ArrayForEach, Array, "forEach") \
++  V(ArrayMap, Array, "map") \
++  V(ArrayReduce, Array, "reduce") \
++  V(ArrayReduceRight, Array, "reduceRight") \
++  V(ArraySome, Array, "some") \
++  V(ArrayPrototypeAt, Array, "at") \
++  V(ArrayPrototypeCopyWithin, Array, "copyWithin") \
++  V(ArrayPrototypeFind, Array, "find") \
++  V(ArrayPrototypeFindIndex, Array, "findIndex") \
++  V(ArrayPrototypeFindLast, Array, "findLast") \
++  V(ArrayPrototypeFindLastIndex, Array, "findLastIndex") \
++  V(ArrayPrototypeFlat, Array, "flat") \
++  V(ArrayPrototypeFlatMap, Array, "flatMap") \
++  V(ArrayPrototypeLastIndexOf, Array, "lastIndexOf") \
++  V(ArrayPrototypeReverse, Array, "reverse") \
++  V(ArrayPrototypeShift, Array, "shift") \
++  V(ArrayPrototypeSlice, Array, "slice") \
++  V(ArrayPrototypeSort, Array, "sort") \
++  V(ArrayPrototypeSplice, Array, "splice") \
++  V(ArrayPrototypeToReversed, Array, "toReversed") \
++  V(ArrayPrototypeToSorted, Array, "toSorted") \
++  V(ArrayPrototypeToSpliced, Array, "toSpliced") \
++  V(ArrayPrototypeUnshift, Array, "unshift") \
++  V(ArrayPrototypeWith, Array, "with") \
++  V(TypedArrayPrototypeAt, TypedArray, "at") \
++  V(TypedArrayPrototypeEvery, TypedArray, "every") \
++  V(TypedArrayPrototypeFilter, TypedArray, "filter") \
++  V(TypedArrayPrototypeFind, TypedArray, "find") \
++  V(TypedArrayPrototypeFindIndex, TypedArray, "findIndex") \
++  V(TypedArrayPrototypeFindLast, TypedArray, "findLast") \
++  V(TypedArrayPrototypeFindLastIndex, TypedArray, "findLastIndex") \
++  V(TypedArrayPrototypeForEach, TypedArray, "forEach") \
++  V(TypedArrayPrototypeMap, TypedArray, "map") \
++  V(TypedArrayPrototypeReduce, TypedArray, "reduce") \
++  V(TypedArrayPrototypeReduceRight, TypedArray, "reduceRight") \
++  V(TypedArrayPrototypeSlice, TypedArray, "slice") \
++  V(TypedArrayPrototypeSome, TypedArray, "some") \
++  V(TypedArrayPrototypeSort, TypedArray, "sort") \
++  V(TypedArrayPrototypeToReversed, TypedArray, "toReversed") \
++  V(TypedArrayPrototypeToSorted, TypedArray, "toSorted") \
++  V(TypedArrayPrototypeWith, TypedArray, "with") \
++  V(SetPrototypeDifference, Set, "difference") \
++  V(SetPrototypeIntersection, Set, "intersection") \
++  V(SetPrototypeSymmetricDifference, Set, "symmetricDifference") \
++  V(SetPrototypeUnion, Set, "union") \
++  V(SetPrototypeIsDisjointFrom, Set, "isDisjointFrom") \
++  V(SetPrototypeIsSubsetOf, Set, "isSubsetOf") \
++  V(SetPrototypeIsSupersetOf, Set, "isSupersetOf") \
++  V(IteratorPrototypeMap, Iterator, "map") \
++  V(IteratorPrototypeFilter, Iterator, "filter") \
++  V(IteratorPrototypeTake, Iterator, "take") \
++  V(IteratorPrototypeDrop, Iterator, "drop") \
++  V(IteratorPrototypeFlatMap, Iterator, "flatMap") \
++  V(IteratorPrototypeReduce, Iterator, "reduce") \
++  V(IteratorPrototypeToArray, Iterator, "toArray") \
++  V(IteratorPrototypeForEach, Iterator, "forEach") \
++  V(IteratorPrototypeSome, Iterator, "some") \
++  V(IteratorPrototypeEvery, Iterator, "every") \
++  V(IteratorPrototypeFind, Iterator, "find") \
++  V(PromiseAll, Promise, "all") \
++  V(PromiseAllSettled, Promise, "allSettled") \
++  V(PromiseAny, Promise, "any") \
++  V(PromiseRace, Promise, "race") \
++  V(PromiseWithResolvers, Promise, "withResolvers") \
++  V(ArrayFrom, ArrayConstructor, "from") \
++  V(ArrayFromAsync, ArrayConstructor, "fromAsync") \
++  V(ArrayOf, ArrayConstructor, "of") \
++  V(MapGroupBy, MapConstructor, "groupBy") \
++  V(ObjectAssign, ObjectConstructor, "assign") \
++  V(ObjectEntries, ObjectConstructor, "entries") \
++  V(ObjectValues, ObjectConstructor, "values") \
++  V(ObjectKeys, ObjectConstructor, "keys") \
++  V(ObjectFromEntries, ObjectConstructor, "fromEntries") \
++  V(ObjectGroupBy, ObjectConstructor, "groupBy") \
++  V(ReflectIsExtensible, Reflect, "isExtensible") \
++  V(ReflectPreventExtensions, Reflect, "preventExtensions") \
++  V(ReflectGetPrototypeOf, Reflect, "getPrototypeOf") \
++  V(ReflectSetPrototypeOf, Reflect, "setPrototypeOf") \
++  V(ReflectGet, Reflect, "get") \
++  V(ReflectDeleteProperty, Reflect, "deleteProperty") \
++  V(ReflectHas, Reflect, "has") \
++  V(ReflectGetOwnPropertyDescriptor, Reflect, "getOwnPropertyDescriptor") \
++  V(DatePrototypeGetDate, Date, "getDate") \
++  V(DatePrototypeGetDay, Date, "getDay") \
++  V(DatePrototypeGetFullYear, Date, "getFullYear") \
++  V(DatePrototypeGetHours, Date, "getHours") \
++  V(DatePrototypeGetMilliseconds, Date, "getMilliseconds") \
++  V(DatePrototypeGetMinutes, Date, "getMinutes") \
++  V(DatePrototypeGetMonth, Date, "getMonth") \
++  V(DatePrototypeGetSeconds, Date, "getSeconds") \
++  V(DatePrototypeGetTime, Date, "getTime") \
++  V(DatePrototypeGetTimezoneOffset, Date, "getTimezoneOffset") \
++  V(DatePrototypeGetUTCDate, Date, "getUTCDate") \
++  V(DatePrototypeGetUTCDay, Date, "getUTCDay") \
++  V(DatePrototypeGetUTCFullYear, Date, "getUTCFullYear") \
++  V(DatePrototypeGetUTCHours, Date, "getUTCHours") \
++  V(DatePrototypeGetUTCMilliseconds, Date, "getUTCMilliseconds") \
++  V(DatePrototypeGetUTCMinutes, Date, "getUTCMinutes") \
++  V(DatePrototypeGetUTCMonth, Date, "getUTCMonth") \
++  V(DatePrototypeGetUTCSeconds, Date, "getUTCSeconds") \
++  V(StringPrototypeAnchor, String, "anchor") \
++  V(StringPrototypeBig, String, "big") \
++  V(StringPrototypeBlink, String, "blink") \
++  V(StringPrototypeBold, String, "bold") \
++  V(StringPrototypeFontcolor, String, "fontcolor") \
++  V(StringPrototypeFontsize, String, "fontsize") \
++  V(StringPrototypeFixed, String, "fixed") \
++  V(StringPrototypeItalics, String, "italics") \
++  V(StringPrototypeLink, String, "link") \
++  V(StringPrototypeSmall, String, "small") \
++  V(StringPrototypeStrike, String, "strike") \
++  V(StringPrototypeSub, String, "sub") \
++  V(StringPrototypeSup, String, "sup")
++
++#define MOONRUN_OMITTED_CPP_BUILTINS(V) \
++  V(ReflectDefineProperty, Reflect, "defineProperty") \
++  V(ReflectOwnKeys, Reflect, "ownKeys") \
++  V(ReflectSet, Reflect, "set") \
++  V(DatePrototypeGetYear, Date, "getYear") \
++  V(DatePrototypeSetYear, Date, "setYear") \
++  V(DatePrototypeSetDate, Date, "setDate") \
++  V(DatePrototypeSetFullYear, Date, "setFullYear") \
++  V(DatePrototypeSetHours, Date, "setHours") \
++  V(DatePrototypeSetMilliseconds, Date, "setMilliseconds") \
++  V(DatePrototypeSetMinutes, Date, "setMinutes") \
++  V(DatePrototypeSetMonth, Date, "setMonth") \
++  V(DatePrototypeSetSeconds, Date, "setSeconds") \
++  V(DatePrototypeSetTime, Date, "setTime") \
++  V(DatePrototypeSetUTCDate, Date, "setUTCDate") \
++  V(DatePrototypeSetUTCFullYear, Date, "setUTCFullYear") \
++  V(DatePrototypeSetUTCHours, Date, "setUTCHours") \
++  V(DatePrototypeSetUTCMilliseconds, Date, "setUTCMilliseconds") \
++  V(DatePrototypeSetUTCMinutes, Date, "setUTCMinutes") \
++  V(DatePrototypeSetUTCMonth, Date, "setUTCMonth") \
++  V(DatePrototypeSetUTCSeconds, Date, "setUTCSeconds") \
++  V(DatePrototypeToDateString, Date, "toDateString") \
++  V(DatePrototypeToISOString, Date, "toISOString") \
++  V(DatePrototypeToUTCString, Date, "toUTCString") \
++  V(DatePrototypeToTimeString, Date, "toTimeString") \
++  V(DatePrototypeToJson, Date, "toJSON") \
++  V(DateNow, DateConstructor, "now") \
++  V(DateParse, DateConstructor, "parse") \
++  V(DateUTC, DateConstructor, "UTC") \
++  V(NumberPrototypeToExponential, Number, "toExponential") \
++  V(NumberPrototypeToFixed, Number, "toFixed") \
++  V(NumberPrototypeToPrecision, Number, "toPrecision") \
++  V(NumberPrototypeToLocaleString, Number, "toLocaleString") \
++  V(JsonParse, JSON, "parse") \
++  V(JsonStringify, JSON, "stringify")
++
++#define MOONRUN_OMITTED_JS_BUILTINS(V) \
++  MOONRUN_OMITTED_TFJ_BUILTINS(V) \
++  MOONRUN_OMITTED_CPP_BUILTINS(V)
++
++#endif  // V8_BUILTINS_MOONRUN_OMITTED_BUILTINS_H_
+--- a/v8/src/builtins/setup-builtins-internal.cc
++++ b/v8/src/builtins/setup-builtins-internal.cc
+@@ -6,6 +6,10 @@
+ 
+ #include "src/builtins/builtins-inl.h"
+ #include "src/builtins/profile-data-reader.h"
++
++#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
++#include "src/builtins/moonrun-omitted-builtins.h"
++#endif
+ #include "src/codegen/assembler-inl.h"
+ #include "src/codegen/interface-descriptors.h"
+ #include "src/codegen/macro-assembler-inl.h"
+@@ -177,7 +181,8 @@
+ }
+ 
+ Tagged<Code> BuildAdaptor(Isolate* isolate, Builtin builtin,
+-                          Address builtin_address, const char* name) {
++                          Address builtin_address, const char* name,
++                          bool omit_body) {
+   HandleScope scope(isolate);
+   uint8_t buffer[kBufferSize];
+   MacroAssembler masm(isolate, BuiltinAssemblerOptions(isolate, builtin),
+@@ -185,7 +190,15 @@
+                       ExternalAssemblerBuffer(buffer, kBufferSize));
+   masm.set_builtin(builtin);
+   DCHECK(!masm.has_frame());
+-  Builtins::Generate_Adaptor(&masm, builtin_address);
++  // Preserve the CPP builtin builder and metadata; only its entry body changes.
++  // The C++ implementation and function-pointer table remain intact.
++  if (omit_body) {
++    // Retain the architecture-specific landing pad emitted by the adaptor.
++    masm.CodeEntry();
++    masm.DebugBreak();
++  } else {
++    Builtins::Generate_Adaptor(&masm, builtin_address);
++  }
+   CodeDesc desc;
+   masm.GetCode(isolate, &desc);
+   DirectHandle<Code> code =
+@@ -405,11 +418,58 @@
+   // Create a scope for the handles in the builtins.
+   HandleScope scope(isolate);
+ 
++  // Select bodies here, without changing the builtin tables, descriptors,
++  // registration, placeholders or bootstrap references. Both builders retain
++  // distinct Code objects and original metadata; TFJ also retains its argc.
++#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
++#define CHECK_OMITTED_KIND(Name, Receiver, Method) \
++  CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::TFJ);
++  MOONRUN_OMITTED_TFJ_BUILTINS(CHECK_OMITTED_KIND)
++#undef CHECK_OMITTED_KIND
++#define CHECK_OMITTED_CPP_KIND(Name, Receiver, Method) \
++  CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::CPP);
++  MOONRUN_OMITTED_CPP_BUILTINS(CHECK_OMITTED_CPP_KIND)
++#undef CHECK_OMITTED_CPP_KIND
++#endif
++  const auto select_js_body = [](Builtin builtin,
++                                 CodeAssemblerGenerator original) {
++#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
++    switch (builtin) {
++#define OMITTED_CASE(Name, Receiver, Method) case Builtin::k##Name:
++      MOONRUN_OMITTED_TFJ_BUILTINS(OMITTED_CASE)
++#undef OMITTED_CASE
++        // Intentional unsupported-API trap, not an Illegal code alias or a
++        // fake return value. The owning builtin ID identifies the omitted API.
++        return +[](compiler::CodeAssemblerState* state) {
++          compiler::CodeAssembler(state).Unreachable();
++        };
++      default:
++        break;
++    }
++#endif
++    return original;
++  };
++
++  const auto omit_cpp_body = [](Builtin builtin) {
++#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
++    switch (builtin) {
++#define OMITTED_CPP_CASE(Name, Receiver, Method) case Builtin::k##Name:
++      MOONRUN_OMITTED_CPP_BUILTINS(OMITTED_CPP_CASE)
++#undef OMITTED_CPP_CASE
++        return true;
++      default:
++        break;
++    }
++#endif
++    return false;
++  };
++
+   int index = 0;
+   Tagged<Code> code;
+ #define BUILD_CPP(Name)                                      \
+   code = BuildAdaptor(isolate, Builtin::k##Name,             \
+-                      FUNCTION_ADDR(Builtin_##Name), #Name); \
++                      FUNCTION_ADDR(Builtin_##Name), #Name, \
++                      omit_cpp_body(Builtin::k##Name)); \
+   AddBuiltin(builtins, Builtin::k##Name, code);              \
+   index++;
+ 
+@@ -421,7 +481,9 @@
+ 
+ #define BUILD_TFJ(Name, Argc, ...)                                         \
+   code = BuildWithCodeStubAssemblerJS(                                     \
+-      isolate, Builtin::k##Name, &Builtins::Generate_##Name, Argc, #Name); \
++      isolate, Builtin::k##Name,                                          \
++      select_js_body(Builtin::k##Name, &Builtins::Generate_##Name), Argc,   \
++      #Name);                                                            \
+   AddBuiltin(builtins, Builtin::k##Name, code);                            \
+   index++;
+ 
