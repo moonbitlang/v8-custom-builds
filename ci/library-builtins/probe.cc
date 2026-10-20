@@ -159,6 +159,27 @@ int main(int argc, char** argv) {
         Date->NumberValue(context).FromMaybe(-1) != 0) return 11;
     v8::String::Utf8Value json_text(isolate, serialized);
     if (!*json_text || std::string(*json_text) != "{\"x\":42}") return 11;
+    // Trimming disabled Date methods must preserve construction and both
+    // coercion paths, including the parser still used by the constructor.
+    v8::Local<v8::Value> date_args[] = {
+        v8::Integer::New(isolate, 0),
+        v8::String::NewFromUtf8Literal(isolate, "1970-01-01T00:00:00.000Z")};
+    for (auto value : date_args) {
+      v8::Local<v8::Object> constructed;
+      v8::Local<v8::String> text;
+      if (!DateConstructor.As<v8::Function>()->NewInstance(context, 1, &value)
+               .ToLocal(&constructed) ||
+          !constructed->IsDate() ||
+          constructed.As<v8::Date>()->ValueOf() != 0 ||
+          constructed->NumberValue(context).FromMaybe(-1) != 0 ||
+          !constructed->ToString(context).ToLocal(&text) ||
+          text->Length() == 0) return 12;
+    }
+    v8::Local<v8::Value> current_date_string;
+    if (!DateConstructor.As<v8::Function>()
+             ->Call(context, v8::Undefined(isolate), 0, nullptr)
+             .ToLocal(&current_date_string) ||
+        !current_date_string->IsString()) return 12;
     std::set<v8::internal::Address> identities;
     const bool inspect = std::string(argv[1]) == "--inspect";
 #define CHECK_BUILTIN(Name, Receiver, Method)                                  \

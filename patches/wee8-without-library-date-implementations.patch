@@ -1,0 +1,187 @@
+Subject: Exclude already-unsupported Date method implementations in custom wee8
+
+Requires the generated builtin-body profile. Ordinary V8 retains full Date
+implementations; the new define is scoped to the Date source target.
+
+--- a/v8/BUILD.gn
++++ b/v8/BUILD.gn
+@@ -36,6 +36,9 @@
+ 
+   # Keep asm.js translation optional independently of binary Wasm support.
+   v8_enable_asmjs = true
++
++  # Keep Date construction/coercion while optionally omitting disabled methods.
++  v8_wee8_omit_date_method_implementations = v8_custom_wee8
+ 
+   # Disable JavaScript source parsing for native Wasm embedders.
+   v8_enable_javascript_parser = true
+@@ -5406,6 +5409,27 @@
+   }
+ }
+ 
++# Scope Date implementation selection to its own compilation units.
++# Runtime layouts, builtin IDs and external-reference table slots stay intact.
++assert(!v8_wee8_omit_date_method_implementations ||
++           (v8_custom_wee8 && v8_moonrun_omit_library_builtin_bodies),
++       "Date implementation trimming requires the custom builtin-body profile")
++v8_source_set("v8_date_builtins") {
++  sources = [ "src/builtins/builtins-date.cc" ]
++  configs = [ ":internal_config", ":cppgc_base_config" ]
++  deps = [
++    ":v8_abseil",
++    ":v8_internal_headers",
++    ":v8_shared_internal_headers",
++    ":v8_maybe_icu",
++    ":v8_tracing",
++  ]
++  if (v8_wee8_omit_date_method_implementations) {
++    defines = [ "V8_WEE8_TRIM_DATE_IMPLEMENTATIONS" ]
++    sources += [ "src/builtins/builtins-date-disabled.cc" ]
++  }
++}
++
+ v8_source_set("v8_base_without_compiler") {
+   # Only targets in this file and gcmole can depend on this.
+   visibility = [
+@@ -5444,7 +5468,6 @@
+     "src/builtins/builtins-collections.cc",
+     "src/builtins/builtins-console.cc",
+     "src/builtins/builtins-dataview.cc",
+-    "src/builtins/builtins-date.cc",
+     "src/builtins/builtins-disposable-stack.cc",
+     "src/builtins/builtins-error.cc",
+     "src/builtins/builtins-function.cc",
+@@ -6352,6 +6375,7 @@
+   ]
+ 
+   deps = [
++    ":v8_date_builtins",
+     ":torque_generated_definitions",
+     ":v8_bigint",
+     ":v8_headers",
+--- /dev/null
++++ b/v8/src/builtins/builtins-date-disabled.cc
+@@ -0,0 +1,20 @@
++// Copyright 2026 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "src/builtins/builtins-utils-inl.h"
++#include "src/builtins/moonrun-omitted-builtins.h"
++
++namespace v8 {
++namespace internal {
++
++// Keep the existing CPP metadata and external-reference slots. The generated
++// JS entry bodies already trap; these distinct stubs also reject a direct CPP
++// entry without retaining the unused calendar and formatting implementations.
++#define UNSUPPORTED_DATE(Name, Receiver, Method) \
++  BUILTIN(Name) { UNREACHABLE(); }
++MOONRUN_OMITTED_DATE_CPP_BUILTINS(UNSUPPORTED_DATE)
++#undef UNSUPPORTED_DATE
++
++}  // namespace internal
++}  // namespace v8
+--- a/v8/src/builtins/builtins-date.cc
++++ b/v8/src/builtins/builtins-date.cc
+@@ -23,7 +23,10 @@
+ 
+ // -----------------------------------------------------------------------------
+ // ES6 section 20.3 Date Objects
+-
++// Custom wee8 keeps construction/coercion here and supplies unsupported CPP
++// entries separately. Keep the guards aligned with the explicit Date manifest.
++
++#if !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
+ namespace {
+ 
+ Tagged<Object> SetLocalDateValue(Isolate* isolate, DirectHandle<JSDate> date,
+@@ -51,6 +54,8 @@
+ }
+ 
+ }  // namespace
++
++#endif  // !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
+ 
+ // ES #sec-date-constructor
+ BUILTIN(DateConstructor) {
+@@ -142,6 +147,7 @@
+   RETURN_RESULT_OR_FAILURE(isolate, JSDate::New(target, new_target, time_val));
+ }
+ 
++#if !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
+ // ES6 section 20.3.3.1 Date.now ( )
+ BUILTIN(DateNow) {
+   HandleScope scope(isolate);
+@@ -695,6 +701,8 @@
+       isolate, isolate->factory()->NewStringFromUtf8(base::VectorOf(buffer)));
+ }
+ 
++#endif  // !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
++
+ // ES6 section 20.3.4.41 Date.prototype.toString ( )
+ BUILTIN(DatePrototypeToString) {
+   HandleScope scope(isolate);
+@@ -705,6 +713,7 @@
+       isolate, isolate->factory()->NewStringFromUtf8(base::VectorOf(buffer)));
+ }
+ 
++#if !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
+ // ES6 section 20.3.4.42 Date.prototype.toTimeString ( )
+ BUILTIN(DatePrototypeToTimeString) {
+   HandleScope scope(isolate);
+@@ -714,6 +723,8 @@
+   RETURN_RESULT_OR_FAILURE(
+       isolate, isolate->factory()->NewStringFromUtf8(base::VectorOf(buffer)));
+ }
++
++#endif  // !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
+ 
+ #ifdef V8_INTL_SUPPORT
+ // ecma402 #sup-date.prototype.tolocaledatestring
+@@ -777,6 +788,7 @@
+ }
+ #endif  // V8_INTL_SUPPORT
+ 
++#if !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
+ // ES6 section 20.3.4.43 Date.prototype.toUTCString ( )
+ BUILTIN(DatePrototypeToUTCString) {
+   HandleScope scope(isolate);
+@@ -861,6 +873,8 @@
+   }
+ }
+ 
++#endif  // !defined(V8_WEE8_TRIM_DATE_IMPLEMENTATIONS)
++
+ // Temporal #sec-date.prototype.totemporalinstant
+ BUILTIN(DatePrototypeToTemporalInstant) {
+   HandleScope scope(isolate);
+--- a/v8/src/builtins/moonrun-omitted-builtins.h
++++ b/v8/src/builtins/moonrun-omitted-builtins.h
+@@ -121,10 +121,7 @@
+   V(StringPrototypeSub, String, "sub") \
+   V(StringPrototypeSup, String, "sup")
+ 
+-#define MOONRUN_OMITTED_CPP_BUILTINS(V) \
+-  V(ReflectDefineProperty, Reflect, "defineProperty") \
+-  V(ReflectOwnKeys, Reflect, "ownKeys") \
+-  V(ReflectSet, Reflect, "set") \
++#define MOONRUN_OMITTED_DATE_CPP_BUILTINS(V) \
+   V(DatePrototypeGetYear, Date, "getYear") \
+   V(DatePrototypeSetYear, Date, "setYear") \
+   V(DatePrototypeSetDate, Date, "setDate") \
+@@ -149,7 +146,13 @@
+   V(DatePrototypeToJson, Date, "toJSON") \
+   V(DateNow, DateConstructor, "now") \
+   V(DateParse, DateConstructor, "parse") \
+-  V(DateUTC, DateConstructor, "UTC") \
++  V(DateUTC, DateConstructor, "UTC")
++
++#define MOONRUN_OMITTED_CPP_BUILTINS(V) \
++  MOONRUN_OMITTED_DATE_CPP_BUILTINS(V) \
++  V(ReflectDefineProperty, Reflect, "defineProperty") \
++  V(ReflectOwnKeys, Reflect, "ownKeys") \
++  V(ReflectSet, Reflect, "set") \
+   V(NumberPrototypeToExponential, Number, "toExponential") \
+   V(NumberPrototypeToFixed, Number, "toFixed") \
+   V(NumberPrototypeToPrecision, Number, "toPrecision") \
