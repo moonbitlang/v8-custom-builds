@@ -34,7 +34,7 @@ use std::{
     time::Duration,
 };
 
-const RELEASE: &str = "v0.106.0-moonbit.1";
+const RELEASE: &str = "v0.106.0-moonbit.2";
 const HEADER_SHA256: &str = "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301";
 
 fn main() -> Result<(), Box<dyn Error>> {
