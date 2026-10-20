@@ -1,0 +1,2169 @@
+ASM	DeoptimizationEntry_Eager	0	unchanged	DeoptimizationEntry
+ASM	DeoptimizationEntry_Lazy	1	unchanged	DeoptimizationEntry
+TFC	RecordWriteSaveFP	2	unchanged	WriteBarrier
+TFC	RecordWriteIgnoreFP	3	unchanged	WriteBarrier
+TFC	EphemeronKeyBarrierSaveFP	4	unchanged	WriteBarrier
+TFC	EphemeronKeyBarrierIgnoreFP	5	unchanged	WriteBarrier
+TFC	AdaptorWithBuiltinExitFrame	6	unchanged	CppBuiltinAdaptor
+TFC	IndirectPointerBarrierSaveFP	7	unchanged	IndirectPointerWriteBarrier
+TFC	IndirectPointerBarrierIgnoreFP	8	unchanged	IndirectPointerWriteBarrier
+ASM	CallFunction_ReceiverIsNullOrUndefined	9	unchanged	CallTrampoline
+ASM	CallFunction_ReceiverIsNotNullOrUndefined	10	unchanged	CallTrampoline
+ASM	CallFunction_ReceiverIsAny	11	unchanged	CallTrampoline
+ASM	CallBoundFunction	12	unchanged	CallTrampoline
+TFC	CallWrappedFunction	13	unchanged	CallTrampoline
+ASM	Call_ReceiverIsNullOrUndefined	14	unchanged	CallTrampoline
+ASM	Call_ReceiverIsNotNullOrUndefined	15	unchanged	CallTrampoline
+ASM	Call_ReceiverIsAny	16	unchanged	CallTrampoline
+TFC	Call_ReceiverIsNullOrUndefined_Baseline_Compact	17	unchanged	CallTrampoline_Baseline_Compact
+TFC	Call_ReceiverIsNullOrUndefined_Baseline	18	unchanged	CallTrampoline_Baseline
+TFC	Call_ReceiverIsNotNullOrUndefined_Baseline_Compact	19	unchanged	CallTrampoline_Baseline_Compact
+TFC	Call_ReceiverIsNotNullOrUndefined_Baseline	20	unchanged	CallTrampoline_Baseline
+TFC	Call_ReceiverIsAny_Baseline_Compact	21	unchanged	CallTrampoline_Baseline_Compact
+TFC	Call_ReceiverIsAny_Baseline	22	unchanged	CallTrampoline_Baseline
+TFC	Call_ReceiverIsNullOrUndefined_WithFeedback	23	unchanged	CallTrampoline_WithFeedback
+TFC	Call_ReceiverIsNotNullOrUndefined_WithFeedback	24	unchanged	CallTrampoline_WithFeedback
+TFC	Call_ReceiverIsAny_WithFeedback	25	unchanged	CallTrampoline_WithFeedback
+TFC	CallProxy	26	unchanged	CallTrampoline
+ASM	CallVarargs	27	unchanged	CallVarargs
+TFC	CallWithSpread	28	unchanged	CallWithSpread
+TFC	CallWithSpread_Baseline	29	unchanged	CallWithSpread_Baseline
+TFC	CallWithSpread_WithFeedback	30	unchanged	CallWithSpread_WithFeedback
+TFC	CallWithArrayLike	31	unchanged	CallWithArrayLike
+TFC	CallWithArrayLike_WithFeedback	32	unchanged	CallWithArrayLike_WithFeedback
+ASM	CallForwardVarargs	33	unchanged	CallForwardVarargs
+ASM	CallFunctionForwardVarargs	34	unchanged	CallForwardVarargs
+TFC	CallFunctionTemplate_Generic	35	unchanged	CallFunctionTemplateGeneric
+TFC	CallFunctionTemplate_CheckAccess	36	unchanged	CallFunctionTemplate
+TFC	CallFunctionTemplate_CheckCompatibleReceiver	37	unchanged	CallFunctionTemplate
+TFC	CallFunctionTemplate_CheckAccessAndCompatibleReceiver	38	unchanged	CallFunctionTemplate
+ASM	ConstructFunction	39	unchanged	JSTrampoline
+ASM	ConstructBoundFunction	40	unchanged	JSTrampoline
+ASM	ConstructedNonConstructable	41	unchanged	JSTrampoline
+ASM	Construct	42	unchanged	JSTrampoline
+ASM	ConstructVarargs	43	unchanged	ConstructVarargs
+TFC	ConstructWithSpread	44	unchanged	ConstructWithSpread
+TFC	ConstructWithSpread_Baseline	45	unchanged	ConstructWithSpread_Baseline
+TFC	ConstructWithSpread_WithFeedback	46	unchanged	ConstructWithSpread_WithFeedback
+TFC	ConstructWithArrayLike	47	unchanged	ConstructWithArrayLike
+ASM	ConstructForwardVarargs	48	unchanged	ConstructForwardVarargs
+ASM	ConstructForwardAllArgs	49	unchanged	ConstructForwardAllArgs
+TFC	ConstructForwardAllArgs_Baseline	50	unchanged	ConstructForwardAllArgs_Baseline
+TFC	ConstructForwardAllArgs_WithFeedback	51	unchanged	ConstructForwardAllArgs_WithFeedback
+ASM	ConstructFunctionForwardVarargs	52	unchanged	ConstructForwardVarargs
+TFC	Construct_Baseline	53	unchanged	Construct_Baseline
+TFC	Construct_WithFeedback	54	unchanged	Construct_WithFeedback
+ASM	JSConstructStubGeneric	55	unchanged	ConstructStub
+ASM	JSBuiltinsConstructStub	56	unchanged	ConstructStub
+TFC	FastNewObject	57	unchanged	FastNewObject
+TFS	FastNewClosure	58	unchanged	NeedsContext::kYes, kSharedFunctionInfo, kFeedbackCell
+TFC	ConstructProxy	59	unchanged	JSTrampoline
+ASM	JSEntry	60	unchanged	JSEntry
+ASM	JSConstructEntry	61	unchanged	JSEntry
+ASM	JSRunMicrotasksEntry	62	unchanged	RunMicrotasksEntry
+ASM	JSEntryTrampoline	63	unchanged	JSEntry
+ASM	JSConstructEntryTrampoline	64	unchanged	JSEntry
+ASM	ResumeGeneratorTrampoline	65	unchanged	ResumeGenerator
+TFC	StringFromCodePointAt	66	unchanged	StringAtAsString
+TFC	StringEqual	67	unchanged	StringEqual
+TFC	StringGreaterThan	68	unchanged	CompareNoContext
+TFC	StringGreaterThanOrEqual	69	unchanged	CompareNoContext
+TFC	StringLessThan	70	unchanged	CompareNoContext
+TFC	StringLessThanOrEqual	71	unchanged	CompareNoContext
+TFC	StringCompare	72	unchanged	CompareNoContext
+TFC	StringSubstring	73	unchanged	StringSubstring
+TFS	OrderedHashTableHealIndex	74	unchanged	NeedsContext::kYes, kTable, kIndex
+ASM	InterpreterEntryTrampoline	75	unchanged	JSTrampoline
+ASM	InterpreterEntryTrampolineForProfiling	76	unchanged	JSTrampoline
+ASM	InterpreterForwardAllArgsThenConstruct	77	unchanged	ConstructForwardAllArgs
+ASM	InterpreterPushArgsThenCall	78	unchanged	InterpreterPushArgsThenCall
+ASM	InterpreterPushUndefinedAndArgsThenCall	79	unchanged	InterpreterPushArgsThenCall
+ASM	InterpreterPushArgsThenCallWithFinalSpread	80	unchanged	InterpreterPushArgsThenCall
+ASM	InterpreterPushArgsThenConstruct	81	unchanged	InterpreterPushArgsThenConstruct
+ASM	InterpreterPushArgsThenFastConstructFunction	82	unchanged	InterpreterPushArgsThenConstruct
+ASM	InterpreterPushArgsThenConstructArrayFunction	83	unchanged	InterpreterPushArgsThenConstruct
+ASM	InterpreterPushArgsThenConstructWithFinalSpread	84	unchanged	InterpreterPushArgsThenConstruct
+ASM	InterpreterEnterAtBytecode	85	unchanged	Void
+ASM	InterpreterEnterAtNextBytecode	86	unchanged	Void
+ASM	InterpreterOnStackReplacement	87	unchanged	OnStackReplacement
+ASM	BaselineOutOfLinePrologue	88	unchanged	BaselineOutOfLinePrologue
+ASM	BaselineOutOfLinePrologueDeopt	89	unchanged	Void
+ASM	BaselineOnStackReplacement	90	unchanged	OnStackReplacement
+ASM	BaselineLeaveFrame	91	unchanged	BaselineLeaveFrame
+ASM	BaselineOrInterpreterEnterAtBytecode	92	unchanged	Void
+ASM	BaselineOrInterpreterEnterAtNextBytecode	93	unchanged	Void
+ASM	InterpreterOnStackReplacement_ToBaseline	94	unchanged	Void
+ASM	MaglevOnStackReplacement	95	unchanged	OnStackReplacement
+ASM	MaglevFunctionEntryStackCheck_WithoutNewTarget	96	unchanged	Void
+ASM	MaglevFunctionEntryStackCheck_WithNewTarget	97	unchanged	Void
+ASM	MaglevOptimizeCodeOrTailCallOptimizedCodeSlot	98	unchanged	MaglevOptimizeCodeOrTailCallOptimizedCodeSlot
+TFC	CompileLazy	99	unchanged	JSTrampoline
+TFC	CompileLazyDeoptimizedCode	100	unchanged	JSTrampoline
+TFC	InstantiateAsmJs	101	unchanged	JSTrampoline
+ASM	NotifyDeoptimized	102	unchanged	Void
+ASM	ContinueToCodeStubBuiltin	103	unchanged	ContinueToBuiltin
+ASM	ContinueToCodeStubBuiltinWithResult	104	unchanged	ContinueToBuiltin
+ASM	ContinueToJavaScriptBuiltin	105	unchanged	ContinueToBuiltin
+ASM	ContinueToJavaScriptBuiltinWithResult	106	unchanged	ContinueToBuiltin
+ASM	CallApiCallbackGeneric	107	unchanged	CallApiCallbackGeneric
+ASM	CallApiCallbackOptimizedNoProfiling	108	unchanged	CallApiCallbackOptimized
+ASM	CallApiCallbackOptimized	109	unchanged	CallApiCallbackOptimized
+ASM	CallApiGetter	110	unchanged	ApiGetter
+TFC	HandleApiCallOrConstruct	111	unchanged	JSTrampoline
+CPP	HandleApiConstruct	112	retain	-
+CPP	HandleApiCallAsFunctionDelegate	113	retain	-
+CPP	HandleApiCallAsConstructorDelegate	114	retain	-
+TFC	AllocateInYoungGeneration	115	unchanged	Allocate
+TFC	AllocateInOldGeneration	116	unchanged	Allocate
+TFC	WasmAllocateInYoungGeneration	117	unchanged	Allocate
+TFC	WasmAllocateInOldGeneration	118	unchanged	Allocate
+TFC	NewHeapNumber	119	unchanged	NewHeapNumber
+TFS	CopyFastSmiOrObjectElements	120	unchanged	NeedsContext::kNo, kObject
+TFC	GrowFastDoubleElements	121	unchanged	GrowArrayElements
+TFC	GrowFastSmiOrObjectElements	122	unchanged	GrowArrayElements
+TFJ	DebugBreakTrampoline	123	retain	kDontAdaptArgumentsSentinel
+ASM	RestartFrameTrampoline	124	unchanged	RestartFrameTrampoline
+TFC	ToNumber	125	unchanged	TypeConversion
+TFC	ToBigInt	126	unchanged	TypeConversion
+TFC	ToNumber_Baseline	127	unchanged	TypeConversion_Baseline
+TFC	ToNumeric_Baseline	128	unchanged	TypeConversion_Baseline
+TFC	PlainPrimitiveToNumber	129	unchanged	TypeConversionNoContext
+TFC	ToNumberConvertBigInt	130	unchanged	TypeConversion
+TFC	ToBigIntConvertNumber	131	unchanged	TypeConversion
+TFC	Typeof	132	unchanged	Typeof
+TFC	Typeof_Baseline	133	unchanged	UnaryOp_Baseline
+TFC	BigIntToI64	134	unchanged	BigIntToI64
+TFC	BigIntToI32Pair	135	unchanged	BigIntToI32Pair
+TFC	I64ToBigInt	136	unchanged	I64ToBigInt
+TFC	I32PairToBigInt	137	unchanged	I32PairToBigInt
+TFC	ToBooleanLazyDeoptContinuation	138	unchanged	SingleParameterOnStack
+TFC	MathCeilContinuation	139	unchanged	SingleParameterOnStack
+TFC	MathFloorContinuation	140	unchanged	SingleParameterOnStack
+TFC	MathRoundContinuation	141	unchanged	SingleParameterOnStack
+TFH	KeyedLoadIC_PolymorphicName	142	unchanged	LoadWithVector
+TFH	KeyedStoreIC_Megamorphic	143	unchanged	StoreWithVector
+TFH	DefineKeyedOwnIC_Megamorphic	144	unchanged	StoreNoFeedback
+TFH	LoadGlobalIC_NoFeedback	145	unchanged	LoadGlobalNoFeedback
+TFH	LoadIC_FunctionPrototype	146	unchanged	LoadWithVector
+TFH	LoadIC_StringLength	147	unchanged	LoadWithVector
+TFH	LoadIC_StringWrapperLength	148	unchanged	LoadWithVector
+TFH	LoadIC_NoFeedback	149	unchanged	LoadNoFeedback
+TFH	StoreGlobalIC_Slow	150	unchanged	StoreWithVector
+TFH	StoreIC_NoFeedback	151	unchanged	StoreNoFeedback
+TFH	DefineNamedOwnIC_NoFeedback	152	unchanged	StoreNoFeedback
+TFH	KeyedLoadIC_SloppyArguments	153	unchanged	LoadWithVector
+TFH	LoadIndexedInterceptorIC	154	unchanged	LoadWithVector
+TFH	KeyedStoreIC_SloppyArguments_InBounds	155	unchanged	StoreWithVector
+TFH	KeyedStoreIC_SloppyArguments_NoTransitionGrowAndHandleCOW	156	unchanged	StoreWithVector
+TFH	KeyedStoreIC_SloppyArguments_NoTransitionIgnoreTypedArrayOOB	157	unchanged	StoreWithVector
+TFH	KeyedStoreIC_SloppyArguments_NoTransitionHandleCOW	158	unchanged	StoreWithVector
+TFH	StoreFastElementIC_InBounds	159	unchanged	StoreWithVector
+TFH	StoreFastElementIC_NoTransitionGrowAndHandleCOW	160	unchanged	StoreWithVector
+TFH	StoreFastElementIC_NoTransitionIgnoreTypedArrayOOB	161	unchanged	StoreWithVector
+TFH	StoreFastElementIC_NoTransitionHandleCOW	162	unchanged	StoreWithVector
+TFH	ElementsTransitionAndStore_InBounds	163	unchanged	StoreTransition
+TFH	ElementsTransitionAndStore_NoTransitionGrowAndHandleCOW	164	unchanged	StoreTransition
+TFH	ElementsTransitionAndStore_NoTransitionIgnoreTypedArrayOOB	165	unchanged	StoreTransition
+TFH	ElementsTransitionAndStore_NoTransitionHandleCOW	166	unchanged	StoreTransition
+TFH	KeyedHasIC_PolymorphicName	167	unchanged	LoadWithVector
+TFH	KeyedHasIC_SloppyArguments	168	unchanged	LoadWithVector
+TFH	HasIndexedInterceptorIC	169	unchanged	LoadWithVector
+TFS	EnqueueMicrotask	170	unchanged	NeedsContext::kYes, kMicrotask
+ASM	RunMicrotasksTrampoline	171	unchanged	RunMicrotasksEntry
+TFC	RunMicrotasks	172	unchanged	RunMicrotasks
+TFS	HasProperty	173	unchanged	NeedsContext::kYes, kObject, kKey
+TFS	DeleteProperty	174	unchanged	NeedsContext::kYes, kObject, kKey, kLanguageMode
+TFS	CopyDataProperties	175	unchanged	NeedsContext::kYes, kTarget, kSource
+TFS	SetDataProperties	176	unchanged	NeedsContext::kYes, kTarget, kSource
+TFC	CopyDataPropertiesWithExcludedPropertiesOnStack	177	unchanged	CopyDataPropertiesWithExcludedPropertiesOnStack
+TFC	CopyDataPropertiesWithExcludedProperties	178	unchanged	CopyDataPropertiesWithExcludedProperties
+TFC	Abort	179	unchanged	Abort
+TFC	AbortCSADcheck	180	unchanged	Abort
+CPP	EmptyFunction	181	retain	-
+CPP	Illegal	182	retain	-
+CPP	IllegalInvocationThrower	183	retain	-
+CPP	StrictPoisonPillThrower	184	retain	-
+CPP	UnsupportedThrower	185	retain	-
+TFJ	ReturnReceiver	186	retain	kJSArgcReceiverSlots, kReceiver
+CPP	AbstractModuleSourceToStringTag	187	omit	-
+TFC	ArrayConstructor	188	unchanged	JSTrampoline
+TFC	ArrayConstructorImpl	189	unchanged	ArrayConstructor
+TFC	ArrayNoArgumentConstructor_PackedSmi_DontOverride	190	unchanged	ArrayNoArgumentConstructor
+TFC	ArrayNoArgumentConstructor_HoleySmi_DontOverride	191	unchanged	ArrayNoArgumentConstructor
+TFC	ArrayNoArgumentConstructor_PackedSmi_DisableAllocationSites	192	unchanged	ArrayNoArgumentConstructor
+TFC	ArrayNoArgumentConstructor_HoleySmi_DisableAllocationSites	193	unchanged	ArrayNoArgumentConstructor
+TFC	ArrayNoArgumentConstructor_Packed_DisableAllocationSites	194	unchanged	ArrayNoArgumentConstructor
+TFC	ArrayNoArgumentConstructor_Holey_DisableAllocationSites	195	unchanged	ArrayNoArgumentConstructor
+TFC	ArrayNoArgumentConstructor_PackedDouble_DisableAllocationSites	196	unchanged	ArrayNoArgumentConstructor
+TFC	ArrayNoArgumentConstructor_HoleyDouble_DisableAllocationSites	197	unchanged	ArrayNoArgumentConstructor
+TFC	ArraySingleArgumentConstructor_PackedSmi_DontOverride	198	unchanged	ArraySingleArgumentConstructor
+TFC	ArraySingleArgumentConstructor_HoleySmi_DontOverride	199	unchanged	ArraySingleArgumentConstructor
+TFC	ArraySingleArgumentConstructor_PackedSmi_DisableAllocationSites	200	unchanged	ArraySingleArgumentConstructor
+TFC	ArraySingleArgumentConstructor_HoleySmi_DisableAllocationSites	201	unchanged	ArraySingleArgumentConstructor
+TFC	ArraySingleArgumentConstructor_Packed_DisableAllocationSites	202	unchanged	ArraySingleArgumentConstructor
+TFC	ArraySingleArgumentConstructor_Holey_DisableAllocationSites	203	unchanged	ArraySingleArgumentConstructor
+TFC	ArraySingleArgumentConstructor_PackedDouble_DisableAllocationSites	204	unchanged	ArraySingleArgumentConstructor
+TFC	ArraySingleArgumentConstructor_HoleyDouble_DisableAllocationSites	205	unchanged	ArraySingleArgumentConstructor
+TFC	ArrayNArgumentsConstructor	206	unchanged	ArrayNArgumentsConstructor
+CPP	ArrayConcat	207	omit	-
+CPP	ArrayPrototypeFill	208	omit	-
+TFS	ArrayIncludesSmi	209	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFS	ArrayIncludesSmiOrObject	210	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFS	ArrayIncludesPackedDoubles	211	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFS	ArrayIncludesHoleyDoubles	212	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFJ	ArrayIncludes	213	omit	kDontAdaptArgumentsSentinel
+TFS	ArrayIndexOfSmi	214	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFS	ArrayIndexOfSmiOrObject	215	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFS	ArrayIndexOfPackedDoubles	216	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFS	ArrayIndexOfHoleyDoubles	217	unchanged	NeedsContext::kYes, kElements, kSearchElement, kLength, kFromIndex
+TFJ	ArrayIndexOf	218	omit	kDontAdaptArgumentsSentinel
+CPP	ArrayPop	219	omit	-
+TFJ	ArrayPrototypePop	220	omit	kDontAdaptArgumentsSentinel
+CPP	ArrayPush	221	omit	-
+TFJ	ArrayPrototypePush	222	omit	kDontAdaptArgumentsSentinel
+CPP	ArrayShift	223	omit	-
+CPP	ArrayUnshift	224	omit	-
+TFS	CloneFastJSArray	225	unchanged	NeedsContext::kYes, kSource
+TFS	CloneFastJSArrayFillingHoles	226	unchanged	NeedsContext::kYes, kSource
+TFS	ExtractFastJSArray	227	unchanged	NeedsContext::kYes, kSource, kBegin, kCount
+TFS	CreateArrayFromSlowBoilerplate	228	unchanged	NeedsContext::kYes, kFeedbackVector, kSlot, kBoilerplateDescriptor, kFlags
+TFS	CreateObjectFromSlowBoilerplate	229	unchanged	NeedsContext::kYes, kFeedbackVector, kSlot, kBoilerplateDescriptor, kFlags
+TFC	CreateArrayFromSlowBoilerplateHelper	230	unchanged	CreateFromSlowBoilerplateHelper
+TFC	CreateObjectFromSlowBoilerplateHelper	231	unchanged	CreateFromSlowBoilerplateHelper
+TFJ	ArrayPrototypeEntries	232	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	ArrayPrototypeKeys	233	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	ArrayPrototypeValues	234	retain	kJSArgcReceiverSlots, kReceiver
+TFJ	ArrayIteratorPrototypeNext	235	retain	kJSArgcReceiverSlots, kReceiver
+CPP	ArrayBufferConstructor	236	omit	-
+CPP	ArrayBufferConstructor_DoNotInitialize	237	omit	-
+CPP	ArrayBufferPrototypeSlice	238	omit	-
+CPP	ArrayBufferPrototypeResize	239	omit	-
+CPP	ArrayBufferPrototypeTransfer	240	omit	-
+CPP	ArrayBufferPrototypeTransferToFixedLength	241	omit	-
+TFS	AsyncFunctionEnter	242	unchanged	NeedsContext::kYes, kClosure, kReceiver
+TFS	AsyncFunctionReject	243	unchanged	NeedsContext::kYes, kAsyncFunctionObject, kReason
+TFS	AsyncFunctionResolve	244	unchanged	NeedsContext::kYes, kAsyncFunctionObject, kValue
+TFC	AsyncFunctionLazyDeoptContinuation	245	unchanged	AsyncFunctionStackParameter
+TFS	AsyncFunctionAwait	246	unchanged	NeedsContext::kYes, kAsyncFunctionObject, kValue
+TFJ	AsyncFunctionAwaitRejectClosure	247	omit	kJSArgcReceiverSlots + 1, kReceiver, kSentError
+TFJ	AsyncFunctionAwaitResolveClosure	248	omit	kJSArgcReceiverSlots + 1, kReceiver, kSentValue
+CPP	BigIntConstructor	249	omit	-
+CPP	BigIntAsUintN	250	omit	-
+CPP	BigIntAsIntN	251	omit	-
+CPP	BigIntPrototypeToLocaleString	252	omit	-
+CPP	BigIntPrototypeToString	253	omit	-
+CPP	BigIntPrototypeValueOf	254	omit	-
+CPP	CallSitePrototypeGetColumnNumber	255	retain	-
+CPP	CallSitePrototypeGetEnclosingColumnNumber	256	retain	-
+CPP	CallSitePrototypeGetEnclosingLineNumber	257	retain	-
+CPP	CallSitePrototypeGetEvalOrigin	258	retain	-
+CPP	CallSitePrototypeGetFileName	259	retain	-
+CPP	CallSitePrototypeGetFunction	260	retain	-
+CPP	CallSitePrototypeGetFunctionName	261	retain	-
+CPP	CallSitePrototypeGetLineNumber	262	retain	-
+CPP	CallSitePrototypeGetMethodName	263	retain	-
+CPP	CallSitePrototypeGetPosition	264	retain	-
+CPP	CallSitePrototypeGetPromiseIndex	265	retain	-
+CPP	CallSitePrototypeGetScriptHash	266	retain	-
+CPP	CallSitePrototypeGetScriptNameOrSourceURL	267	retain	-
+CPP	CallSitePrototypeGetThis	268	retain	-
+CPP	CallSitePrototypeGetTypeName	269	retain	-
+CPP	CallSitePrototypeIsAsync	270	retain	-
+CPP	CallSitePrototypeIsConstructor	271	retain	-
+CPP	CallSitePrototypeIsEval	272	retain	-
+CPP	CallSitePrototypeIsNative	273	retain	-
+CPP	CallSitePrototypeIsPromiseAll	274	retain	-
+CPP	CallSitePrototypeIsToplevel	275	retain	-
+CPP	CallSitePrototypeToString	276	retain	-
+CPP	ConsoleDebug	277	omit	-
+CPP	ConsoleError	278	omit	-
+CPP	ConsoleInfo	279	omit	-
+CPP	ConsoleLog	280	omit	-
+CPP	ConsoleWarn	281	omit	-
+CPP	ConsoleDir	282	omit	-
+CPP	ConsoleDirXml	283	omit	-
+CPP	ConsoleTable	284	omit	-
+CPP	ConsoleTrace	285	omit	-
+CPP	ConsoleGroup	286	omit	-
+CPP	ConsoleGroupCollapsed	287	omit	-
+CPP	ConsoleGroupEnd	288	omit	-
+CPP	ConsoleClear	289	omit	-
+CPP	ConsoleCount	290	omit	-
+CPP	ConsoleCountReset	291	omit	-
+CPP	ConsoleAssert	292	omit	-
+CPP	ConsoleProfile	293	omit	-
+CPP	ConsoleProfileEnd	294	omit	-
+CPP	ConsoleTime	295	omit	-
+CPP	ConsoleTimeLog	296	omit	-
+CPP	ConsoleTimeEnd	297	omit	-
+CPP	ConsoleTimeStamp	298	omit	-
+CPP	ConsoleContext	299	omit	-
+CPP	DataViewConstructor	300	omit	-
+CPP	DateConstructor	301	omit	-
+TFJ	DatePrototypeGetDate	302	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetDay	303	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetFullYear	304	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetHours	305	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetMilliseconds	306	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetMinutes	307	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetMonth	308	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetSeconds	309	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetTime	310	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetTimezoneOffset	311	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCDate	312	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCDay	313	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCFullYear	314	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCHours	315	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCMilliseconds	316	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCMinutes	317	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCMonth	318	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCSeconds	319	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeValueOf	320	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeToPrimitive	321	omit	kJSArgcReceiverSlots + 1, kReceiver, kHint
+CPP	DatePrototypeGetYear	322	omit	-
+CPP	DatePrototypeSetYear	323	omit	-
+CPP	DateNow	324	omit	-
+CPP	DateParse	325	omit	-
+CPP	DatePrototypeSetDate	326	omit	-
+CPP	DatePrototypeSetFullYear	327	omit	-
+CPP	DatePrototypeSetHours	328	omit	-
+CPP	DatePrototypeSetMilliseconds	329	omit	-
+CPP	DatePrototypeSetMinutes	330	omit	-
+CPP	DatePrototypeSetMonth	331	omit	-
+CPP	DatePrototypeSetSeconds	332	omit	-
+CPP	DatePrototypeSetTime	333	omit	-
+CPP	DatePrototypeSetUTCDate	334	omit	-
+CPP	DatePrototypeSetUTCFullYear	335	omit	-
+CPP	DatePrototypeSetUTCHours	336	omit	-
+CPP	DatePrototypeSetUTCMilliseconds	337	omit	-
+CPP	DatePrototypeSetUTCMinutes	338	omit	-
+CPP	DatePrototypeSetUTCMonth	339	omit	-
+CPP	DatePrototypeSetUTCSeconds	340	omit	-
+CPP	DatePrototypeToDateString	341	omit	-
+CPP	DatePrototypeToISOString	342	omit	-
+CPP	DatePrototypeToUTCString	343	omit	-
+CPP	DatePrototypeToString	344	omit	-
+CPP	DatePrototypeToTimeString	345	omit	-
+CPP	DatePrototypeToJson	346	omit	-
+CPP	DateUTC	347	omit	-
+CPP	DisposableStackConstructor	348	omit	-
+CPP	DisposableStackPrototypeUse	349	omit	-
+CPP	DisposableStackPrototypeDispose	350	omit	-
+CPP	DisposableStackPrototypeGetDisposed	351	omit	-
+CPP	DisposableStackPrototypeAdopt	352	omit	-
+CPP	DisposableStackPrototypeDefer	353	omit	-
+CPP	DisposableStackPrototypeMove	354	omit	-
+CPP	AsyncDisposeFromSyncDispose	355	omit	-
+CPP	ErrorConstructor	356	retain	-
+CPP	ErrorCaptureStackTrace	357	retain	-
+CPP	ErrorPrototypeToString	358	retain	-
+CPP	FunctionConstructor	359	omit	-
+ASM	FunctionPrototypeApply	360	unchanged	JSTrampoline
+CPP	FunctionPrototypeBind	361	omit	-
+CPP	WebAssemblyFunctionPrototypeBind	362	omit	-
+ASM	FunctionPrototypeCall	363	unchanged	JSTrampoline
+CPP	FunctionPrototypeToString	364	omit	-
+TFS	CreateIterResultObject	365	unchanged	NeedsContext::kYes, kValue, kDone
+TFS	CreateGeneratorObject	366	unchanged	NeedsContext::kYes, kClosure, kReceiver
+CPP	GeneratorFunctionConstructor	367	omit	-
+TFJ	GeneratorPrototypeNext	368	omit	kDontAdaptArgumentsSentinel
+TFJ	GeneratorPrototypeReturn	369	omit	kDontAdaptArgumentsSentinel
+TFJ	GeneratorPrototypeThrow	370	omit	kDontAdaptArgumentsSentinel
+CPP	AsyncFunctionConstructor	371	omit	-
+TFC	SuspendGeneratorBaseline	372	unchanged	SuspendGeneratorBaseline
+TFC	ResumeGeneratorBaseline	373	unchanged	ResumeGeneratorBaseline
+TFC	GetIteratorWithFeedbackLazyDeoptContinuation	374	unchanged	GetIteratorStackParameter
+TFC	CallIteratorWithFeedbackLazyDeoptContinuation	375	unchanged	SingleParameterOnStack
+CPP	GlobalDecodeURI	376	omit	-
+CPP	GlobalDecodeURIComponent	377	omit	-
+CPP	GlobalEncodeURI	378	omit	-
+CPP	GlobalEncodeURIComponent	379	omit	-
+CPP	GlobalEscape	380	omit	-
+CPP	GlobalUnescape	381	omit	-
+CPP	GlobalEval	382	omit	-
+TFJ	GlobalIsFinite	383	retain	kJSArgcReceiverSlots + 1, kReceiver, kNumber
+TFJ	GlobalIsNaN	384	retain	kJSArgcReceiverSlots + 1, kReceiver, kNumber
+CPP	JsonParse	385	omit	-
+CPP	JsonStringify	386	omit	-
+CPP	JsonRawJson	387	omit	-
+CPP	JsonIsRawJson	388	omit	-
+TFH	LoadIC	389	unchanged	LoadWithVector
+TFH	LoadIC_Megamorphic	390	unchanged	LoadWithVector
+TFH	LoadIC_Noninlined	391	unchanged	LoadWithVector
+TFH	LoadICTrampoline	392	unchanged	Load
+TFH	LoadICBaseline	393	unchanged	LoadBaseline
+TFH	LoadICTrampoline_Megamorphic	394	unchanged	Load
+TFH	LoadSuperIC	395	unchanged	LoadWithReceiverAndVector
+TFH	LoadSuperICBaseline	396	unchanged	LoadWithReceiverBaseline
+TFH	KeyedLoadIC	397	unchanged	KeyedLoadWithVector
+TFH	EnumeratedKeyedLoadIC	398	unchanged	EnumeratedKeyedLoad
+TFH	KeyedLoadIC_Megamorphic	399	unchanged	KeyedLoadWithVector
+TFH	KeyedLoadICTrampoline	400	unchanged	KeyedLoad
+TFH	KeyedLoadICBaseline	401	unchanged	KeyedLoadBaseline
+TFH	EnumeratedKeyedLoadICBaseline	402	unchanged	EnumeratedKeyedLoadBaseline
+TFH	KeyedLoadICTrampoline_Megamorphic	403	unchanged	KeyedLoad
+TFH	StoreGlobalIC	404	unchanged	StoreGlobalWithVector
+TFH	StoreGlobalICTrampoline	405	unchanged	StoreGlobal
+TFH	StoreGlobalICBaseline	406	unchanged	StoreGlobalBaseline
+TFH	StoreIC	407	unchanged	StoreWithVector
+TFH	StoreIC_Megamorphic	408	unchanged	StoreWithVector
+TFH	StoreICTrampoline	409	unchanged	Store
+TFH	StoreICTrampoline_Megamorphic	410	unchanged	Store
+TFH	StoreICBaseline	411	unchanged	StoreBaseline
+TFH	DefineNamedOwnIC	412	unchanged	StoreWithVector
+TFH	DefineNamedOwnICTrampoline	413	unchanged	Store
+TFH	DefineNamedOwnICBaseline	414	unchanged	StoreBaseline
+TFH	KeyedStoreIC	415	unchanged	StoreWithVector
+TFH	KeyedStoreICTrampoline	416	unchanged	Store
+TFH	KeyedStoreICTrampoline_Megamorphic	417	unchanged	Store
+TFH	KeyedStoreICBaseline	418	unchanged	StoreBaseline
+TFH	DefineKeyedOwnIC	419	unchanged	DefineKeyedOwnWithVector
+TFH	DefineKeyedOwnICTrampoline	420	unchanged	DefineKeyedOwn
+TFH	DefineKeyedOwnICBaseline	421	unchanged	DefineKeyedOwnBaseline
+TFH	StoreInArrayLiteralIC	422	unchanged	StoreWithVector
+TFH	StoreInArrayLiteralICBaseline	423	unchanged	StoreBaseline
+TFH	LookupContextTrampoline	424	unchanged	LookupTrampoline
+TFH	LookupContextBaseline	425	unchanged	LookupBaseline
+TFH	LookupContextInsideTypeofTrampoline	426	unchanged	LookupTrampoline
+TFH	LookupContextInsideTypeofBaseline	427	unchanged	LookupBaseline
+TFH	LoadGlobalIC	428	unchanged	LoadGlobalWithVector
+TFH	LoadGlobalICInsideTypeof	429	unchanged	LoadGlobalWithVector
+TFH	LoadGlobalICTrampoline	430	unchanged	LoadGlobal
+TFH	LoadGlobalICBaseline	431	unchanged	LoadGlobalBaseline
+TFH	LoadGlobalICInsideTypeofTrampoline	432	unchanged	LoadGlobal
+TFH	LoadGlobalICInsideTypeofBaseline	433	unchanged	LoadGlobalBaseline
+TFH	LookupGlobalIC	434	unchanged	LookupWithVector
+TFH	LookupGlobalICTrampoline	435	unchanged	LookupTrampoline
+TFH	LookupGlobalICBaseline	436	unchanged	LookupBaseline
+TFH	LookupGlobalICInsideTypeof	437	unchanged	LookupWithVector
+TFH	LookupGlobalICInsideTypeofTrampoline	438	unchanged	LookupTrampoline
+TFH	LookupGlobalICInsideTypeofBaseline	439	unchanged	LookupBaseline
+TFH	CloneObjectIC	440	unchanged	CloneObjectWithVector
+TFH	CloneObjectICBaseline	441	unchanged	CloneObjectBaseline
+TFH	CloneObjectIC_Slow	442	unchanged	CloneObjectWithVector
+TFH	KeyedHasIC	443	unchanged	KeyedHasICWithVector
+TFH	KeyedHasICBaseline	444	unchanged	KeyedHasICBaseline
+TFH	KeyedHasIC_Megamorphic	445	unchanged	KeyedHasICWithVector
+TFS	IterableToList	446	unchanged	NeedsContext::kYes, kIterable, kIteratorFn
+TFS	IterableToFixedArray	447	unchanged	NeedsContext::kYes, kIterable, kIteratorFn
+TFS	IterableToListWithSymbolLookup	448	unchanged	NeedsContext::kYes, kIterable
+TFS	IterableToFixedArrayWithSymbolLookupSlow	449	unchanged	NeedsContext::kYes, kIterable
+TFS	IterableToListMayPreserveHoles	450	unchanged	NeedsContext::kYes, kIterable, kIteratorFn
+TFS	IterableToListConvertHoles	451	unchanged	NeedsContext::kYes, kIterable, kIteratorFn
+TFS	IterableToFixedArrayForWasm	452	unchanged	NeedsContext::kYes, kIterable, kExpectedLength
+TFS	StringListFromIterable	453	unchanged	NeedsContext::kYes, kIterable
+TFS	FindOrderedHashMapEntry	454	unchanged	NeedsContext::kYes, kTable, kKey
+TFJ	MapConstructor	455	omit	kDontAdaptArgumentsSentinel
+TFJ	MapPrototypeSet	456	omit	kJSArgcReceiverSlots + 2, kReceiver, kKey, kValue
+TFJ	MapPrototypeDelete	457	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	MapPrototypeGet	458	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	MapPrototypeHas	459	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+CPP	MapPrototypeClear	460	omit	-
+TFJ	MapPrototypeEntries	461	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapPrototypeGetSize	462	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapPrototypeForEach	463	omit	kDontAdaptArgumentsSentinel
+TFJ	MapPrototypeKeys	464	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapPrototypeValues	465	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapIteratorPrototypeNext	466	omit	kJSArgcReceiverSlots, kReceiver
+TFS	MapIteratorToList	467	unchanged	NeedsContext::kYes, kSource
+CPP	NumberPrototypeToExponential	468	omit	-
+CPP	NumberPrototypeToFixed	469	omit	-
+CPP	NumberPrototypeToLocaleString	470	omit	-
+CPP	NumberPrototypeToPrecision	471	omit	-
+TFC	SameValue	472	unchanged	CompareNoContext
+TFC	SameValueNumbersOnly	473	unchanged	CompareNoContext
+TFC	Add_Baseline	474	unchanged	BinaryOp_Baseline
+TFC	AddSmi_Baseline	475	unchanged	BinarySmiOp_Baseline
+TFC	Subtract_Baseline	476	unchanged	BinaryOp_Baseline
+TFC	SubtractSmi_Baseline	477	unchanged	BinarySmiOp_Baseline
+TFC	Multiply_Baseline	478	unchanged	BinaryOp_Baseline
+TFC	MultiplySmi_Baseline	479	unchanged	BinarySmiOp_Baseline
+TFC	Divide_Baseline	480	unchanged	BinaryOp_Baseline
+TFC	DivideSmi_Baseline	481	unchanged	BinarySmiOp_Baseline
+TFC	Modulus_Baseline	482	unchanged	BinaryOp_Baseline
+TFC	ModulusSmi_Baseline	483	unchanged	BinarySmiOp_Baseline
+TFC	Exponentiate_Baseline	484	unchanged	BinaryOp_Baseline
+TFC	ExponentiateSmi_Baseline	485	unchanged	BinarySmiOp_Baseline
+TFC	BitwiseAnd_Baseline	486	unchanged	BinaryOp_Baseline
+TFC	BitwiseAndSmi_Baseline	487	unchanged	BinarySmiOp_Baseline
+TFC	BitwiseOr_Baseline	488	unchanged	BinaryOp_Baseline
+TFC	BitwiseOrSmi_Baseline	489	unchanged	BinarySmiOp_Baseline
+TFC	BitwiseXor_Baseline	490	unchanged	BinaryOp_Baseline
+TFC	BitwiseXorSmi_Baseline	491	unchanged	BinarySmiOp_Baseline
+TFC	ShiftLeft_Baseline	492	unchanged	BinaryOp_Baseline
+TFC	ShiftLeftSmi_Baseline	493	unchanged	BinarySmiOp_Baseline
+TFC	ShiftRight_Baseline	494	unchanged	BinaryOp_Baseline
+TFC	ShiftRightSmi_Baseline	495	unchanged	BinarySmiOp_Baseline
+TFC	ShiftRightLogical_Baseline	496	unchanged	BinaryOp_Baseline
+TFC	ShiftRightLogicalSmi_Baseline	497	unchanged	BinarySmiOp_Baseline
+TFC	Add_WithFeedback	498	unchanged	BinaryOp_WithFeedback
+TFC	Subtract_WithFeedback	499	unchanged	BinaryOp_WithFeedback
+TFC	Multiply_WithFeedback	500	unchanged	BinaryOp_WithFeedback
+TFC	Divide_WithFeedback	501	unchanged	BinaryOp_WithFeedback
+TFC	Modulus_WithFeedback	502	unchanged	BinaryOp_WithFeedback
+TFC	Exponentiate_WithFeedback	503	unchanged	BinaryOp_WithFeedback
+TFC	BitwiseAnd_WithFeedback	504	unchanged	BinaryOp_WithFeedback
+TFC	BitwiseOr_WithFeedback	505	unchanged	BinaryOp_WithFeedback
+TFC	BitwiseXor_WithFeedback	506	unchanged	BinaryOp_WithFeedback
+TFC	ShiftLeft_WithFeedback	507	unchanged	BinaryOp_WithFeedback
+TFC	ShiftRight_WithFeedback	508	unchanged	BinaryOp_WithFeedback
+TFC	ShiftRightLogical_WithFeedback	509	unchanged	BinaryOp_WithFeedback
+TFC	Equal_Baseline	510	unchanged	Compare_Baseline
+TFC	StrictEqual_Baseline	511	unchanged	Compare_Baseline
+TFC	LessThan_Baseline	512	unchanged	Compare_Baseline
+TFC	GreaterThan_Baseline	513	unchanged	Compare_Baseline
+TFC	LessThanOrEqual_Baseline	514	unchanged	Compare_Baseline
+TFC	GreaterThanOrEqual_Baseline	515	unchanged	Compare_Baseline
+TFC	Equal_WithFeedback	516	unchanged	Compare_WithFeedback
+TFC	StrictEqual_WithFeedback	517	unchanged	Compare_WithFeedback
+TFC	LessThan_WithFeedback	518	unchanged	Compare_WithFeedback
+TFC	GreaterThan_WithFeedback	519	unchanged	Compare_WithFeedback
+TFC	LessThanOrEqual_WithFeedback	520	unchanged	Compare_WithFeedback
+TFC	GreaterThanOrEqual_WithFeedback	521	unchanged	Compare_WithFeedback
+TFC	BitwiseNot_Baseline	522	unchanged	UnaryOp_Baseline
+TFC	Decrement_Baseline	523	unchanged	UnaryOp_Baseline
+TFC	Increment_Baseline	524	unchanged	UnaryOp_Baseline
+TFC	Negate_Baseline	525	unchanged	UnaryOp_Baseline
+TFC	BitwiseNot_WithFeedback	526	unchanged	UnaryOp_WithFeedback
+TFC	Decrement_WithFeedback	527	unchanged	UnaryOp_WithFeedback
+TFC	Increment_WithFeedback	528	unchanged	UnaryOp_WithFeedback
+TFC	Negate_WithFeedback	529	unchanged	UnaryOp_WithFeedback
+TFJ	ObjectAssign	530	omit	kDontAdaptArgumentsSentinel
+TFJ	ObjectCreate	531	omit	kDontAdaptArgumentsSentinel
+CPP	ObjectDefineGetter	532	omit	-
+CPP	ObjectDefineProperties	533	omit	-
+CPP	ObjectDefineProperty	534	omit	-
+CPP	ObjectDefineSetter	535	omit	-
+TFJ	ObjectEntries	536	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+CPP	ObjectFreeze	537	omit	-
+TFJ	ObjectGetOwnPropertyDescriptor	538	omit	kDontAdaptArgumentsSentinel
+CPP	ObjectGetOwnPropertyDescriptors	539	omit	-
+TFJ	ObjectGetOwnPropertyNames	540	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+CPP	ObjectGetOwnPropertySymbols	541	omit	-
+TFJ	ObjectHasOwn	542	omit	kJSArgcReceiverSlots + 2, kReceiver, kObject, kKey
+TFJ	ObjectIs	543	omit	kJSArgcReceiverSlots + 2, kReceiver, kLeft, kRight
+CPP	ObjectIsFrozen	544	omit	-
+CPP	ObjectIsSealed	545	omit	-
+TFJ	ObjectKeys	546	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+CPP	ObjectLookupGetter	547	omit	-
+CPP	ObjectLookupSetter	548	omit	-
+TFJ	ObjectPrototypeHasOwnProperty	549	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	ObjectPrototypeIsPrototypeOf	550	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+CPP	ObjectPrototypePropertyIsEnumerable	551	omit	-
+CPP	ObjectPrototypeGetProto	552	omit	-
+CPP	ObjectPrototypeSetProto	553	omit	-
+CPP	ObjectSeal	554	omit	-
+TFS	ObjectToString	555	unchanged	NeedsContext::kYes, kReceiver
+TFJ	ObjectValues	556	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+TFC	OrdinaryHasInstance	557	unchanged	Compare
+TFC	InstanceOf	558	unchanged	Compare
+TFC	InstanceOf_WithFeedback	559	unchanged	Compare_WithFeedback
+TFC	InstanceOf_Baseline	560	unchanged	Compare_Baseline
+TFS	ForInEnumerate	561	unchanged	NeedsContext::kYes, kReceiver
+TFC	ForInPrepare	562	unchanged	ForInPrepare
+TFS	ForInFilter	563	unchanged	NeedsContext::kYes, kKey, kObject
+ASM	ReflectApply	564	unchanged	JSTrampoline
+ASM	ReflectConstruct	565	unchanged	JSTrampoline
+CPP	ReflectDefineProperty	566	omit	-
+CPP	ReflectOwnKeys	567	omit	-
+CPP	ReflectSet	568	omit	-
+TFS	FindOrderedHashSetEntry	569	unchanged	NeedsContext::kYes, kTable, kKey
+TFJ	SetConstructor	570	omit	kDontAdaptArgumentsSentinel
+TFJ	SetPrototypeHas	571	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	SetPrototypeAdd	572	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	SetPrototypeDelete	573	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+CPP	SetPrototypeClear	574	omit	-
+TFJ	SetPrototypeEntries	575	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	SetPrototypeGetSize	576	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	SetPrototypeForEach	577	omit	kDontAdaptArgumentsSentinel
+TFJ	SetPrototypeValues	578	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	SetIteratorPrototypeNext	579	omit	kJSArgcReceiverSlots, kReceiver
+TFS	SetOrSetIteratorToList	580	unchanged	NeedsContext::kYes, kSource
+CPP	ShadowRealmConstructor	581	omit	-
+TFS	ShadowRealmGetWrappedValue	582	unchanged	NeedsContext::kYes, kCreationContext, kTargetContext, kValue
+CPP	ShadowRealmPrototypeEvaluate	583	omit	-
+TFJ	ShadowRealmPrototypeImportValue	584	omit	kJSArgcReceiverSlots + 2, kReceiver, kSpecifier, kExportName
+TFJ	ShadowRealmImportValueFulfilled	585	omit	kJSArgcReceiverSlots + 1, kReceiver, kExports
+TFJ	ShadowRealmImportValueRejected	586	omit	kJSArgcReceiverSlots + 1, kReceiver, kException
+CPP	SharedArrayBufferPrototypeGetByteLength	587	omit	-
+CPP	SharedArrayBufferPrototypeSlice	588	omit	-
+CPP	SharedArrayBufferPrototypeGrow	589	omit	-
+TFJ	AtomicsLoad	590	omit	kJSArgcReceiverSlots + 2, kReceiver, kArrayOrSharedObject, kIndexOrFieldName
+TFJ	AtomicsStore	591	omit	kJSArgcReceiverSlots + 3, kReceiver, kArrayOrSharedObject, kIndexOrFieldName, kValue
+TFJ	AtomicsExchange	592	omit	kJSArgcReceiverSlots + 3, kReceiver, kArrayOrSharedObject, kIndexOrFieldName, kValue
+TFJ	AtomicsCompareExchange	593	omit	kJSArgcReceiverSlots + 4, kReceiver, kArrayOrSharedObject, kIndexOrFieldName, kOldValue, kNewValue
+TFJ	AtomicsAdd	594	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsSub	595	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsAnd	596	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsOr	597	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsXor	598	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+CPP	AtomicsNotify	599	omit	-
+CPP	AtomicsIsLockFree	600	omit	-
+CPP	AtomicsWait	601	omit	-
+CPP	AtomicsWaitAsync	602	omit	-
+CPP	AtomicsPause	603	omit	-
+CPP	StringFromCodePoint	604	omit	-
+TFJ	StringFromCharCode	605	retain	kDontAdaptArgumentsSentinel
+CPP	StringPrototypeLastIndexOf	606	omit	-
+CPP	StringPrototypeLocaleCompare	607	omit	-
+CPP	StringRaw	608	omit	-
+CPP	SymbolConstructor	609	omit	-
+CPP	SymbolFor	610	omit	-
+CPP	SymbolKeyFor	611	omit	-
+TFJ	TypedArrayBaseConstructor	612	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayConstructor	613	omit	kDontAdaptArgumentsSentinel
+CPP	TypedArrayPrototypeBuffer	614	omit	-
+TFJ	TypedArrayPrototypeByteLength	615	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayPrototypeByteOffset	616	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayPrototypeLength	617	omit	kJSArgcReceiverSlots, kReceiver
+CPP	TypedArrayPrototypeCopyWithin	618	omit	-
+CPP	TypedArrayPrototypeFill	619	omit	-
+CPP	TypedArrayPrototypeIncludes	620	omit	-
+CPP	TypedArrayPrototypeIndexOf	621	omit	-
+CPP	TypedArrayPrototypeLastIndexOf	622	omit	-
+CPP	TypedArrayPrototypeReverse	623	omit	-
+TFJ	TypedArrayPrototypeToStringTag	624	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayPrototypeMap	625	omit	kDontAdaptArgumentsSentinel
+ASM	JSToWasmWrapperAsm	626	unchanged	WasmJSToWasmWrapper
+ASM	WasmReturnPromiseOnSuspendAsm	627	unchanged	WasmJSToWasmWrapper
+ASM	WasmToJsWrapperAsm	628	unchanged	WasmDummy
+TFC	WasmToJsWrapperCSA	629	unchanged	WasmToJSWrapper
+TFC	WasmToJsWrapperInvalidSig	630	unchanged	WasmToJSWrapper
+ASM	WasmSuspend	631	unchanged	WasmSuspend
+ASM	WasmResume	632	unchanged	WasmDummyWithJSLinkage
+ASM	WasmReject	633	unchanged	WasmDummyWithJSLinkage
+ASM	WasmTrapHandlerLandingPad	634	unchanged	WasmDummy
+ASM	WasmCompileLazy	635	unchanged	WasmDummy
+ASM	WasmLiftoffFrameSetup	636	unchanged	WasmDummy
+ASM	WasmDebugBreak	637	unchanged	WasmDummy
+ASM	WasmOnStackReplace	638	unchanged	WasmDummy
+TFC	WasmFloat32ToNumber	639	unchanged	WasmFloat32ToNumber
+TFC	WasmFloat64ToNumber	640	unchanged	WasmFloat64ToTagged
+TFC	WasmFloat64ToString	641	unchanged	WasmFloat64ToTagged
+TFC	JSToWasmLazyDeoptContinuation	642	unchanged	SingleParameterOnStack
+ASM	WasmToOnHeapWasmToJsTrampoline	643	unchanged	WasmDummy
+TFJ	WeakMapConstructor	644	omit	kDontAdaptArgumentsSentinel
+TFS	WeakMapLookupHashIndex	645	unchanged	NeedsContext::kYes, kTable, kKey
+TFJ	WeakMapGet	646	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakMapPrototypeHas	647	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakMapPrototypeSet	648	omit	kJSArgcReceiverSlots + 2, kReceiver, kKey, kValue
+TFJ	WeakMapPrototypeDelete	649	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakSetConstructor	650	omit	kDontAdaptArgumentsSentinel
+TFJ	WeakSetPrototypeHas	651	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakSetPrototypeAdd	652	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	WeakSetPrototypeDelete	653	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFS	WeakCollectionDelete	654	unchanged	NeedsContext::kYes, kCollection, kKey
+TFS	WeakCollectionSet	655	unchanged	NeedsContext::kYes, kCollection, kKey, kValue
+CPP	SharedSpaceJSObjectHasInstance	656	omit	-
+CPP	SharedStructTypeConstructor	657	omit	-
+CPP	SharedStructTypeIsSharedStruct	658	omit	-
+CPP	SharedStructConstructor	659	omit	-
+CPP	SharedArrayConstructor	660	omit	-
+CPP	SharedArrayIsSharedArray	661	omit	-
+CPP	AtomicsMutexConstructor	662	omit	-
+CPP	AtomicsMutexIsMutex	663	omit	-
+CPP	AtomicsMutexLock	664	omit	-
+CPP	AtomicsMutexLockAsync	665	omit	-
+CPP	AtomicsMutexLockWithTimeout	666	omit	-
+CPP	AtomicsMutexTryLock	667	omit	-
+CPP	AtomicsMutexAsyncUnlockResolveHandler	668	omit	-
+CPP	AtomicsMutexAsyncUnlockRejectHandler	669	omit	-
+CPP	AtomicsConditionConstructor	670	omit	-
+CPP	AtomicsConditionAcquireLock	671	omit	-
+CPP	AtomicsConditionIsCondition	672	omit	-
+CPP	AtomicsConditionWait	673	omit	-
+CPP	AtomicsConditionNotify	674	omit	-
+CPP	AtomicsConditionWaitAsync	675	omit	-
+TFS	AsyncGeneratorResolve	676	unchanged	NeedsContext::kYes, kGenerator, kValue, kDone
+TFS	AsyncGeneratorReject	677	unchanged	NeedsContext::kYes, kGenerator, kValue
+TFS	AsyncGeneratorYieldWithAwait	678	unchanged	NeedsContext::kYes, kGenerator, kValue
+TFS	AsyncGeneratorReturn	679	unchanged	NeedsContext::kYes, kGenerator, kValue
+TFS	AsyncGeneratorResumeNext	680	unchanged	NeedsContext::kYes, kGenerator
+CPP	AsyncGeneratorFunctionConstructor	681	omit	-
+TFJ	AsyncGeneratorPrototypeNext	682	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncGeneratorPrototypeReturn	683	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncGeneratorPrototypeThrow	684	omit	kDontAdaptArgumentsSentinel
+TFS	AsyncGeneratorAwait	685	unchanged	NeedsContext::kYes, kAsyncGeneratorObject, kValue
+TFJ	AsyncGeneratorAwaitResolveClosure	686	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorAwaitRejectClosure	687	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorYieldWithAwaitResolveClosure	688	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorReturnClosedResolveClosure	689	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorReturnClosedRejectClosure	690	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorReturnResolveClosure	691	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncFromSyncIteratorPrototypeNext	692	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncFromSyncIteratorPrototypeThrow	693	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncFromSyncIteratorPrototypeReturn	694	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncFromSyncIteratorCloseSyncAndRethrow	695	omit	kJSArgcReceiverSlots + 1, kReceiver, kError
+TFJ	AsyncIteratorValueUnwrap	696	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+ASM	CEntry_Return1_ArgvInRegister_NoBuiltinExit	697	unchanged	InterpreterCEntry1
+ASM	CEntry_Return1_ArgvOnStack_BuiltinExit	698	unchanged	CEntry1ArgvOnStack
+ASM	CEntry_Return1_ArgvOnStack_NoBuiltinExit	699	unchanged	CEntryDummy
+ASM	CEntry_Return2_ArgvInRegister_NoBuiltinExit	700	unchanged	InterpreterCEntry2
+ASM	CEntry_Return2_ArgvOnStack_BuiltinExit	701	unchanged	CEntryDummy
+ASM	CEntry_Return2_ArgvOnStack_NoBuiltinExit	702	unchanged	CEntryDummy
+ASM	WasmCEntry	703	unchanged	CEntryDummy
+ASM	DirectCEntry	704	unchanged	CEntryDummy
+TFS	StringAdd_CheckNone	705	unchanged	NeedsContext::kYes, kLeft, kRight
+TFS	SubString	706	unchanged	NeedsContext::kYes, kString, kFrom, kTo
+ASM	DoubleToI	707	unchanged	Void
+TFC	GetProperty	708	unchanged	GetProperty
+TFS	GetPropertyWithReceiver	709	unchanged	NeedsContext::kYes, kObject, kKey, kReceiver, kOnNonExistent
+TFS	SetProperty	710	unchanged	NeedsContext::kYes, kReceiver, kKey, kValue
+TFS	CreateDataProperty	711	unchanged	NeedsContext::kYes, kReceiver, kKey, kValue
+TFS	GetOwnPropertyDescriptor	712	unchanged	NeedsContext::kYes, kReceiver, kKey
+ASM	MemCopyUint8Uint8	713	unchanged	CCall
+ASM	MemMove	714	unchanged	CCall
+TFC	FindNonDefaultConstructorOrConstruct	715	unchanged	FindNonDefaultConstructorOrConstruct
+TFS	OrdinaryGetOwnPropertyDescriptor	716	unchanged	NeedsContext::kYes, kReceiver, kKey
+CPP	IsTraceCategoryEnabled	717	omit	-
+CPP	Trace	718	omit	-
+CPP	FinalizationRegistryUnregister	719	omit	-
+TFJ	AsyncModuleEvaluate	720	omit	kDontAdaptArgumentsSentinel
+CPP	CallAsyncModuleFulfilled	721	omit	-
+CPP	CallAsyncModuleRejected	722	omit	-
+CPP	TemporalNowTimeZone	723	omit	-
+CPP	TemporalNowInstant	724	omit	-
+CPP	TemporalNowPlainDateTime	725	omit	-
+CPP	TemporalNowPlainDateTimeISO	726	omit	-
+CPP	TemporalNowZonedDateTime	727	omit	-
+CPP	TemporalNowZonedDateTimeISO	728	omit	-
+CPP	TemporalNowPlainDate	729	omit	-
+CPP	TemporalNowPlainDateISO	730	omit	-
+CPP	TemporalNowPlainTimeISO	731	omit	-
+CPP	TemporalPlainDateConstructor	732	omit	-
+CPP	TemporalPlainDateFrom	733	omit	-
+CPP	TemporalPlainDateCompare	734	omit	-
+CPP	TemporalPlainDatePrototypeCalendar	735	omit	-
+CPP	TemporalPlainDatePrototypeYear	736	omit	-
+CPP	TemporalPlainDatePrototypeMonth	737	omit	-
+CPP	TemporalPlainDatePrototypeMonthCode	738	omit	-
+CPP	TemporalPlainDatePrototypeDay	739	omit	-
+CPP	TemporalPlainDatePrototypeDayOfWeek	740	omit	-
+CPP	TemporalPlainDatePrototypeDayOfYear	741	omit	-
+CPP	TemporalPlainDatePrototypeWeekOfYear	742	omit	-
+CPP	TemporalPlainDatePrototypeDaysInWeek	743	omit	-
+CPP	TemporalPlainDatePrototypeDaysInMonth	744	omit	-
+CPP	TemporalPlainDatePrototypeDaysInYear	745	omit	-
+CPP	TemporalPlainDatePrototypeMonthsInYear	746	omit	-
+CPP	TemporalPlainDatePrototypeInLeapYear	747	omit	-
+CPP	TemporalPlainDatePrototypeToPlainYearMonth	748	omit	-
+CPP	TemporalPlainDatePrototypeToPlainMonthDay	749	omit	-
+CPP	TemporalPlainDatePrototypeGetISOFields	750	omit	-
+CPP	TemporalPlainDatePrototypeAdd	751	omit	-
+CPP	TemporalPlainDatePrototypeSubtract	752	omit	-
+CPP	TemporalPlainDatePrototypeWith	753	omit	-
+CPP	TemporalPlainDatePrototypeWithCalendar	754	omit	-
+CPP	TemporalPlainDatePrototypeUntil	755	omit	-
+CPP	TemporalPlainDatePrototypeSince	756	omit	-
+CPP	TemporalPlainDatePrototypeEquals	757	omit	-
+CPP	TemporalPlainDatePrototypeToPlainDateTime	758	omit	-
+CPP	TemporalPlainDatePrototypeToZonedDateTime	759	omit	-
+CPP	TemporalPlainDatePrototypeToString	760	omit	-
+CPP	TemporalPlainDatePrototypeToJSON	761	omit	-
+CPP	TemporalPlainDatePrototypeToLocaleString	762	omit	-
+CPP	TemporalPlainDatePrototypeValueOf	763	omit	-
+CPP	TemporalPlainTimeConstructor	764	omit	-
+CPP	TemporalPlainTimeFrom	765	omit	-
+CPP	TemporalPlainTimeCompare	766	omit	-
+CPP	TemporalPlainTimePrototypeCalendar	767	omit	-
+CPP	TemporalPlainTimePrototypeHour	768	omit	-
+CPP	TemporalPlainTimePrototypeMinute	769	omit	-
+CPP	TemporalPlainTimePrototypeSecond	770	omit	-
+CPP	TemporalPlainTimePrototypeMillisecond	771	omit	-
+CPP	TemporalPlainTimePrototypeMicrosecond	772	omit	-
+CPP	TemporalPlainTimePrototypeNanosecond	773	omit	-
+CPP	TemporalPlainTimePrototypeAdd	774	omit	-
+CPP	TemporalPlainTimePrototypeSubtract	775	omit	-
+CPP	TemporalPlainTimePrototypeWith	776	omit	-
+CPP	TemporalPlainTimePrototypeUntil	777	omit	-
+CPP	TemporalPlainTimePrototypeSince	778	omit	-
+CPP	TemporalPlainTimePrototypeRound	779	omit	-
+CPP	TemporalPlainTimePrototypeEquals	780	omit	-
+CPP	TemporalPlainTimePrototypeToPlainDateTime	781	omit	-
+CPP	TemporalPlainTimePrototypeToZonedDateTime	782	omit	-
+CPP	TemporalPlainTimePrototypeGetISOFields	783	omit	-
+CPP	TemporalPlainTimePrototypeToString	784	omit	-
+CPP	TemporalPlainTimePrototypeToJSON	785	omit	-
+CPP	TemporalPlainTimePrototypeToLocaleString	786	omit	-
+CPP	TemporalPlainTimePrototypeValueOf	787	omit	-
+CPP	TemporalPlainDateTimeConstructor	788	omit	-
+CPP	TemporalPlainDateTimeFrom	789	omit	-
+CPP	TemporalPlainDateTimeCompare	790	omit	-
+CPP	TemporalPlainDateTimePrototypeCalendar	791	omit	-
+CPP	TemporalPlainDateTimePrototypeYear	792	omit	-
+CPP	TemporalPlainDateTimePrototypeMonth	793	omit	-
+CPP	TemporalPlainDateTimePrototypeMonthCode	794	omit	-
+CPP	TemporalPlainDateTimePrototypeDay	795	omit	-
+CPP	TemporalPlainDateTimePrototypeHour	796	omit	-
+CPP	TemporalPlainDateTimePrototypeMinute	797	omit	-
+CPP	TemporalPlainDateTimePrototypeSecond	798	omit	-
+CPP	TemporalPlainDateTimePrototypeMillisecond	799	omit	-
+CPP	TemporalPlainDateTimePrototypeMicrosecond	800	omit	-
+CPP	TemporalPlainDateTimePrototypeNanosecond	801	omit	-
+CPP	TemporalPlainDateTimePrototypeDayOfWeek	802	omit	-
+CPP	TemporalPlainDateTimePrototypeDayOfYear	803	omit	-
+CPP	TemporalPlainDateTimePrototypeWeekOfYear	804	omit	-
+CPP	TemporalPlainDateTimePrototypeDaysInWeek	805	omit	-
+CPP	TemporalPlainDateTimePrototypeDaysInMonth	806	omit	-
+CPP	TemporalPlainDateTimePrototypeDaysInYear	807	omit	-
+CPP	TemporalPlainDateTimePrototypeMonthsInYear	808	omit	-
+CPP	TemporalPlainDateTimePrototypeInLeapYear	809	omit	-
+CPP	TemporalPlainDateTimePrototypeWith	810	omit	-
+CPP	TemporalPlainDateTimePrototypeWithPlainTime	811	omit	-
+CPP	TemporalPlainDateTimePrototypeWithPlainDate	812	omit	-
+CPP	TemporalPlainDateTimePrototypeWithCalendar	813	omit	-
+CPP	TemporalPlainDateTimePrototypeAdd	814	omit	-
+CPP	TemporalPlainDateTimePrototypeSubtract	815	omit	-
+CPP	TemporalPlainDateTimePrototypeUntil	816	omit	-
+CPP	TemporalPlainDateTimePrototypeSince	817	omit	-
+CPP	TemporalPlainDateTimePrototypeRound	818	omit	-
+CPP	TemporalPlainDateTimePrototypeEquals	819	omit	-
+CPP	TemporalPlainDateTimePrototypeToString	820	omit	-
+CPP	TemporalPlainDateTimePrototypeToJSON	821	omit	-
+CPP	TemporalPlainDateTimePrototypeToLocaleString	822	omit	-
+CPP	TemporalPlainDateTimePrototypeValueOf	823	omit	-
+CPP	TemporalPlainDateTimePrototypeToZonedDateTime	824	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainDate	825	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainYearMonth	826	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainMonthDay	827	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainTime	828	omit	-
+CPP	TemporalPlainDateTimePrototypeGetISOFields	829	omit	-
+CPP	TemporalZonedDateTimeConstructor	830	omit	-
+CPP	TemporalZonedDateTimeFrom	831	omit	-
+CPP	TemporalZonedDateTimeCompare	832	omit	-
+CPP	TemporalZonedDateTimePrototypeCalendar	833	omit	-
+CPP	TemporalZonedDateTimePrototypeTimeZone	834	omit	-
+CPP	TemporalZonedDateTimePrototypeYear	835	omit	-
+CPP	TemporalZonedDateTimePrototypeMonth	836	omit	-
+CPP	TemporalZonedDateTimePrototypeMonthCode	837	omit	-
+CPP	TemporalZonedDateTimePrototypeDay	838	omit	-
+CPP	TemporalZonedDateTimePrototypeHour	839	omit	-
+CPP	TemporalZonedDateTimePrototypeMinute	840	omit	-
+CPP	TemporalZonedDateTimePrototypeSecond	841	omit	-
+CPP	TemporalZonedDateTimePrototypeMillisecond	842	omit	-
+CPP	TemporalZonedDateTimePrototypeMicrosecond	843	omit	-
+CPP	TemporalZonedDateTimePrototypeNanosecond	844	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochSeconds	845	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochMilliseconds	846	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochMicroseconds	847	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochNanoseconds	848	omit	-
+CPP	TemporalZonedDateTimePrototypeDayOfWeek	849	omit	-
+CPP	TemporalZonedDateTimePrototypeDayOfYear	850	omit	-
+CPP	TemporalZonedDateTimePrototypeWeekOfYear	851	omit	-
+CPP	TemporalZonedDateTimePrototypeHoursInDay	852	omit	-
+CPP	TemporalZonedDateTimePrototypeDaysInWeek	853	omit	-
+CPP	TemporalZonedDateTimePrototypeDaysInMonth	854	omit	-
+CPP	TemporalZonedDateTimePrototypeDaysInYear	855	omit	-
+CPP	TemporalZonedDateTimePrototypeMonthsInYear	856	omit	-
+CPP	TemporalZonedDateTimePrototypeInLeapYear	857	omit	-
+CPP	TemporalZonedDateTimePrototypeOffsetNanoseconds	858	omit	-
+CPP	TemporalZonedDateTimePrototypeOffset	859	omit	-
+CPP	TemporalZonedDateTimePrototypeWith	860	omit	-
+CPP	TemporalZonedDateTimePrototypeWithPlainTime	861	omit	-
+CPP	TemporalZonedDateTimePrototypeWithPlainDate	862	omit	-
+CPP	TemporalZonedDateTimePrototypeWithTimeZone	863	omit	-
+CPP	TemporalZonedDateTimePrototypeWithCalendar	864	omit	-
+CPP	TemporalZonedDateTimePrototypeAdd	865	omit	-
+CPP	TemporalZonedDateTimePrototypeSubtract	866	omit	-
+CPP	TemporalZonedDateTimePrototypeUntil	867	omit	-
+CPP	TemporalZonedDateTimePrototypeSince	868	omit	-
+CPP	TemporalZonedDateTimePrototypeRound	869	omit	-
+CPP	TemporalZonedDateTimePrototypeEquals	870	omit	-
+CPP	TemporalZonedDateTimePrototypeToString	871	omit	-
+CPP	TemporalZonedDateTimePrototypeToJSON	872	omit	-
+CPP	TemporalZonedDateTimePrototypeToLocaleString	873	omit	-
+CPP	TemporalZonedDateTimePrototypeValueOf	874	omit	-
+CPP	TemporalZonedDateTimePrototypeStartOfDay	875	omit	-
+CPP	TemporalZonedDateTimePrototypeToInstant	876	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainDate	877	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainTime	878	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainDateTime	879	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainYearMonth	880	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainMonthDay	881	omit	-
+CPP	TemporalZonedDateTimePrototypeGetISOFields	882	omit	-
+CPP	TemporalDurationConstructor	883	omit	-
+CPP	TemporalDurationFrom	884	omit	-
+CPP	TemporalDurationCompare	885	omit	-
+CPP	TemporalDurationPrototypeYears	886	omit	-
+CPP	TemporalDurationPrototypeMonths	887	omit	-
+CPP	TemporalDurationPrototypeWeeks	888	omit	-
+CPP	TemporalDurationPrototypeDays	889	omit	-
+CPP	TemporalDurationPrototypeHours	890	omit	-
+CPP	TemporalDurationPrototypeMinutes	891	omit	-
+CPP	TemporalDurationPrototypeSeconds	892	omit	-
+CPP	TemporalDurationPrototypeMilliseconds	893	omit	-
+CPP	TemporalDurationPrototypeMicroseconds	894	omit	-
+CPP	TemporalDurationPrototypeNanoseconds	895	omit	-
+CPP	TemporalDurationPrototypeSign	896	omit	-
+CPP	TemporalDurationPrototypeBlank	897	omit	-
+CPP	TemporalDurationPrototypeWith	898	omit	-
+CPP	TemporalDurationPrototypeNegated	899	omit	-
+CPP	TemporalDurationPrototypeAbs	900	omit	-
+CPP	TemporalDurationPrototypeAdd	901	omit	-
+CPP	TemporalDurationPrototypeSubtract	902	omit	-
+CPP	TemporalDurationPrototypeRound	903	omit	-
+CPP	TemporalDurationPrototypeTotal	904	omit	-
+CPP	TemporalDurationPrototypeToString	905	omit	-
+CPP	TemporalDurationPrototypeToJSON	906	omit	-
+CPP	TemporalDurationPrototypeToLocaleString	907	omit	-
+CPP	TemporalDurationPrototypeValueOf	908	omit	-
+CPP	TemporalInstantConstructor	909	omit	-
+CPP	TemporalInstantFrom	910	omit	-
+CPP	TemporalInstantFromEpochSeconds	911	omit	-
+CPP	TemporalInstantFromEpochMilliseconds	912	omit	-
+CPP	TemporalInstantFromEpochMicroseconds	913	omit	-
+CPP	TemporalInstantFromEpochNanoseconds	914	omit	-
+CPP	TemporalInstantCompare	915	omit	-
+CPP	TemporalInstantPrototypeEpochSeconds	916	omit	-
+CPP	TemporalInstantPrototypeEpochMilliseconds	917	omit	-
+CPP	TemporalInstantPrototypeEpochMicroseconds	918	omit	-
+CPP	TemporalInstantPrototypeEpochNanoseconds	919	omit	-
+CPP	TemporalInstantPrototypeAdd	920	omit	-
+CPP	TemporalInstantPrototypeSubtract	921	omit	-
+CPP	TemporalInstantPrototypeUntil	922	omit	-
+CPP	TemporalInstantPrototypeSince	923	omit	-
+CPP	TemporalInstantPrototypeRound	924	omit	-
+CPP	TemporalInstantPrototypeEquals	925	omit	-
+CPP	TemporalInstantPrototypeToString	926	omit	-
+CPP	TemporalInstantPrototypeToJSON	927	omit	-
+CPP	TemporalInstantPrototypeToLocaleString	928	omit	-
+CPP	TemporalInstantPrototypeValueOf	929	omit	-
+CPP	TemporalInstantPrototypeToZonedDateTime	930	omit	-
+CPP	TemporalInstantPrototypeToZonedDateTimeISO	931	omit	-
+CPP	TemporalPlainYearMonthConstructor	932	omit	-
+CPP	TemporalPlainYearMonthFrom	933	omit	-
+CPP	TemporalPlainYearMonthCompare	934	omit	-
+CPP	TemporalPlainYearMonthPrototypeCalendar	935	omit	-
+CPP	TemporalPlainYearMonthPrototypeYear	936	omit	-
+CPP	TemporalPlainYearMonthPrototypeMonth	937	omit	-
+CPP	TemporalPlainYearMonthPrototypeMonthCode	938	omit	-
+CPP	TemporalPlainYearMonthPrototypeDaysInYear	939	omit	-
+CPP	TemporalPlainYearMonthPrototypeDaysInMonth	940	omit	-
+CPP	TemporalPlainYearMonthPrototypeMonthsInYear	941	omit	-
+CPP	TemporalPlainYearMonthPrototypeInLeapYear	942	omit	-
+CPP	TemporalPlainYearMonthPrototypeWith	943	omit	-
+CPP	TemporalPlainYearMonthPrototypeAdd	944	omit	-
+CPP	TemporalPlainYearMonthPrototypeSubtract	945	omit	-
+CPP	TemporalPlainYearMonthPrototypeUntil	946	omit	-
+CPP	TemporalPlainYearMonthPrototypeSince	947	omit	-
+CPP	TemporalPlainYearMonthPrototypeEquals	948	omit	-
+CPP	TemporalPlainYearMonthPrototypeToString	949	omit	-
+CPP	TemporalPlainYearMonthPrototypeToJSON	950	omit	-
+CPP	TemporalPlainYearMonthPrototypeToLocaleString	951	omit	-
+CPP	TemporalPlainYearMonthPrototypeValueOf	952	omit	-
+CPP	TemporalPlainYearMonthPrototypeToPlainDate	953	omit	-
+CPP	TemporalPlainYearMonthPrototypeGetISOFields	954	omit	-
+CPP	TemporalPlainMonthDayConstructor	955	omit	-
+CPP	TemporalPlainMonthDayFrom	956	omit	-
+CPP	TemporalPlainMonthDayPrototypeCalendar	957	omit	-
+CPP	TemporalPlainMonthDayPrototypeMonthCode	958	omit	-
+CPP	TemporalPlainMonthDayPrototypeDay	959	omit	-
+CPP	TemporalPlainMonthDayPrototypeWith	960	omit	-
+CPP	TemporalPlainMonthDayPrototypeEquals	961	omit	-
+CPP	TemporalPlainMonthDayPrototypeToString	962	omit	-
+CPP	TemporalPlainMonthDayPrototypeToJSON	963	omit	-
+CPP	TemporalPlainMonthDayPrototypeToLocaleString	964	omit	-
+CPP	TemporalPlainMonthDayPrototypeValueOf	965	omit	-
+CPP	TemporalPlainMonthDayPrototypeToPlainDate	966	omit	-
+CPP	TemporalPlainMonthDayPrototypeGetISOFields	967	omit	-
+CPP	TemporalTimeZoneConstructor	968	omit	-
+CPP	TemporalTimeZoneFrom	969	omit	-
+CPP	TemporalTimeZonePrototypeId	970	omit	-
+CPP	TemporalTimeZonePrototypeGetOffsetNanosecondsFor	971	omit	-
+CPP	TemporalTimeZonePrototypeGetOffsetStringFor	972	omit	-
+CPP	TemporalTimeZonePrototypeGetPlainDateTimeFor	973	omit	-
+CPP	TemporalTimeZonePrototypeGetInstantFor	974	omit	-
+CPP	TemporalTimeZonePrototypeGetPossibleInstantsFor	975	omit	-
+CPP	TemporalTimeZonePrototypeGetNextTransition	976	omit	-
+CPP	TemporalTimeZonePrototypeGetPreviousTransition	977	omit	-
+CPP	TemporalTimeZonePrototypeToString	978	omit	-
+CPP	TemporalTimeZonePrototypeToJSON	979	omit	-
+CPP	TemporalCalendarConstructor	980	omit	-
+CPP	TemporalCalendarFrom	981	omit	-
+CPP	TemporalCalendarPrototypeId	982	omit	-
+CPP	TemporalCalendarPrototypeDateFromFields	983	omit	-
+CPP	TemporalCalendarPrototypeYearMonthFromFields	984	omit	-
+CPP	TemporalCalendarPrototypeMonthDayFromFields	985	omit	-
+CPP	TemporalCalendarPrototypeDateAdd	986	omit	-
+CPP	TemporalCalendarPrototypeDateUntil	987	omit	-
+CPP	TemporalCalendarPrototypeYear	988	omit	-
+CPP	TemporalCalendarPrototypeMonth	989	omit	-
+CPP	TemporalCalendarPrototypeMonthCode	990	omit	-
+CPP	TemporalCalendarPrototypeDay	991	omit	-
+CPP	TemporalCalendarPrototypeDayOfWeek	992	omit	-
+CPP	TemporalCalendarPrototypeDayOfYear	993	omit	-
+CPP	TemporalCalendarPrototypeWeekOfYear	994	omit	-
+CPP	TemporalCalendarPrototypeDaysInWeek	995	omit	-
+CPP	TemporalCalendarPrototypeDaysInMonth	996	omit	-
+CPP	TemporalCalendarPrototypeDaysInYear	997	omit	-
+CPP	TemporalCalendarPrototypeMonthsInYear	998	omit	-
+CPP	TemporalCalendarPrototypeInLeapYear	999	omit	-
+TFJ	TemporalCalendarPrototypeFields	1000	omit	kJSArgcReceiverSlots, kIterable
+CPP	TemporalCalendarPrototypeMergeFields	1001	omit	-
+CPP	TemporalCalendarPrototypeToString	1002	omit	-
+CPP	TemporalCalendarPrototypeToJSON	1003	omit	-
+CPP	DatePrototypeToTemporalInstant	1004	omit	-
+TFJ	StringFixedArrayFromIterable	1005	omit	kJSArgcReceiverSlots, kIterable
+TFJ	TemporalInstantFixedArrayFromIterable	1006	omit	kJSArgcReceiverSlots, kIterable
+TFJ	AggregateErrorConstructor	1007	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeAt	1008	omit	JSParameterCount(1), kReceiver, kIndex
+TFJ	ArrayPrototypeConcat	1009	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeCopyWithin	1010	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayEveryLoopEagerDeoptContinuation	1011	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayEveryLoopLazyDeoptContinuation	1012	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFC	ArrayEveryLoopContinuation	1013	unchanged	ArrayEveryLoopContinuation
+TFJ	ArrayEvery	1014	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFilterLoopEagerDeoptContinuation	1015	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength, kInitialTo
+TFJ	ArrayFilterLoopLazyDeoptContinuation	1016	omit	JSParameterCount(8), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength, kValueK, kInitialTo, kResult
+TFC	ArrayFilterLoopContinuation	1017	unchanged	ArrayFilterLoopContinuation
+TFJ	ArrayFilter	1018	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFindLoopEagerDeoptContinuation	1019	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayFindLoopLazyDeoptContinuation	1020	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFJ	ArrayFindLoopAfterCallbackLazyDeoptContinuation	1021	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kInitialK, kLength, kFoundValue, kIsFound
+TFC	ArrayFindLoopContinuation	1022	unchanged	ArrayFindLoopContinuation
+TFJ	ArrayPrototypeFind	1023	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFindIndexLoopEagerDeoptContinuation	1024	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayFindIndexLoopLazyDeoptContinuation	1025	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFJ	ArrayFindIndexLoopAfterCallbackLazyDeoptContinuation	1026	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kInitialK, kLength, kFoundValue, kIsFound
+TFC	ArrayFindIndexLoopContinuation	1027	unchanged	ArrayFindIndexLoopContinuation
+TFJ	ArrayPrototypeFindIndex	1028	omit	kDontAdaptArgumentsSentinel
+TFC	ArrayFindLastLoopContinuation	1029	unchanged	ArrayFindLastLoopContinuation
+TFJ	ArrayPrototypeFindLast	1030	omit	kDontAdaptArgumentsSentinel
+TFC	ArrayFindLastIndexLoopContinuation	1031	unchanged	ArrayFindLastIndexLoopContinuation
+TFJ	ArrayPrototypeFindLastIndex	1032	omit	kDontAdaptArgumentsSentinel
+TFC	FlattenIntoArrayWithoutMapFn	1033	unchanged	FlattenIntoArrayWithoutMapFn
+TFC	FlattenIntoArrayWithMapFn	1034	unchanged	FlattenIntoArrayWithMapFn
+TFJ	ArrayPrototypeFlat	1035	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeFlatMap	1036	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayForEachLoopEagerDeoptContinuation	1037	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayForEachLoopLazyDeoptContinuation	1038	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFC	ArrayForEachLoopContinuation	1039	unchanged	ArrayForEachLoopContinuation
+TFJ	ArrayForEach	1040	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFromAsyncIterableOnFulfilled	1041	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsyncIterableOnRejected	1042	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsyncArrayLikeOnFulfilled	1043	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsyncArrayLikeOnRejected	1044	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsync	1045	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFrom	1046	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayIsArray	1047	omit	JSParameterCount(1), kReceiver, kArg
+TFC	LoadJoinElement_DictionaryElements_0	1048	unchanged	LoadJoinElement_DictionaryElements_0
+TFC	LoadJoinElement_FastSmiOrObjectElements_0	1049	unchanged	LoadJoinElement_FastSmiOrObjectElements_0
+TFC	LoadJoinElement_FastDoubleElements_0	1050	unchanged	LoadJoinElement_FastDoubleElements_0
+TFC	ConvertToLocaleString	1051	unchanged	ConvertToLocaleString
+TFC	JoinStackPush	1052	unchanged	JoinStackPush
+TFC	JoinStackPop	1053	unchanged	JoinStackPop
+TFJ	ArrayPrototypeJoin	1054	retain	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToLocaleString	1055	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToString	1056	retain	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeJoin	1057	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeToLocaleString	1058	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeLastIndexOf	1059	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayMapPreLoopLazyDeoptContinuation	1060	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kLength, kResult
+TFJ	ArrayMapLoopEagerDeoptContinuation	1061	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength
+TFJ	ArrayMapLoopLazyDeoptContinuation	1062	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength, kResult
+TFC	ArrayMapLoopContinuation	1063	unchanged	ArrayMapLoopContinuation
+TFJ	ArrayMap	1064	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayOf	1065	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayReduceRightPreLoopEagerDeoptContinuation	1066	omit	JSParameterCount(2), kReceiver, kCallback, kLength
+TFJ	ArrayReduceRightLoopEagerDeoptContinuation	1067	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kAccumulator
+TFJ	ArrayReduceRightLoopLazyDeoptContinuation	1068	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kResult
+TFC	ArrayReduceRightLoopContinuation	1069	unchanged	ArrayReduceRightLoopContinuation
+TFJ	ArrayReduceRight	1070	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayReducePreLoopEagerDeoptContinuation	1071	omit	JSParameterCount(2), kReceiver, kCallback, kLength
+TFJ	ArrayReduceLoopEagerDeoptContinuation	1072	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kAccumulator
+TFJ	ArrayReduceLoopLazyDeoptContinuation	1073	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kResult
+TFC	ArrayReduceLoopContinuation	1074	unchanged	ArrayReduceLoopContinuation
+TFJ	ArrayReduce	1075	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeReverse	1076	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeShift	1077	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeSlice	1078	omit	kDontAdaptArgumentsSentinel
+TFJ	ArraySomeLoopEagerDeoptContinuation	1079	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArraySomeLoopLazyDeoptContinuation	1080	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFC	ArraySomeLoopContinuation	1081	unchanged	ArraySomeLoopContinuation
+TFJ	ArraySome	1082	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeSplice	1083	omit	kDontAdaptArgumentsSentinel
+TFC	GenericArrayToReversed	1084	unchanged	GenericArrayToReversed
+TFJ	ArrayPrototypeToReversed	1085	omit	kDontAdaptArgumentsSentinel
+TFC	ArrayTimSortIntoCopy	1086	unchanged	ArrayTimSortIntoCopy
+TFJ	ArrayPrototypeToSorted	1087	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToSpliced	1088	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeUnshift	1089	omit	kDontAdaptArgumentsSentinel
+TFC	GenericArrayWith	1090	unchanged	GenericArrayWith
+TFJ	ArrayPrototypeWith	1091	omit	JSParameterCount(2), kReceiver, kIndex, kValue
+TFJ	ArrayBufferPrototypeGetByteLength	1092	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferPrototypeGetMaxByteLength	1093	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferPrototypeGetResizable	1094	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferPrototypeGetDetached	1095	omit	JSParameterCount(0), kReceiver
+TFJ	SharedArrayBufferPrototypeGetMaxByteLength	1096	omit	JSParameterCount(0), kReceiver
+TFJ	SharedArrayBufferPrototypeGetGrowable	1097	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferIsView	1098	omit	JSParameterCount(1), kReceiver, kArg
+TFC	ToInteger	1099	unchanged	ToInteger
+TFC	FastCreateDataProperty	1100	unchanged	FastCreateDataProperty
+TFJ	BooleanConstructor	1101	retain	kDontAdaptArgumentsSentinel
+TFJ	BooleanPrototypeToString	1102	retain	JSParameterCount(0), kReceiver
+TFJ	BooleanPrototypeValueOf	1103	retain	JSParameterCount(0), kReceiver
+TFC	BigIntAddNoThrow	1104	unchanged	BigIntAddNoThrow
+TFC	BigIntAdd	1105	unchanged	BigIntAdd
+TFC	BigIntSubtractNoThrow	1106	unchanged	BigIntSubtractNoThrow
+TFC	BigIntSubtract	1107	unchanged	BigIntSubtract
+TFC	BigIntMultiplyNoThrow	1108	unchanged	BigIntMultiplyNoThrow
+TFC	BigIntMultiply	1109	unchanged	BigIntMultiply
+TFC	BigIntDivideNoThrow	1110	unchanged	BigIntDivideNoThrow
+TFC	BigIntDivide	1111	unchanged	BigIntDivide
+TFC	BigIntModulusNoThrow	1112	unchanged	BigIntModulusNoThrow
+TFC	BigIntModulus	1113	unchanged	BigIntModulus
+TFC	BigIntBitwiseAndNoThrow	1114	unchanged	BigIntBitwiseAndNoThrow
+TFC	BigIntBitwiseAnd	1115	unchanged	BigIntBitwiseAnd
+TFC	BigIntBitwiseOrNoThrow	1116	unchanged	BigIntBitwiseOrNoThrow
+TFC	BigIntBitwiseOr	1117	unchanged	BigIntBitwiseOr
+TFC	BigIntBitwiseXorNoThrow	1118	unchanged	BigIntBitwiseXorNoThrow
+TFC	BigIntBitwiseXor	1119	unchanged	BigIntBitwiseXor
+TFC	BigIntShiftLeftNoThrow	1120	unchanged	BigIntShiftLeftNoThrow
+TFC	BigIntShiftLeft	1121	unchanged	BigIntShiftLeft
+TFC	BigIntShiftRightNoThrow	1122	unchanged	BigIntShiftRightNoThrow
+TFC	BigIntShiftRight	1123	unchanged	BigIntShiftRight
+TFC	BigIntEqual	1124	unchanged	BigIntEqual
+TFC	BigIntLessThan	1125	unchanged	BigIntLessThan
+TFC	BigIntGreaterThan	1126	unchanged	BigIntGreaterThan
+TFC	BigIntLessThanOrEqual	1127	unchanged	BigIntLessThanOrEqual
+TFC	BigIntGreaterThanOrEqual	1128	unchanged	BigIntGreaterThanOrEqual
+TFC	BigIntUnaryMinus	1129	unchanged	BigIntUnaryMinus
+TFC	ToString	1130	unchanged	ToString
+TFJ	StringPrototypeToString	1131	retain	JSParameterCount(0), kReceiver
+TFJ	StringPrototypeValueOf	1132	retain	JSParameterCount(0), kReceiver
+TFC	StringToList	1133	unchanged	StringToList
+TFJ	StringPrototypeCharAt	1134	retain	JSParameterCount(1), kReceiver, kPosition
+TFJ	StringPrototypeCharCodeAt	1135	retain	JSParameterCount(1), kReceiver, kPosition
+TFJ	StringPrototypeCodePointAt	1136	retain	JSParameterCount(1), kReceiver, kPosition
+TFJ	StringPrototypeConcat	1137	retain	kDontAdaptArgumentsSentinel
+TFJ	StringConstructor	1138	retain	kDontAdaptArgumentsSentinel
+TFJ	StringCreateLazyDeoptContinuation	1139	omit	JSParameterCount(1), kReceiver, kValue
+TFC	StringAddConvertLeft	1140	unchanged	StringAddConvertLeft
+TFC	StringAddConvertRight	1141	unchanged	StringAddConvertRight
+TFC	StringCharAt	1142	unchanged	StringCharAt
+TFC	FastNewClosureBaseline	1143	unchanged	FastNewClosureBaseline
+TFC	FastNewFunctionContextEval	1144	unchanged	FastNewFunctionContextEval
+TFC	FastNewFunctionContextFunction	1145	unchanged	FastNewFunctionContextFunction
+TFC	CreateRegExpLiteral	1146	unchanged	CreateRegExpLiteral
+TFC	CreateShallowArrayLiteral	1147	unchanged	CreateShallowArrayLiteral
+TFC	CreateEmptyArrayLiteral	1148	unchanged	CreateEmptyArrayLiteral
+TFC	CreateShallowObjectLiteral	1149	unchanged	CreateShallowObjectLiteral
+TFJ	ObjectConstructor	1150	retain	kDontAdaptArgumentsSentinel
+TFC	CreateEmptyLiteralObject	1151	unchanged	CreateEmptyLiteralObject
+TFJ	NumberConstructor	1152	retain	kDontAdaptArgumentsSentinel
+TFJ	GenericLazyDeoptContinuation	1153	retain	JSParameterCount(1), kReceiver, kResult
+TFC	StringToNumber	1154	unchanged	StringToNumber
+TFC	NonNumberToNumber	1155	unchanged	NonNumberToNumber
+TFC	NonNumberToNumeric	1156	unchanged	NonNumberToNumeric
+TFC	ToNumeric	1157	unchanged	ToNumeric
+TFC	NumberToString	1158	unchanged	NumberToString
+TFC	ToBoolean	1159	unchanged	ToBoolean
+TFC	ToBooleanForBaselineJump	1160	unchanged	ToBooleanForBaselineJump
+TFC	ToLength	1161	unchanged	ToLength
+TFC	ToName	1162	unchanged	ToName
+TFC	ToObject	1163	unchanged	ToObject
+TFC	NonPrimitiveToPrimitive_Default	1164	unchanged	NonPrimitiveToPrimitive_Default
+TFC	NonPrimitiveToPrimitive_Number	1165	unchanged	NonPrimitiveToPrimitive_Number
+TFC	NonPrimitiveToPrimitive_String	1166	unchanged	NonPrimitiveToPrimitive_String
+TFC	OrdinaryToPrimitive_Number	1167	unchanged	OrdinaryToPrimitive_Number
+TFC	OrdinaryToPrimitive_Number_Inline	1168	unchanged	OrdinaryToPrimitive_Number_Inline
+TFC	OrdinaryToPrimitive_String	1169	unchanged	OrdinaryToPrimitive_String
+TFJ	FastConsoleAssert	1170	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBuffer	1171	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetByteLength	1172	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetByteOffset	1173	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint8	1174	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt8	1175	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint16	1176	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt16	1177	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint32	1178	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt32	1179	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat16	1180	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat32	1181	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat64	1182	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBigUint64	1183	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBigInt64	1184	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint8	1185	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt8	1186	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint16	1187	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt16	1188	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint32	1189	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt32	1190	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat16	1191	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat32	1192	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat64	1193	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetBigUint64	1194	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetBigInt64	1195	retain	kDontAdaptArgumentsSentinel
+TFJ	FinalizationRegistryConstructor	1196	omit	kDontAdaptArgumentsSentinel
+TFJ	FinalizationRegistryRegister	1197	omit	kDontAdaptArgumentsSentinel
+TFJ	FinalizationRegistryPrototypeCleanupSome	1198	omit	kDontAdaptArgumentsSentinel
+TFJ	FunctionPrototypeHasInstance	1199	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	FastFunctionPrototypeBind	1200	omit	kDontAdaptArgumentsSentinel
+TFC	IncBlockCounter	1201	unchanged	IncBlockCounter
+TFC	GetTemplateObject	1202	unchanged	GetTemplateObject
+TFC	ForInNext	1203	unchanged	ForInNext
+TFC	GetImportMetaObjectBaseline	1204	unchanged	GetImportMetaObjectBaseline
+TFC	GetIteratorWithFeedback	1205	unchanged	GetIteratorWithFeedback
+TFC	GetIteratorBaseline	1206	unchanged	GetIteratorBaseline
+TFC	CreateAsyncFromSyncIteratorBaseline	1207	unchanged	CreateAsyncFromSyncIteratorBaseline
+TFC	CallIteratorWithFeedback	1208	unchanged	CallIteratorWithFeedback
+TFJ	IteratorConstructor	1209	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeGetToStringTag	1210	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeSetToStringTag	1211	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	IteratorPrototypeGetConstructor	1212	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeSetConstructor	1213	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	IteratorFrom	1214	omit	JSParameterCount(1), kReceiver, kObjArg
+TFJ	WrapForValidIteratorPrototypeNext	1215	omit	JSParameterCount(0), kReceiver
+TFJ	WrapForValidIteratorPrototypeReturn	1216	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorHelperPrototypeNext	1217	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorHelperPrototypeReturn	1218	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeMap	1219	omit	JSParameterCount(1), kReceiver, kMapper
+TFC	IteratorMapHelperNext	1220	unchanged	IteratorMapHelperNext
+TFJ	IteratorPrototypeFilter	1221	omit	JSParameterCount(1), kReceiver, kPredicate
+TFC	IteratorFilterHelperNext	1222	unchanged	IteratorFilterHelperNext
+TFJ	IteratorPrototypeTake	1223	omit	JSParameterCount(1), kReceiver, kLimit
+TFC	IteratorTakeHelperNext	1224	unchanged	IteratorTakeHelperNext
+TFJ	IteratorPrototypeDrop	1225	omit	JSParameterCount(1), kReceiver, kLimit
+TFC	IteratorDropHelperNext	1226	unchanged	IteratorDropHelperNext
+TFJ	IteratorPrototypeFlatMap	1227	omit	JSParameterCount(1), kReceiver, kMapper
+TFC	IteratorFlatMapHelperNext	1228	unchanged	IteratorFlatMapHelperNext
+TFJ	IteratorPrototypeReduce	1229	omit	kDontAdaptArgumentsSentinel
+TFJ	IteratorPrototypeToArray	1230	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeForEach	1231	omit	JSParameterCount(1), kReceiver, kFn
+TFJ	IteratorPrototypeSome	1232	omit	JSParameterCount(1), kReceiver, kPredicate
+TFJ	IteratorPrototypeEvery	1233	omit	JSParameterCount(1), kReceiver, kPredicate
+TFJ	IteratorPrototypeFind	1234	omit	JSParameterCount(1), kReceiver, kPredicate
+TFJ	MapGroupBy	1235	omit	JSParameterCount(2), kReceiver, kItems, kCallback
+TFJ	MathAbs	1236	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCeil	1237	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathFloor	1238	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathRound	1239	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathTrunc	1240	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathPow	1241	retain	JSParameterCount(2), kReceiver, kBase, kExponent
+TFJ	MathMax	1242	retain	kDontAdaptArgumentsSentinel
+TFJ	MathMin	1243	retain	kDontAdaptArgumentsSentinel
+TFJ	MathAcos	1244	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAcosh	1245	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAsin	1246	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAsinh	1247	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAtan	1248	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAtan2	1249	retain	JSParameterCount(2), kReceiver, kY, kX
+TFJ	MathAtanh	1250	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCbrt	1251	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathClz32	1252	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCos	1253	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCosh	1254	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathExp	1255	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathExpm1	1256	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathFround	1257	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathF16round	1258	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathImul	1259	retain	JSParameterCount(2), kReceiver, kX, kY
+TFJ	MathLog	1260	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog1p	1261	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog10	1262	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog2	1263	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSin	1264	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSign	1265	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSinh	1266	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSqrt	1267	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathTan	1268	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathTanh	1269	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathHypot	1270	retain	kDontAdaptArgumentsSentinel
+TFJ	MathRandom	1271	retain	JSParameterCount(0), kReceiver
+TFJ	NumberPrototypeToString	1272	retain	kDontAdaptArgumentsSentinel
+TFJ	NumberIsFinite	1273	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberIsInteger	1274	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberIsNaN	1275	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberIsSafeInteger	1276	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberPrototypeValueOf	1277	retain	JSParameterCount(0), kReceiver
+TFJ	NumberParseFloat	1278	retain	JSParameterCount(1), kReceiver, kValue
+TFC	ParseInt	1279	unchanged	ParseInt
+TFJ	NumberParseInt	1280	retain	JSParameterCount(2), kReceiver, kValue, kRadix
+TFC	Add	1281	unchanged	Add
+TFC	Subtract	1282	unchanged	Subtract
+TFC	Multiply	1283	unchanged	Multiply
+TFC	Divide	1284	unchanged	Divide
+TFC	Modulus	1285	unchanged	Modulus
+TFC	Exponentiate	1286	unchanged	Exponentiate
+TFC	Negate	1287	unchanged	Negate
+TFC	BitwiseNot	1288	unchanged	BitwiseNot
+TFC	Decrement	1289	unchanged	Decrement
+TFC	Increment	1290	unchanged	Increment
+TFC	ShiftLeft	1291	unchanged	ShiftLeft
+TFC	ShiftRight	1292	unchanged	ShiftRight
+TFC	ShiftRightLogical	1293	unchanged	ShiftRightLogical
+TFC	BitwiseAnd	1294	unchanged	BitwiseAnd
+TFC	BitwiseOr	1295	unchanged	BitwiseOr
+TFC	BitwiseXor	1296	unchanged	BitwiseXor
+TFC	LessThan	1297	unchanged	LessThan
+TFC	LessThanOrEqual	1298	unchanged	LessThanOrEqual
+TFC	GreaterThan	1299	unchanged	GreaterThan
+TFC	GreaterThanOrEqual	1300	unchanged	GreaterThanOrEqual
+TFC	Equal	1301	unchanged	Equal
+TFC	StrictEqual	1302	unchanged	StrictEqual
+TFJ	ObjectFromEntries	1303	omit	kDontAdaptArgumentsSentinel
+TFC	GroupByGeneric	1304	unchanged	GroupByGeneric
+TFJ	ObjectGroupBy	1305	omit	JSParameterCount(2), kReceiver, kItems, kCallback
+TFC	CreateObjectWithoutProperties	1306	unchanged	CreateObjectWithoutProperties
+TFJ	ObjectIsExtensible	1307	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ObjectPreventExtensions	1308	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ObjectGetPrototypeOf	1309	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ObjectSetPrototypeOf	1310	omit	JSParameterCount(2), kReceiver, kObject, kProto
+TFJ	ObjectPrototypeToString	1311	retain	JSParameterCount(0), kReceiver
+TFJ	ObjectPrototypeValueOf	1312	retain	JSParameterCount(0), kReceiver
+TFJ	ObjectPrototypeToLocaleString	1313	omit	JSParameterCount(0), kReceiver
+TFC	FulfillPromise	1314	unchanged	FulfillPromise
+TFC	RejectPromise	1315	unchanged	RejectPromise
+TFC	NewPromiseCapability	1316	unchanged	NewPromiseCapability
+TFJ	PromiseCapabilityDefaultReject	1317	omit	JSParameterCount(1), kReceiver, kReason
+TFJ	PromiseCapabilityDefaultResolve	1318	omit	JSParameterCount(1), kReceiver, kResolution
+TFC	PerformPromiseThen	1319	unchanged	PerformPromiseThen
+TFJ	PromiseReject	1320	omit	JSParameterCount(1), kReceiver, kReason
+TFJ	PromiseGetCapabilitiesExecutor	1321	omit	JSParameterCount(2), kReceiver, kResolve, kReject
+TFJ	PromiseConstructorLazyDeoptContinuation	1322	omit	JSParameterCount(4), kReceiver, kPromise, kReject, kException, kResult
+TFJ	PromiseAll	1323	omit	JSParameterCount(1), kReceiver, kIterable
+TFJ	PromiseAllSettled	1324	omit	JSParameterCount(1), kReceiver, kIterable
+TFJ	PromiseAllResolveElementClosure	1325	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAllSettledResolveElementClosure	1326	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAllSettledRejectElementClosure	1327	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAnyRejectElementClosure	1328	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAny	1329	omit	JSParameterCount(1), kReceiver, kIterable
+TFJ	PromiseConstructor	1330	omit	JSParameterCount(1), kReceiver, kExecutor
+TFJ	PromisePrototypeCatch	1331	omit	JSParameterCount(1), kReceiver, kOnRejected
+TFJ	PromiseValueThunkFinally	1332	omit	JSParameterCount(0), kReceiver
+TFJ	PromiseThrowerFinally	1333	omit	JSParameterCount(0), kReceiver
+TFJ	PromiseCatchFinally	1334	omit	JSParameterCount(1), kReceiver, kReason
+TFJ	PromiseThenFinally	1335	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromisePrototypeFinally	1336	omit	JSParameterCount(1), kReceiver, kOnFinally
+TFC	PromiseResolveThenableJob	1337	unchanged	PromiseResolveThenableJob
+TFJ	GetContinuationPreservedEmbedderData	1338	omit	JSParameterCount(0), kReceiver
+TFJ	SetContinuationPreservedEmbedderData	1339	omit	JSParameterCount(1), kReceiver, kData
+TFJ	PromiseRace	1340	omit	JSParameterCount(1), kReceiver, kIterable
+TFC	PromiseFulfillReactionJob	1341	unchanged	PromiseFulfillReactionJob
+TFC	PromiseRejectReactionJob	1342	unchanged	PromiseRejectReactionJob
+TFJ	PromiseResolveTrampoline	1343	omit	JSParameterCount(1), kReceiver, kValue
+TFC	PromiseResolve	1344	unchanged	PromiseResolve
+TFC	ResolvePromise	1345	unchanged	ResolvePromise
+TFJ	PromisePrototypeThen	1346	omit	JSParameterCount(2), kReceiver, kOnFulfilled, kOnRejected
+TFJ	PromiseTry	1347	omit	kDontAdaptArgumentsSentinel
+TFJ	PromiseWithResolvers	1348	omit	JSParameterCount(0), kReceiver
+TFJ	ProxyConstructor	1349	omit	JSParameterCount(2), kReceiver, kTarget, kHandler
+TFC	ProxyDeleteProperty	1350	unchanged	ProxyDeleteProperty
+TFC	ProxyGetProperty	1351	unchanged	ProxyGetProperty
+TFC	ProxyGetPrototypeOf	1352	unchanged	ProxyGetPrototypeOf
+TFC	ProxyHasProperty	1353	unchanged	ProxyHasProperty
+TFC	ProxyIsExtensible	1354	unchanged	ProxyIsExtensible
+TFC	ProxyPreventExtensions	1355	unchanged	ProxyPreventExtensions
+TFJ	ProxyRevocable	1356	omit	JSParameterCount(2), kReceiver, kTarget, kHandler
+TFJ	ProxyRevoke	1357	omit	JSParameterCount(0), kReceiver
+TFC	ProxySetProperty	1358	unchanged	ProxySetProperty
+TFC	ProxySetPrototypeOf	1359	unchanged	ProxySetPrototypeOf
+TFJ	ReflectIsExtensible	1360	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ReflectPreventExtensions	1361	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ReflectGetPrototypeOf	1362	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ReflectSetPrototypeOf	1363	omit	JSParameterCount(2), kReceiver, kObject, kProto
+TFJ	ReflectGet	1364	omit	kDontAdaptArgumentsSentinel
+TFJ	ReflectDeleteProperty	1365	omit	JSParameterCount(2), kReceiver, kObject, kKey
+TFJ	ReflectHas	1366	omit	JSParameterCount(2), kReceiver, kObject, kKey
+TFJ	ReflectGetOwnPropertyDescriptor	1367	omit	JSParameterCount(2), kReceiver, kTarget, kPropertyKey
+TFJ	SetPrototypeDifference	1368	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIntersection	1369	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIsDisjointFrom	1370	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIsSubsetOf	1371	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIsSupersetOf	1372	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeSymmetricDifference	1373	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeUnion	1374	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	StringPrototypeAt	1375	omit	JSParameterCount(1), kReceiver, kIndex
+TFJ	StringPrototypeEndsWith	1376	omit	kDontAdaptArgumentsSentinel
+TFC	CreateHTML	1377	unchanged	CreateHTML
+TFJ	StringPrototypeAnchor	1378	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeBig	1379	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeBlink	1380	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeBold	1381	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeFontcolor	1382	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeFontsize	1383	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeFixed	1384	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeItalics	1385	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeLink	1386	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSmall	1387	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeStrike	1388	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSub	1389	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSup	1390	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIncludes	1391	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIndexOf	1392	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIsWellFormed	1393	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIterator	1394	retain	JSParameterCount(0), kReceiver
+TFJ	StringIteratorPrototypeNext	1395	retain	JSParameterCount(0), kReceiver
+TFJ	StringPrototypePadStart	1396	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypePadEnd	1397	omit	kDontAdaptArgumentsSentinel
+TFC	StringRepeat	1398	unchanged	StringRepeat
+TFJ	StringPrototypeRepeat	1399	omit	JSParameterCount(1), kReceiver, kCount
+TFJ	StringPrototypeSlice	1400	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeStartsWith	1401	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSubstr	1402	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSubstring	1403	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeToWellFormed	1404	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeTrim	1405	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeTrimStart	1406	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeTrimEnd	1407	omit	kDontAdaptArgumentsSentinel
+TFJ	SuppressedErrorConstructor	1408	omit	kDontAdaptArgumentsSentinel
+TFJ	SymbolPrototypeDescriptionGetter	1409	omit	JSParameterCount(0), kReceiver
+TFJ	SymbolPrototypeToPrimitive	1410	retain	JSParameterCount(1), kReceiver, kHint
+TFJ	SymbolPrototypeToString	1411	retain	JSParameterCount(0), kReceiver
+TFJ	SymbolPrototypeValueOf	1412	retain	JSParameterCount(0), kReceiver
+TFJ	TypedArrayPrototypeAt	1413	omit	JSParameterCount(1), kReceiver, kIndex
+TFC	CreateTypedArray	1414	unchanged	CreateTypedArray
+TFJ	TypedArrayPrototypeEvery	1415	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeEntries	1416	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFilter	1417	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFind	1418	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFindIndex	1419	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFindLast	1420	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFindLastIndex	1421	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeForEach	1422	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayFrom	1423	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeKeys	1424	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayOf	1425	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeReduce	1426	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeReduceRight	1427	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSet	1428	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSlice	1429	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSome	1430	omit	kDontAdaptArgumentsSentinel
+TFC	TypedArrayMergeSort	1431	unchanged	TypedArrayMergeSort
+TFJ	TypedArrayPrototypeSort	1432	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSubArray	1433	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeToReversed	1434	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeToSorted	1435	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeValues	1436	retain	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeWith	1437	omit	JSParameterCount(2), kReceiver, kIndex, kValueArg
+TFJ	WeakRefConstructor	1438	omit	kDontAdaptArgumentsSentinel
+TFJ	WeakRefDeref	1439	omit	JSParameterCount(0), kReceiver
+TFC	NewSloppyArgumentsElements	1440	unchanged	NewSloppyArgumentsElements
+TFC	NewStrictArgumentsElements	1441	unchanged	NewStrictArgumentsElements
+TFC	NewRestArgumentsElements	1442	unchanged	NewRestArgumentsElements
+TFC	FastNewSloppyArguments	1443	unchanged	FastNewSloppyArguments
+TFC	FastNewStrictArguments	1444	unchanged	FastNewStrictArguments
+TFC	FastNewRestArguments	1445	unchanged	FastNewRestArguments
+TFC	StoreCurrentScriptContextSlotBaseline	1446	unchanged	StoreCurrentScriptContextSlotBaseline
+TFC	StoreScriptContextSlotBaseline	1447	unchanged	StoreScriptContextSlotBaseline
+TFC	StringSlowFlatten	1448	unchanged	StringSlowFlatten
+TFC	StringIndexOf	1449	unchanged	StringIndexOf
+TFC	TestTurbofanType	1450	unchanged	TestTurbofanType
+TFC	CheckTurbofanType	1451	unchanged	CheckTurbofanType
+TFC	CheckTurboshaftWord32Type	1452	unchanged	CheckTurboshaftWord32Type
+TFC	CheckTurboshaftWord64Type	1453	unchanged	CheckTurboshaftWord64Type
+TFC	CheckTurboshaftFloat32Type	1454	unchanged	CheckTurboshaftFloat32Type
+TFC	CheckTurboshaftFloat64Type	1455	unchanged	CheckTurboshaftFloat64Type
+TFC	DebugPrintWordPtr	1456	unchanged	DebugPrintWordPtr
+TFC	DebugPrintFloat64	1457	unchanged	DebugPrintFloat64
+TFC	GenericBuiltinTest_JSAny_0	1458	unchanged	GenericBuiltinTest_JSAny_0
+TFC	TestHelperPlus1	1459	unchanged	TestHelperPlus1
+TFC	TestHelperPlus2	1460	unchanged	TestHelperPlus2
+TFC	NewSmiBox	1461	unchanged	NewSmiBox
+TFC	ReturnTwoValues	1462	unchanged	ReturnTwoValues
+TFC	ThrowAsBuiltin	1463	unchanged	ThrowAsBuiltin
+TFC	TestCallNever	1464	unchanged	TestCallNever
+TFC	Load_FastSmiElements_0	1465	unchanged	Load_FastSmiElements_0
+TFC	Load_FastObjectElements_0	1466	unchanged	Load_FastObjectElements_0
+TFC	Load_FastDoubleElements_0	1467	unchanged	Load_FastDoubleElements_0
+TFC	Store_FastSmiElements_0	1468	unchanged	Store_FastSmiElements_0
+TFC	Store_FastObjectElements_0	1469	unchanged	Store_FastObjectElements_0
+TFC	Store_FastDoubleElements_0	1470	unchanged	Store_FastDoubleElements_0
+TFC	Delete_FastSmiElements_0	1471	unchanged	Delete_FastSmiElements_0
+TFC	Delete_FastObjectElements_0	1472	unchanged	Delete_FastObjectElements_0
+TFC	Delete_FastDoubleElements_0	1473	unchanged	Delete_FastDoubleElements_0
+TFC	SortCompareDefault	1474	unchanged	SortCompareDefault
+TFC	SortCompareUserFn	1475	unchanged	SortCompareUserFn
+TFC	CanUseSameAccessor_GenericElementsAccessor_0	1476	unchanged	CanUseSameAccessor_GenericElementsAccessor_0
+TFC	Copy	1477	unchanged	Copy
+TFC	MergeAt	1478	unchanged	MergeAt
+TFC	GallopLeft	1479	unchanged	GallopLeft
+TFC	GallopRight	1480	unchanged	GallopRight
+TFC	ArrayTimSort	1481	unchanged	ArrayTimSort
+TFJ	ArrayPrototypeSort	1482	omit	kDontAdaptArgumentsSentinel
+TFJ	JSToJSWrapperInvalidSig	1483	retain	JSParameterCount(0), kReceiver
+TFJ	JSToJSWrapper	1484	retain	kDontAdaptArgumentsSentinel
+TFJ	JSToWasmWrapper	1485	retain	kDontAdaptArgumentsSentinel
+TFJ	WasmPromising	1486	retain	kDontAdaptArgumentsSentinel
+TFC	JSToWasmHandleReturns	1487	unchanged	JSToWasmHandleReturns
+TFC	WasmInt32ToHeapNumber	1488	unchanged	WasmInt32ToHeapNumber
+TFC	WasmFuncRefToJS	1489	unchanged	WasmFuncRefToJS
+TFC	WasmTaggedNonSmiToInt32	1490	unchanged	WasmTaggedNonSmiToInt32
+TFC	WasmTaggedToFloat64	1491	unchanged	WasmTaggedToFloat64
+TFC	WasmTaggedToFloat32	1492	unchanged	WasmTaggedToFloat32
+TFC	WasmMemoryGrow	1493	unchanged	WasmMemoryGrow
+TFC	WasmTableInit	1494	unchanged	WasmTableInit
+TFC	WasmTableCopy	1495	unchanged	WasmTableCopy
+TFC	WasmTableFill	1496	unchanged	WasmTableFill
+TFC	WasmTableGrow	1497	unchanged	WasmTableGrow
+TFC	WasmTableGet	1498	unchanged	WasmTableGet
+TFC	WasmTableSet	1499	unchanged	WasmTableSet
+TFC	WasmTableGetFuncRef	1500	unchanged	WasmTableGetFuncRef
+TFC	WasmFunctionTableGet	1501	unchanged	WasmFunctionTableGet
+TFC	WasmTableSetFuncRef	1502	unchanged	WasmTableSetFuncRef
+TFC	WasmRefFunc	1503	unchanged	WasmRefFunc
+TFC	WasmInternalFunctionCreateExternal	1504	unchanged	WasmInternalFunctionCreateExternal
+TFC	WasmAllocateZeroedFixedArray	1505	unchanged	WasmAllocateZeroedFixedArray
+TFC	WasmAllocateFixedArray	1506	unchanged	WasmAllocateFixedArray
+TFC	WasmLiftoffDeoptFinish	1507	unchanged	WasmLiftoffDeoptFinish
+TFC	WasmThrow	1508	unchanged	WasmThrow
+TFC	WasmRethrow	1509	unchanged	WasmRethrow
+TFC	WasmRethrowExplicitContext	1510	unchanged	WasmRethrowExplicitContext
+TFC	WasmTriggerTierUp	1511	unchanged	WasmTriggerTierUp
+TFC	WasmStackGuard	1512	unchanged	WasmStackGuard
+TFC	WasmStackOverflow	1513	unchanged	WasmStackOverflow
+TFC	WasmTraceMemory	1514	unchanged	WasmTraceMemory
+TFC	WasmTraceEnter	1515	unchanged	WasmTraceEnter
+TFC	WasmTraceExit	1516	unchanged	WasmTraceExit
+TFC	WasmAllocateJSArray	1517	unchanged	WasmAllocateJSArray
+TFC	WasmAllocateStructWithRtt	1518	unchanged	WasmAllocateStructWithRtt
+TFC	WasmAllocateArray_Uninitialized	1519	unchanged	WasmAllocateArray_Uninitialized
+TFC	WasmArrayNewSegment	1520	unchanged	WasmArrayNewSegment
+TFC	WasmArrayInitSegment	1521	unchanged	WasmArrayInitSegment
+TFC	WasmArrayCopy	1522	unchanged	WasmArrayCopy
+TFC	WasmUint32ToNumber	1523	unchanged	WasmUint32ToNumber
+TFC	UintPtr53ToNumber	1524	unchanged	UintPtr53ToNumber
+TFC	WasmI32AtomicWait	1525	unchanged	WasmI32AtomicWait
+TFC	WasmI64AtomicWait	1526	unchanged	WasmI64AtomicWait
+TFC	CallRefIC	1527	unchanged	CallRefIC
+TFC	CallIndirectIC	1528	unchanged	CallIndirectIC
+TFC	WasmGetOwnProperty	1529	unchanged	WasmGetOwnProperty
+TFC	WasmTrap	1530	unchanged	WasmTrap
+TFC	ThrowWasmTrapUnreachable	1531	unchanged	ThrowWasmTrapUnreachable
+TFC	WasmTrapHandlerThrowTrap	1532	unchanged	WasmTrapHandlerThrowTrap
+TFC	WasmPropagateException	1533	unchanged	WasmPropagateException
+TFC	ThrowWasmTrapMemOutOfBounds	1534	unchanged	ThrowWasmTrapMemOutOfBounds
+TFC	ThrowWasmTrapUnalignedAccess	1535	unchanged	ThrowWasmTrapUnalignedAccess
+TFC	ThrowWasmTrapDivByZero	1536	unchanged	ThrowWasmTrapDivByZero
+TFC	ThrowWasmTrapDivUnrepresentable	1537	unchanged	ThrowWasmTrapDivUnrepresentable
+TFC	ThrowWasmTrapRemByZero	1538	unchanged	ThrowWasmTrapRemByZero
+TFC	ThrowWasmTrapFloatUnrepresentable	1539	unchanged	ThrowWasmTrapFloatUnrepresentable
+TFC	ThrowWasmTrapFuncSigMismatch	1540	unchanged	ThrowWasmTrapFuncSigMismatch
+TFC	ThrowWasmTrapDataSegmentOutOfBounds	1541	unchanged	ThrowWasmTrapDataSegmentOutOfBounds
+TFC	ThrowWasmTrapElementSegmentOutOfBounds	1542	unchanged	ThrowWasmTrapElementSegmentOutOfBounds
+TFC	ThrowWasmTrapTableOutOfBounds	1543	unchanged	ThrowWasmTrapTableOutOfBounds
+TFC	ThrowWasmTrapRethrowNull	1544	unchanged	ThrowWasmTrapRethrowNull
+TFC	ThrowWasmTrapNullDereference	1545	unchanged	ThrowWasmTrapNullDereference
+TFC	ThrowWasmTrapIllegalCast	1546	unchanged	ThrowWasmTrapIllegalCast
+TFC	ThrowWasmTrapArrayOutOfBounds	1547	unchanged	ThrowWasmTrapArrayOutOfBounds
+TFC	ThrowWasmTrapArrayTooLarge	1548	unchanged	ThrowWasmTrapArrayTooLarge
+TFC	ThrowWasmTrapStringOffsetOutOfBounds	1549	unchanged	ThrowWasmTrapStringOffsetOutOfBounds
+TFC	WasmStringNewWtf8	1550	unchanged	WasmStringNewWtf8
+TFC	WasmStringNewWtf8Array	1551	unchanged	WasmStringNewWtf8Array
+TFC	WasmStringNewWtf16	1552	unchanged	WasmStringNewWtf16
+TFC	WasmStringNewWtf16Array	1553	unchanged	WasmStringNewWtf16Array
+TFC	WasmStringFromDataSegment	1554	unchanged	WasmStringFromDataSegment
+TFC	WasmStringAsWtf16	1555	unchanged	WasmStringAsWtf16
+TFC	WasmStringConst	1556	unchanged	WasmStringConst
+TFC	WasmStringMeasureUtf8	1557	unchanged	WasmStringMeasureUtf8
+TFC	WasmStringMeasureWtf8	1558	unchanged	WasmStringMeasureWtf8
+TFC	WasmStringEncodeWtf8	1559	unchanged	WasmStringEncodeWtf8
+TFC	WasmStringEncodeWtf8Array	1560	unchanged	WasmStringEncodeWtf8Array
+TFC	WasmStringToUtf8Array	1561	unchanged	WasmStringToUtf8Array
+TFC	WasmStringEncodeWtf16	1562	unchanged	WasmStringEncodeWtf16
+TFC	WasmStringEncodeWtf16Array	1563	unchanged	WasmStringEncodeWtf16Array
+TFC	ThrowToLowerCaseCalledOnNull	1564	unchanged	ThrowToLowerCaseCalledOnNull
+TFC	ThrowIndexOfCalledOnNull	1565	unchanged	ThrowIndexOfCalledOnNull
+TFC	ThrowDataViewTypeError	1566	unchanged	ThrowDataViewTypeError
+TFC	ThrowDataViewDetachedError	1567	unchanged	ThrowDataViewDetachedError
+TFC	ThrowDataViewOutOfBounds	1568	unchanged	ThrowDataViewOutOfBounds
+TFC	WasmStringConcat	1569	unchanged	WasmStringConcat
+TFC	WasmStringEqual	1570	unchanged	WasmStringEqual
+TFC	WasmStringIsUSVSequence	1571	unchanged	WasmStringIsUSVSequence
+TFC	WasmStringAsWtf8	1572	unchanged	WasmStringAsWtf8
+TFC	WasmStringViewWtf8Advance	1573	unchanged	WasmStringViewWtf8Advance
+TFC	WasmStringViewWtf8Encode	1574	unchanged	WasmStringViewWtf8Encode
+TFC	WasmStringViewWtf8Slice	1575	unchanged	WasmStringViewWtf8Slice
+TFC	WasmStringViewWtf16GetCodeUnit	1576	unchanged	WasmStringViewWtf16GetCodeUnit
+TFC	WasmStringViewWtf16Encode	1577	unchanged	WasmStringViewWtf16Encode
+TFC	WasmStringViewWtf16Slice	1578	unchanged	WasmStringViewWtf16Slice
+TFC	WasmStringAsIter	1579	unchanged	WasmStringAsIter
+TFC	WasmStringCodePointAt	1580	unchanged	WasmStringCodePointAt
+TFC	WasmStringViewIterNext	1581	unchanged	WasmStringViewIterNext
+TFC	WasmStringViewIterAdvance	1582	unchanged	WasmStringViewIterAdvance
+TFC	WasmStringViewIterRewind	1583	unchanged	WasmStringViewIterRewind
+TFC	WasmStringViewIterSlice	1584	unchanged	WasmStringViewIterSlice
+TFC	WasmIntToString	1585	unchanged	WasmIntToString
+TFC	WasmStringToDouble	1586	unchanged	WasmStringToDouble
+TFC	WasmStringFromCodePoint	1587	unchanged	WasmStringFromCodePoint
+TFC	WasmStringHash	1588	unchanged	WasmStringHash
+TFC	WasmAnyConvertExtern	1589	unchanged	WasmAnyConvertExtern
+TFC	WasmFastApiCallTypeCheckAndUpdateIC	1590	unchanged	WasmFastApiCallTypeCheckAndUpdateIC
+TFJ	WebAssemblyStringCast	1591	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringTest	1592	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromWtf16Array	1593	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromUtf8Array	1594	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringIntoUtf8Array	1595	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringToUtf8Array	1596	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringToWtf16Array	1597	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromCharCode	1598	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromCodePoint	1599	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringCodePointAt	1600	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringCharCodeAt	1601	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringLength	1602	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringMeasureUtf8	1603	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringConcat	1604	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringSubstring	1605	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringEquals	1606	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringCompare	1607	retain	kDontAdaptArgumentsSentinel
+TFC	LoadJoinElement_GenericElementsAccessor_0	1608	unchanged	LoadJoinElement_GenericElementsAccessor_0
+TFC	LoadJoinTypedElement_Int32Elements_0	1609	unchanged	LoadJoinTypedElement_Int32Elements_0
+TFC	LoadJoinTypedElement_Float16Elements_0	1610	unchanged	LoadJoinTypedElement_Float16Elements_0
+TFC	LoadJoinTypedElement_Float32Elements_0	1611	unchanged	LoadJoinTypedElement_Float32Elements_0
+TFC	LoadJoinTypedElement_Float64Elements_0	1612	unchanged	LoadJoinTypedElement_Float64Elements_0
+TFC	LoadJoinTypedElement_Uint8ClampedElements_0	1613	unchanged	LoadJoinTypedElement_Uint8ClampedElements_0
+TFC	LoadJoinTypedElement_BigUint64Elements_0	1614	unchanged	LoadJoinTypedElement_BigUint64Elements_0
+TFC	LoadJoinTypedElement_BigInt64Elements_0	1615	unchanged	LoadJoinTypedElement_BigInt64Elements_0
+TFC	LoadJoinTypedElement_Uint8Elements_0	1616	unchanged	LoadJoinTypedElement_Uint8Elements_0
+TFC	LoadJoinTypedElement_Int8Elements_0	1617	unchanged	LoadJoinTypedElement_Int8Elements_0
+TFC	LoadJoinTypedElement_Uint16Elements_0	1618	unchanged	LoadJoinTypedElement_Uint16Elements_0
+TFC	LoadJoinTypedElement_Int16Elements_0	1619	unchanged	LoadJoinTypedElement_Int16Elements_0
+TFC	LoadJoinTypedElement_Uint32Elements_0	1620	unchanged	LoadJoinTypedElement_Uint32Elements_0
+TFC	GenericBuiltinTest_Smi_0	1621	unchanged	GenericBuiltinTest_Smi_0
+TFC	CanUseSameAccessor_FastDoubleElements_0	1622	unchanged	CanUseSameAccessor_FastDoubleElements_0
+TFC	CanUseSameAccessor_FastSmiElements_0	1623	unchanged	CanUseSameAccessor_FastSmiElements_0
+TFC	CanUseSameAccessor_FastObjectElements_0	1624	unchanged	CanUseSameAccessor_FastObjectElements_0
+TFC	LoadNoHasPropertyCheck_GenericElementsAccessor_0	1625	unchanged	LoadNoHasPropertyCheck_GenericElementsAccessor_0
+TFC	Load_GenericElementsAccessor_0	1626	unchanged	Load_GenericElementsAccessor_0
+TFC	Store_GenericElementsAccessor_0	1627	unchanged	Store_GenericElementsAccessor_0
+TFC	Delete_GenericElementsAccessor_0	1628	unchanged	Delete_GenericElementsAccessor_0
+TFC	LoadTypedElement_Int32Elements_0	1629	unchanged	LoadTypedElement_Int32Elements_0
+TFC	StoreTypedElementNumeric_Int32Elements_0	1630	unchanged	StoreTypedElementNumeric_Int32Elements_0
+TFC	StoreTypedElementJSAny_Int32Elements_0	1631	unchanged	StoreTypedElementJSAny_Int32Elements_0
+TFC	LoadTypedElement_Float16Elements_0	1632	unchanged	LoadTypedElement_Float16Elements_0
+TFC	StoreTypedElementNumeric_Float16Elements_0	1633	unchanged	StoreTypedElementNumeric_Float16Elements_0
+TFC	StoreTypedElementJSAny_Float16Elements_0	1634	unchanged	StoreTypedElementJSAny_Float16Elements_0
+TFC	LoadTypedElement_Float32Elements_0	1635	unchanged	LoadTypedElement_Float32Elements_0
+TFC	StoreTypedElementNumeric_Float32Elements_0	1636	unchanged	StoreTypedElementNumeric_Float32Elements_0
+TFC	StoreTypedElementJSAny_Float32Elements_0	1637	unchanged	StoreTypedElementJSAny_Float32Elements_0
+TFC	LoadTypedElement_Float64Elements_0	1638	unchanged	LoadTypedElement_Float64Elements_0
+TFC	StoreTypedElementNumeric_Float64Elements_0	1639	unchanged	StoreTypedElementNumeric_Float64Elements_0
+TFC	StoreTypedElementJSAny_Float64Elements_0	1640	unchanged	StoreTypedElementJSAny_Float64Elements_0
+TFC	LoadTypedElement_Uint8ClampedElements_0	1641	unchanged	LoadTypedElement_Uint8ClampedElements_0
+TFC	StoreTypedElementNumeric_Uint8ClampedElements_0	1642	unchanged	StoreTypedElementNumeric_Uint8ClampedElements_0
+TFC	StoreTypedElementJSAny_Uint8ClampedElements_0	1643	unchanged	StoreTypedElementJSAny_Uint8ClampedElements_0
+TFC	LoadTypedElement_BigUint64Elements_0	1644	unchanged	LoadTypedElement_BigUint64Elements_0
+TFC	StoreTypedElementNumeric_BigUint64Elements_0	1645	unchanged	StoreTypedElementNumeric_BigUint64Elements_0
+TFC	StoreTypedElementJSAny_BigUint64Elements_0	1646	unchanged	StoreTypedElementJSAny_BigUint64Elements_0
+TFC	LoadTypedElement_BigInt64Elements_0	1647	unchanged	LoadTypedElement_BigInt64Elements_0
+TFC	StoreTypedElementNumeric_BigInt64Elements_0	1648	unchanged	StoreTypedElementNumeric_BigInt64Elements_0
+TFC	StoreTypedElementJSAny_BigInt64Elements_0	1649	unchanged	StoreTypedElementJSAny_BigInt64Elements_0
+TFC	LoadTypedElement_Uint8Elements_0	1650	unchanged	LoadTypedElement_Uint8Elements_0
+TFC	StoreTypedElementNumeric_Uint8Elements_0	1651	unchanged	StoreTypedElementNumeric_Uint8Elements_0
+TFC	StoreTypedElementJSAny_Uint8Elements_0	1652	unchanged	StoreTypedElementJSAny_Uint8Elements_0
+TFC	LoadTypedElement_Int8Elements_0	1653	unchanged	LoadTypedElement_Int8Elements_0
+TFC	StoreTypedElementNumeric_Int8Elements_0	1654	unchanged	StoreTypedElementNumeric_Int8Elements_0
+TFC	StoreTypedElementJSAny_Int8Elements_0	1655	unchanged	StoreTypedElementJSAny_Int8Elements_0
+TFC	LoadTypedElement_Uint16Elements_0	1656	unchanged	LoadTypedElement_Uint16Elements_0
+TFC	StoreTypedElementNumeric_Uint16Elements_0	1657	unchanged	StoreTypedElementNumeric_Uint16Elements_0
+TFC	StoreTypedElementJSAny_Uint16Elements_0	1658	unchanged	StoreTypedElementJSAny_Uint16Elements_0
+TFC	LoadTypedElement_Int16Elements_0	1659	unchanged	LoadTypedElement_Int16Elements_0
+TFC	StoreTypedElementNumeric_Int16Elements_0	1660	unchanged	StoreTypedElementNumeric_Int16Elements_0
+TFC	StoreTypedElementJSAny_Int16Elements_0	1661	unchanged	StoreTypedElementJSAny_Int16Elements_0
+TFC	LoadTypedElement_Uint32Elements_0	1662	unchanged	LoadTypedElement_Uint32Elements_0
+TFC	StoreTypedElementNumeric_Uint32Elements_0	1663	unchanged	StoreTypedElementNumeric_Uint32Elements_0
+TFC	StoreTypedElementJSAny_Uint32Elements_0	1664	unchanged	StoreTypedElementJSAny_Uint32Elements_0
+CPP	StringPrototypeNormalize	1665	omit	-
+CPP	StringPrototypeToLocaleLowerCase	1666	omit	-
+CPP	StringPrototypeToLocaleUpperCase	1667	omit	-
+CPP	StringPrototypeToLowerCase	1668	omit	-
+CPP	StringPrototypeToUpperCase	1669	omit	-
+BCH	WideHandler	1670	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kWide
+BCH	ExtraWideHandler	1671	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kExtraWide
+BCH	DebugBreakWideHandler	1672	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreakWide
+BCH	DebugBreakExtraWideHandler	1673	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreakExtraWide
+BCH	DebugBreak0Handler	1674	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreak0
+BCH	DebugBreak1Handler	1675	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreak1
+BCH	DebugBreak2Handler	1676	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreak2
+BCH	DebugBreak3Handler	1677	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreak3
+BCH	DebugBreak4Handler	1678	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreak4
+BCH	DebugBreak5Handler	1679	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreak5
+BCH	DebugBreak6Handler	1680	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugBreak6
+BCH	LdarHandler	1681	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdar
+BCH	LdaZeroHandler	1682	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaZero
+BCH	LdaSmiHandler	1683	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaSmi
+BCH	LdaUndefinedHandler	1684	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaUndefined
+BCH	LdaNullHandler	1685	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaNull
+BCH	LdaTheHoleHandler	1686	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaTheHole
+BCH	LdaTrueHandler	1687	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaTrue
+BCH	LdaFalseHandler	1688	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaFalse
+BCH	LdaConstantHandler	1689	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaConstant
+BCH	LdaContextSlotHandler	1690	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaContextSlot
+BCH	LdaImmutableContextSlotHandler	1691	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaImmutableContextSlot
+BCH	LdaCurrentContextSlotHandler	1692	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaCurrentContextSlot
+BCH	LdaImmutableCurrentContextSlotHandler	1693	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaImmutableCurrentContextSlot
+BCH	StarHandler	1694	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStar
+BCH	MovHandler	1695	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kMov
+BCH	PushContextHandler	1696	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kPushContext
+BCH	PopContextHandler	1697	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kPopContext
+BCH	TestReferenceEqualHandler	1698	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestReferenceEqual
+BCH	TestUndetectableHandler	1699	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestUndetectable
+BCH	TestNullHandler	1700	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestNull
+BCH	TestUndefinedHandler	1701	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestUndefined
+BCH	TestTypeOfHandler	1702	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestTypeOf
+BCH	LdaGlobalHandler	1703	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaGlobal
+BCH	LdaGlobalInsideTypeofHandler	1704	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaGlobalInsideTypeof
+BCH	StaGlobalHandler	1705	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaGlobal
+BCH	StaContextSlotHandler	1706	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaContextSlot
+BCH	StaCurrentContextSlotHandler	1707	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaCurrentContextSlot
+BCH	StaScriptContextSlotHandler	1708	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaScriptContextSlot
+BCH	StaCurrentScriptContextSlotHandler	1709	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaCurrentScriptContextSlot
+BCH	LdaLookupSlotHandler	1710	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaLookupSlot
+BCH	LdaLookupContextSlotHandler	1711	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaLookupContextSlot
+BCH	LdaLookupGlobalSlotHandler	1712	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaLookupGlobalSlot
+BCH	LdaLookupSlotInsideTypeofHandler	1713	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaLookupSlotInsideTypeof
+BCH	LdaLookupContextSlotInsideTypeofHandler	1714	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaLookupContextSlotInsideTypeof
+BCH	LdaLookupGlobalSlotInsideTypeofHandler	1715	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaLookupGlobalSlotInsideTypeof
+BCH	StaLookupSlotHandler	1716	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaLookupSlot
+BCH	GetNamedPropertyHandler	1717	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kGetNamedProperty
+BCH	GetNamedPropertyFromSuperHandler	1718	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kGetNamedPropertyFromSuper
+BCH	GetKeyedPropertyHandler	1719	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kGetKeyedProperty
+BCH	GetEnumeratedKeyedPropertyHandler	1720	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kGetEnumeratedKeyedProperty
+BCH	LdaModuleVariableHandler	1721	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLdaModuleVariable
+BCH	StaModuleVariableHandler	1722	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaModuleVariable
+BCH	SetNamedPropertyHandler	1723	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSetNamedProperty
+BCH	DefineNamedOwnPropertyHandler	1724	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDefineNamedOwnProperty
+BCH	SetKeyedPropertyHandler	1725	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSetKeyedProperty
+BCH	DefineKeyedOwnPropertyHandler	1726	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDefineKeyedOwnProperty
+BCH	StaInArrayLiteralHandler	1727	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStaInArrayLiteral
+BCH	DefineKeyedOwnPropertyInLiteralHandler	1728	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDefineKeyedOwnPropertyInLiteral
+BCH	AddHandler	1729	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kAdd
+BCH	SubHandler	1730	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSub
+BCH	MulHandler	1731	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kMul
+BCH	DivHandler	1732	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDiv
+BCH	ModHandler	1733	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kMod
+BCH	ExpHandler	1734	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kExp
+BCH	BitwiseOrHandler	1735	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kBitwiseOr
+BCH	BitwiseXorHandler	1736	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kBitwiseXor
+BCH	BitwiseAndHandler	1737	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kBitwiseAnd
+BCH	ShiftLeftHandler	1738	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kShiftLeft
+BCH	ShiftRightHandler	1739	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kShiftRight
+BCH	ShiftRightLogicalHandler	1740	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kShiftRightLogical
+BCH	AddSmiHandler	1741	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kAddSmi
+BCH	SubSmiHandler	1742	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSubSmi
+BCH	MulSmiHandler	1743	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kMulSmi
+BCH	DivSmiHandler	1744	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDivSmi
+BCH	ModSmiHandler	1745	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kModSmi
+BCH	ExpSmiHandler	1746	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kExpSmi
+BCH	BitwiseOrSmiHandler	1747	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kBitwiseOrSmi
+BCH	BitwiseXorSmiHandler	1748	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kBitwiseXorSmi
+BCH	BitwiseAndSmiHandler	1749	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kBitwiseAndSmi
+BCH	ShiftLeftSmiHandler	1750	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kShiftLeftSmi
+BCH	ShiftRightSmiHandler	1751	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kShiftRightSmi
+BCH	ShiftRightLogicalSmiHandler	1752	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kShiftRightLogicalSmi
+BCH	IncHandler	1753	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kInc
+BCH	DecHandler	1754	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDec
+BCH	NegateHandler	1755	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kNegate
+BCH	BitwiseNotHandler	1756	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kBitwiseNot
+BCH	ToBooleanLogicalNotHandler	1757	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kToBooleanLogicalNot
+BCH	LogicalNotHandler	1758	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kLogicalNot
+BCH	TypeOfHandler	1759	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTypeOf
+BCH	DeletePropertyStrictHandler	1760	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDeletePropertyStrict
+BCH	DeletePropertySloppyHandler	1761	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDeletePropertySloppy
+BCH	GetSuperConstructorHandler	1762	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kGetSuperConstructor
+BCH	FindNonDefaultConstructorOrConstructHandler	1763	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kFindNonDefaultConstructorOrConstruct
+BCH	CallAnyReceiverHandler	1764	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallAnyReceiver
+BCH	CallPropertyHandler	1765	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallProperty
+BCH	CallProperty0Handler	1766	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallProperty0
+BCH	CallProperty1Handler	1767	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallProperty1
+BCH	CallProperty2Handler	1768	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallProperty2
+BCH	CallUndefinedReceiverHandler	1769	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallUndefinedReceiver
+BCH	CallUndefinedReceiver0Handler	1770	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallUndefinedReceiver0
+BCH	CallUndefinedReceiver1Handler	1771	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallUndefinedReceiver1
+BCH	CallUndefinedReceiver2Handler	1772	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallUndefinedReceiver2
+BCH	CallWithSpreadHandler	1773	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallWithSpread
+BCH	CallRuntimeHandler	1774	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallRuntime
+BCH	CallRuntimeForPairHandler	1775	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallRuntimeForPair
+BCH	CallJSRuntimeHandler	1776	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCallJSRuntime
+BCH	InvokeIntrinsicHandler	1777	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kInvokeIntrinsic
+BCH	ConstructHandler	1778	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kConstruct
+BCH	ConstructWithSpreadHandler	1779	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kConstructWithSpread
+BCH	ConstructForwardAllArgsHandler	1780	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kConstructForwardAllArgs
+BCH	TestEqualHandler	1781	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestEqual
+BCH	TestEqualStrictHandler	1782	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestEqualStrict
+BCH	TestLessThanHandler	1783	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestLessThan
+BCH	TestGreaterThanHandler	1784	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestGreaterThan
+BCH	TestLessThanOrEqualHandler	1785	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestLessThanOrEqual
+BCH	TestGreaterThanOrEqualHandler	1786	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestGreaterThanOrEqual
+BCH	TestInstanceOfHandler	1787	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestInstanceOf
+BCH	TestInHandler	1788	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kTestIn
+BCH	ToNameHandler	1789	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kToName
+BCH	ToNumberHandler	1790	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kToNumber
+BCH	ToNumericHandler	1791	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kToNumeric
+BCH	ToObjectHandler	1792	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kToObject
+BCH	ToStringHandler	1793	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kToString
+BCH	ToBooleanHandler	1794	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kToBoolean
+BCH	CreateRegExpLiteralHandler	1795	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateRegExpLiteral
+BCH	CreateArrayLiteralHandler	1796	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateArrayLiteral
+BCH	CreateArrayFromIterableHandler	1797	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateArrayFromIterable
+BCH	CreateEmptyArrayLiteralHandler	1798	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateEmptyArrayLiteral
+BCH	CreateObjectLiteralHandler	1799	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateObjectLiteral
+BCH	CreateEmptyObjectLiteralHandler	1800	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateEmptyObjectLiteral
+BCH	CloneObjectHandler	1801	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCloneObject
+BCH	GetTemplateObjectHandler	1802	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kGetTemplateObject
+BCH	CreateClosureHandler	1803	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateClosure
+BCH	CreateBlockContextHandler	1804	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateBlockContext
+BCH	CreateCatchContextHandler	1805	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateCatchContext
+BCH	CreateFunctionContextHandler	1806	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateFunctionContext
+BCH	CreateEvalContextHandler	1807	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateEvalContext
+BCH	CreateWithContextHandler	1808	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateWithContext
+BCH	CreateMappedArgumentsHandler	1809	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateMappedArguments
+BCH	CreateUnmappedArgumentsHandler	1810	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateUnmappedArguments
+BCH	CreateRestParameterHandler	1811	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kCreateRestParameter
+BCH	JumpLoopHandler	1812	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpLoop
+BCH	JumpHandler	1813	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJump
+BCH	JumpConstantHandler	1814	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpConstant
+BCH	JumpIfNullConstantHandler	1815	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfNullConstant
+BCH	JumpIfNotNullConstantHandler	1816	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfNotNullConstant
+BCH	JumpIfUndefinedConstantHandler	1817	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfUndefinedConstant
+BCH	JumpIfNotUndefinedConstantHandler	1818	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfNotUndefinedConstant
+BCH	JumpIfUndefinedOrNullConstantHandler	1819	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfUndefinedOrNullConstant
+BCH	JumpIfTrueConstantHandler	1820	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfTrueConstant
+BCH	JumpIfFalseConstantHandler	1821	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfFalseConstant
+BCH	JumpIfJSReceiverConstantHandler	1822	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfJSReceiverConstant
+BCH	JumpIfForInDoneConstantHandler	1823	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfForInDoneConstant
+BCH	JumpIfToBooleanTrueConstantHandler	1824	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfToBooleanTrueConstant
+BCH	JumpIfToBooleanFalseConstantHandler	1825	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfToBooleanFalseConstant
+BCH	JumpIfToBooleanTrueHandler	1826	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfToBooleanTrue
+BCH	JumpIfToBooleanFalseHandler	1827	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfToBooleanFalse
+BCH	JumpIfTrueHandler	1828	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfTrue
+BCH	JumpIfFalseHandler	1829	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfFalse
+BCH	JumpIfNullHandler	1830	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfNull
+BCH	JumpIfNotNullHandler	1831	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfNotNull
+BCH	JumpIfUndefinedHandler	1832	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfUndefined
+BCH	JumpIfNotUndefinedHandler	1833	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfNotUndefined
+BCH	JumpIfUndefinedOrNullHandler	1834	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfUndefinedOrNull
+BCH	JumpIfJSReceiverHandler	1835	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfJSReceiver
+BCH	JumpIfForInDoneHandler	1836	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kJumpIfForInDone
+BCH	SwitchOnSmiNoFeedbackHandler	1837	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSwitchOnSmiNoFeedback
+BCH	ForInEnumerateHandler	1838	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kForInEnumerate
+BCH	ForInPrepareHandler	1839	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kForInPrepare
+BCH	ForInNextHandler	1840	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kForInNext
+BCH	ForInStepHandler	1841	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kForInStep
+BCH	SetPendingMessageHandler	1842	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSetPendingMessage
+BCH	ThrowHandler	1843	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kThrow
+BCH	ReThrowHandler	1844	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kReThrow
+BCH	ReturnHandler	1845	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kReturn
+BCH	ThrowReferenceErrorIfHoleHandler	1846	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kThrowReferenceErrorIfHole
+BCH	ThrowSuperNotCalledIfHoleHandler	1847	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kThrowSuperNotCalledIfHole
+BCH	ThrowSuperAlreadyCalledIfNotHoleHandler	1848	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kThrowSuperAlreadyCalledIfNotHole
+BCH	ThrowIfNotSuperConstructorHandler	1849	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kThrowIfNotSuperConstructor
+BCH	SwitchOnGeneratorStateHandler	1850	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSwitchOnGeneratorState
+BCH	SuspendGeneratorHandler	1851	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kSuspendGenerator
+BCH	ResumeGeneratorHandler	1852	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kResumeGenerator
+BCH	GetIteratorHandler	1853	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kGetIterator
+BCH	DebuggerHandler	1854	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kDebugger
+BCH	IncBlockCounterHandler	1855	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kIncBlockCounter
+BCH	AbortHandler	1856	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kAbort
+BCH	ShortStarHandler	1857	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kStar0
+BCH	IllegalHandler	1858	unchanged	interpreter::OperandScale::kSingle, interpreter::Bytecode::kIllegal
+BCH	DebugBreak1WideHandler	1859	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDebugBreak1
+BCH	DebugBreak2WideHandler	1860	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDebugBreak2
+BCH	DebugBreak3WideHandler	1861	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDebugBreak3
+BCH	DebugBreak4WideHandler	1862	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDebugBreak4
+BCH	DebugBreak5WideHandler	1863	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDebugBreak5
+BCH	DebugBreak6WideHandler	1864	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDebugBreak6
+BCH	LdarWideHandler	1865	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdar
+BCH	LdaSmiWideHandler	1866	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaSmi
+BCH	LdaConstantWideHandler	1867	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaConstant
+BCH	LdaContextSlotWideHandler	1868	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaContextSlot
+BCH	LdaImmutableContextSlotWideHandler	1869	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaImmutableContextSlot
+BCH	LdaCurrentContextSlotWideHandler	1870	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaCurrentContextSlot
+BCH	LdaImmutableCurrentContextSlotWideHandler	1871	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaImmutableCurrentContextSlot
+BCH	StarWideHandler	1872	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStar
+BCH	MovWideHandler	1873	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kMov
+BCH	PushContextWideHandler	1874	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kPushContext
+BCH	PopContextWideHandler	1875	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kPopContext
+BCH	TestReferenceEqualWideHandler	1876	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestReferenceEqual
+BCH	LdaGlobalWideHandler	1877	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaGlobal
+BCH	LdaGlobalInsideTypeofWideHandler	1878	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaGlobalInsideTypeof
+BCH	StaGlobalWideHandler	1879	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaGlobal
+BCH	StaContextSlotWideHandler	1880	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaContextSlot
+BCH	StaCurrentContextSlotWideHandler	1881	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaCurrentContextSlot
+BCH	StaScriptContextSlotWideHandler	1882	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaScriptContextSlot
+BCH	StaCurrentScriptContextSlotWideHandler	1883	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaCurrentScriptContextSlot
+BCH	LdaLookupSlotWideHandler	1884	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaLookupSlot
+BCH	LdaLookupContextSlotWideHandler	1885	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaLookupContextSlot
+BCH	LdaLookupGlobalSlotWideHandler	1886	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaLookupGlobalSlot
+BCH	LdaLookupSlotInsideTypeofWideHandler	1887	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaLookupSlotInsideTypeof
+BCH	LdaLookupContextSlotInsideTypeofWideHandler	1888	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaLookupContextSlotInsideTypeof
+BCH	LdaLookupGlobalSlotInsideTypeofWideHandler	1889	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaLookupGlobalSlotInsideTypeof
+BCH	StaLookupSlotWideHandler	1890	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaLookupSlot
+BCH	GetNamedPropertyWideHandler	1891	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kGetNamedProperty
+BCH	GetNamedPropertyFromSuperWideHandler	1892	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kGetNamedPropertyFromSuper
+BCH	GetKeyedPropertyWideHandler	1893	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kGetKeyedProperty
+BCH	GetEnumeratedKeyedPropertyWideHandler	1894	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kGetEnumeratedKeyedProperty
+BCH	LdaModuleVariableWideHandler	1895	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kLdaModuleVariable
+BCH	StaModuleVariableWideHandler	1896	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaModuleVariable
+BCH	SetNamedPropertyWideHandler	1897	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kSetNamedProperty
+BCH	DefineNamedOwnPropertyWideHandler	1898	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDefineNamedOwnProperty
+BCH	SetKeyedPropertyWideHandler	1899	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kSetKeyedProperty
+BCH	DefineKeyedOwnPropertyWideHandler	1900	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDefineKeyedOwnProperty
+BCH	StaInArrayLiteralWideHandler	1901	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kStaInArrayLiteral
+BCH	DefineKeyedOwnPropertyInLiteralWideHandler	1902	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDefineKeyedOwnPropertyInLiteral
+BCH	AddWideHandler	1903	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kAdd
+BCH	SubWideHandler	1904	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kSub
+BCH	MulWideHandler	1905	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kMul
+BCH	DivWideHandler	1906	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDiv
+BCH	ModWideHandler	1907	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kMod
+BCH	ExpWideHandler	1908	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kExp
+BCH	BitwiseOrWideHandler	1909	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kBitwiseOr
+BCH	BitwiseXorWideHandler	1910	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kBitwiseXor
+BCH	BitwiseAndWideHandler	1911	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kBitwiseAnd
+BCH	ShiftLeftWideHandler	1912	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kShiftLeft
+BCH	ShiftRightWideHandler	1913	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kShiftRight
+BCH	ShiftRightLogicalWideHandler	1914	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kShiftRightLogical
+BCH	AddSmiWideHandler	1915	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kAddSmi
+BCH	SubSmiWideHandler	1916	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kSubSmi
+BCH	MulSmiWideHandler	1917	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kMulSmi
+BCH	DivSmiWideHandler	1918	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDivSmi
+BCH	ModSmiWideHandler	1919	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kModSmi
+BCH	ExpSmiWideHandler	1920	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kExpSmi
+BCH	BitwiseOrSmiWideHandler	1921	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kBitwiseOrSmi
+BCH	BitwiseXorSmiWideHandler	1922	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kBitwiseXorSmi
+BCH	BitwiseAndSmiWideHandler	1923	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kBitwiseAndSmi
+BCH	ShiftLeftSmiWideHandler	1924	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kShiftLeftSmi
+BCH	ShiftRightSmiWideHandler	1925	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kShiftRightSmi
+BCH	ShiftRightLogicalSmiWideHandler	1926	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kShiftRightLogicalSmi
+BCH	IncWideHandler	1927	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kInc
+BCH	DecWideHandler	1928	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDec
+BCH	NegateWideHandler	1929	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kNegate
+BCH	BitwiseNotWideHandler	1930	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kBitwiseNot
+BCH	TypeOfWideHandler	1931	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTypeOf
+BCH	DeletePropertyStrictWideHandler	1932	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDeletePropertyStrict
+BCH	DeletePropertySloppyWideHandler	1933	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kDeletePropertySloppy
+BCH	GetSuperConstructorWideHandler	1934	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kGetSuperConstructor
+BCH	FindNonDefaultConstructorOrConstructWideHandler	1935	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kFindNonDefaultConstructorOrConstruct
+BCH	CallAnyReceiverWideHandler	1936	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallAnyReceiver
+BCH	CallPropertyWideHandler	1937	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallProperty
+BCH	CallProperty0WideHandler	1938	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallProperty0
+BCH	CallProperty1WideHandler	1939	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallProperty1
+BCH	CallProperty2WideHandler	1940	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallProperty2
+BCH	CallUndefinedReceiverWideHandler	1941	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallUndefinedReceiver
+BCH	CallUndefinedReceiver0WideHandler	1942	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallUndefinedReceiver0
+BCH	CallUndefinedReceiver1WideHandler	1943	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallUndefinedReceiver1
+BCH	CallUndefinedReceiver2WideHandler	1944	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallUndefinedReceiver2
+BCH	CallWithSpreadWideHandler	1945	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallWithSpread
+BCH	CallRuntimeWideHandler	1946	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallRuntime
+BCH	CallRuntimeForPairWideHandler	1947	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallRuntimeForPair
+BCH	CallJSRuntimeWideHandler	1948	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCallJSRuntime
+BCH	InvokeIntrinsicWideHandler	1949	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kInvokeIntrinsic
+BCH	ConstructWideHandler	1950	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kConstruct
+BCH	ConstructWithSpreadWideHandler	1951	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kConstructWithSpread
+BCH	ConstructForwardAllArgsWideHandler	1952	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kConstructForwardAllArgs
+BCH	TestEqualWideHandler	1953	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestEqual
+BCH	TestEqualStrictWideHandler	1954	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestEqualStrict
+BCH	TestLessThanWideHandler	1955	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestLessThan
+BCH	TestGreaterThanWideHandler	1956	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestGreaterThan
+BCH	TestLessThanOrEqualWideHandler	1957	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestLessThanOrEqual
+BCH	TestGreaterThanOrEqualWideHandler	1958	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestGreaterThanOrEqual
+BCH	TestInstanceOfWideHandler	1959	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestInstanceOf
+BCH	TestInWideHandler	1960	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kTestIn
+BCH	ToNumberWideHandler	1961	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kToNumber
+BCH	ToNumericWideHandler	1962	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kToNumeric
+BCH	ToObjectWideHandler	1963	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kToObject
+BCH	CreateRegExpLiteralWideHandler	1964	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateRegExpLiteral
+BCH	CreateArrayLiteralWideHandler	1965	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateArrayLiteral
+BCH	CreateEmptyArrayLiteralWideHandler	1966	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateEmptyArrayLiteral
+BCH	CreateObjectLiteralWideHandler	1967	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateObjectLiteral
+BCH	CloneObjectWideHandler	1968	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCloneObject
+BCH	GetTemplateObjectWideHandler	1969	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kGetTemplateObject
+BCH	CreateClosureWideHandler	1970	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateClosure
+BCH	CreateBlockContextWideHandler	1971	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateBlockContext
+BCH	CreateCatchContextWideHandler	1972	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateCatchContext
+BCH	CreateFunctionContextWideHandler	1973	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateFunctionContext
+BCH	CreateEvalContextWideHandler	1974	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateEvalContext
+BCH	CreateWithContextWideHandler	1975	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kCreateWithContext
+BCH	JumpLoopWideHandler	1976	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpLoop
+BCH	JumpWideHandler	1977	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJump
+BCH	JumpConstantWideHandler	1978	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpConstant
+BCH	JumpIfNullConstantWideHandler	1979	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfNullConstant
+BCH	JumpIfNotNullConstantWideHandler	1980	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfNotNullConstant
+BCH	JumpIfUndefinedConstantWideHandler	1981	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfUndefinedConstant
+BCH	JumpIfNotUndefinedConstantWideHandler	1982	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfNotUndefinedConstant
+BCH	JumpIfUndefinedOrNullConstantWideHandler	1983	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfUndefinedOrNullConstant
+BCH	JumpIfTrueConstantWideHandler	1984	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfTrueConstant
+BCH	JumpIfFalseConstantWideHandler	1985	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfFalseConstant
+BCH	JumpIfJSReceiverConstantWideHandler	1986	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfJSReceiverConstant
+BCH	JumpIfForInDoneConstantWideHandler	1987	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfForInDoneConstant
+BCH	JumpIfToBooleanTrueConstantWideHandler	1988	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfToBooleanTrueConstant
+BCH	JumpIfToBooleanFalseConstantWideHandler	1989	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfToBooleanFalseConstant
+BCH	JumpIfToBooleanTrueWideHandler	1990	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfToBooleanTrue
+BCH	JumpIfToBooleanFalseWideHandler	1991	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfToBooleanFalse
+BCH	JumpIfTrueWideHandler	1992	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfTrue
+BCH	JumpIfFalseWideHandler	1993	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfFalse
+BCH	JumpIfNullWideHandler	1994	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfNull
+BCH	JumpIfNotNullWideHandler	1995	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfNotNull
+BCH	JumpIfUndefinedWideHandler	1996	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfUndefined
+BCH	JumpIfNotUndefinedWideHandler	1997	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfNotUndefined
+BCH	JumpIfUndefinedOrNullWideHandler	1998	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfUndefinedOrNull
+BCH	JumpIfJSReceiverWideHandler	1999	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfJSReceiver
+BCH	JumpIfForInDoneWideHandler	2000	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kJumpIfForInDone
+BCH	SwitchOnSmiNoFeedbackWideHandler	2001	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kSwitchOnSmiNoFeedback
+BCH	ForInEnumerateWideHandler	2002	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kForInEnumerate
+BCH	ForInPrepareWideHandler	2003	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kForInPrepare
+BCH	ForInNextWideHandler	2004	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kForInNext
+BCH	ForInStepWideHandler	2005	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kForInStep
+BCH	ThrowReferenceErrorIfHoleWideHandler	2006	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kThrowReferenceErrorIfHole
+BCH	ThrowIfNotSuperConstructorWideHandler	2007	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kThrowIfNotSuperConstructor
+BCH	SwitchOnGeneratorStateWideHandler	2008	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kSwitchOnGeneratorState
+BCH	SuspendGeneratorWideHandler	2009	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kSuspendGenerator
+BCH	ResumeGeneratorWideHandler	2010	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kResumeGenerator
+BCH	GetIteratorWideHandler	2011	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kGetIterator
+BCH	IncBlockCounterWideHandler	2012	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kIncBlockCounter
+BCH	AbortWideHandler	2013	unchanged	interpreter::OperandScale::kDouble, interpreter::Bytecode::kAbort
+BCH	DebugBreak1ExtraWideHandler	2014	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDebugBreak1
+BCH	DebugBreak2ExtraWideHandler	2015	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDebugBreak2
+BCH	DebugBreak3ExtraWideHandler	2016	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDebugBreak3
+BCH	DebugBreak4ExtraWideHandler	2017	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDebugBreak4
+BCH	DebugBreak5ExtraWideHandler	2018	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDebugBreak5
+BCH	DebugBreak6ExtraWideHandler	2019	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDebugBreak6
+BCH	LdarExtraWideHandler	2020	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdar
+BCH	LdaSmiExtraWideHandler	2021	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaSmi
+BCH	LdaConstantExtraWideHandler	2022	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaConstant
+BCH	LdaContextSlotExtraWideHandler	2023	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaContextSlot
+BCH	LdaImmutableContextSlotExtraWideHandler	2024	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaImmutableContextSlot
+BCH	LdaCurrentContextSlotExtraWideHandler	2025	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaCurrentContextSlot
+BCH	LdaImmutableCurrentContextSlotExtraWideHandler	2026	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaImmutableCurrentContextSlot
+BCH	StarExtraWideHandler	2027	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStar
+BCH	MovExtraWideHandler	2028	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kMov
+BCH	PushContextExtraWideHandler	2029	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kPushContext
+BCH	PopContextExtraWideHandler	2030	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kPopContext
+BCH	TestReferenceEqualExtraWideHandler	2031	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestReferenceEqual
+BCH	LdaGlobalExtraWideHandler	2032	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaGlobal
+BCH	LdaGlobalInsideTypeofExtraWideHandler	2033	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaGlobalInsideTypeof
+BCH	StaGlobalExtraWideHandler	2034	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaGlobal
+BCH	StaContextSlotExtraWideHandler	2035	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaContextSlot
+BCH	StaCurrentContextSlotExtraWideHandler	2036	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaCurrentContextSlot
+BCH	StaScriptContextSlotExtraWideHandler	2037	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaScriptContextSlot
+BCH	StaCurrentScriptContextSlotExtraWideHandler	2038	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaCurrentScriptContextSlot
+BCH	LdaLookupSlotExtraWideHandler	2039	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaLookupSlot
+BCH	LdaLookupContextSlotExtraWideHandler	2040	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaLookupContextSlot
+BCH	LdaLookupGlobalSlotExtraWideHandler	2041	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaLookupGlobalSlot
+BCH	LdaLookupSlotInsideTypeofExtraWideHandler	2042	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaLookupSlotInsideTypeof
+BCH	LdaLookupContextSlotInsideTypeofExtraWideHandler	2043	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaLookupContextSlotInsideTypeof
+BCH	LdaLookupGlobalSlotInsideTypeofExtraWideHandler	2044	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaLookupGlobalSlotInsideTypeof
+BCH	StaLookupSlotExtraWideHandler	2045	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaLookupSlot
+BCH	GetNamedPropertyExtraWideHandler	2046	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kGetNamedProperty
+BCH	GetNamedPropertyFromSuperExtraWideHandler	2047	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kGetNamedPropertyFromSuper
+BCH	GetKeyedPropertyExtraWideHandler	2048	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kGetKeyedProperty
+BCH	GetEnumeratedKeyedPropertyExtraWideHandler	2049	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kGetEnumeratedKeyedProperty
+BCH	LdaModuleVariableExtraWideHandler	2050	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kLdaModuleVariable
+BCH	StaModuleVariableExtraWideHandler	2051	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaModuleVariable
+BCH	SetNamedPropertyExtraWideHandler	2052	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kSetNamedProperty
+BCH	DefineNamedOwnPropertyExtraWideHandler	2053	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDefineNamedOwnProperty
+BCH	SetKeyedPropertyExtraWideHandler	2054	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kSetKeyedProperty
+BCH	DefineKeyedOwnPropertyExtraWideHandler	2055	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDefineKeyedOwnProperty
+BCH	StaInArrayLiteralExtraWideHandler	2056	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kStaInArrayLiteral
+BCH	DefineKeyedOwnPropertyInLiteralExtraWideHandler	2057	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDefineKeyedOwnPropertyInLiteral
+BCH	AddExtraWideHandler	2058	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kAdd
+BCH	SubExtraWideHandler	2059	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kSub
+BCH	MulExtraWideHandler	2060	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kMul
+BCH	DivExtraWideHandler	2061	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDiv
+BCH	ModExtraWideHandler	2062	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kMod
+BCH	ExpExtraWideHandler	2063	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kExp
+BCH	BitwiseOrExtraWideHandler	2064	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kBitwiseOr
+BCH	BitwiseXorExtraWideHandler	2065	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kBitwiseXor
+BCH	BitwiseAndExtraWideHandler	2066	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kBitwiseAnd
+BCH	ShiftLeftExtraWideHandler	2067	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kShiftLeft
+BCH	ShiftRightExtraWideHandler	2068	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kShiftRight
+BCH	ShiftRightLogicalExtraWideHandler	2069	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kShiftRightLogical
+BCH	AddSmiExtraWideHandler	2070	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kAddSmi
+BCH	SubSmiExtraWideHandler	2071	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kSubSmi
+BCH	MulSmiExtraWideHandler	2072	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kMulSmi
+BCH	DivSmiExtraWideHandler	2073	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDivSmi
+BCH	ModSmiExtraWideHandler	2074	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kModSmi
+BCH	ExpSmiExtraWideHandler	2075	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kExpSmi
+BCH	BitwiseOrSmiExtraWideHandler	2076	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kBitwiseOrSmi
+BCH	BitwiseXorSmiExtraWideHandler	2077	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kBitwiseXorSmi
+BCH	BitwiseAndSmiExtraWideHandler	2078	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kBitwiseAndSmi
+BCH	ShiftLeftSmiExtraWideHandler	2079	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kShiftLeftSmi
+BCH	ShiftRightSmiExtraWideHandler	2080	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kShiftRightSmi
+BCH	ShiftRightLogicalSmiExtraWideHandler	2081	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kShiftRightLogicalSmi
+BCH	IncExtraWideHandler	2082	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kInc
+BCH	DecExtraWideHandler	2083	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDec
+BCH	NegateExtraWideHandler	2084	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kNegate
+BCH	BitwiseNotExtraWideHandler	2085	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kBitwiseNot
+BCH	TypeOfExtraWideHandler	2086	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTypeOf
+BCH	DeletePropertyStrictExtraWideHandler	2087	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDeletePropertyStrict
+BCH	DeletePropertySloppyExtraWideHandler	2088	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kDeletePropertySloppy
+BCH	GetSuperConstructorExtraWideHandler	2089	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kGetSuperConstructor
+BCH	FindNonDefaultConstructorOrConstructExtraWideHandler	2090	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kFindNonDefaultConstructorOrConstruct
+BCH	CallAnyReceiverExtraWideHandler	2091	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallAnyReceiver
+BCH	CallPropertyExtraWideHandler	2092	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallProperty
+BCH	CallProperty0ExtraWideHandler	2093	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallProperty0
+BCH	CallProperty1ExtraWideHandler	2094	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallProperty1
+BCH	CallProperty2ExtraWideHandler	2095	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallProperty2
+BCH	CallUndefinedReceiverExtraWideHandler	2096	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallUndefinedReceiver
+BCH	CallUndefinedReceiver0ExtraWideHandler	2097	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallUndefinedReceiver0
+BCH	CallUndefinedReceiver1ExtraWideHandler	2098	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallUndefinedReceiver1
+BCH	CallUndefinedReceiver2ExtraWideHandler	2099	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallUndefinedReceiver2
+BCH	CallWithSpreadExtraWideHandler	2100	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallWithSpread
+BCH	CallRuntimeExtraWideHandler	2101	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallRuntime
+BCH	CallRuntimeForPairExtraWideHandler	2102	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallRuntimeForPair
+BCH	CallJSRuntimeExtraWideHandler	2103	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCallJSRuntime
+BCH	InvokeIntrinsicExtraWideHandler	2104	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kInvokeIntrinsic
+BCH	ConstructExtraWideHandler	2105	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kConstruct
+BCH	ConstructWithSpreadExtraWideHandler	2106	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kConstructWithSpread
+BCH	ConstructForwardAllArgsExtraWideHandler	2107	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kConstructForwardAllArgs
+BCH	TestEqualExtraWideHandler	2108	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestEqual
+BCH	TestEqualStrictExtraWideHandler	2109	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestEqualStrict
+BCH	TestLessThanExtraWideHandler	2110	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestLessThan
+BCH	TestGreaterThanExtraWideHandler	2111	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestGreaterThan
+BCH	TestLessThanOrEqualExtraWideHandler	2112	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestLessThanOrEqual
+BCH	TestGreaterThanOrEqualExtraWideHandler	2113	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestGreaterThanOrEqual
+BCH	TestInstanceOfExtraWideHandler	2114	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestInstanceOf
+BCH	TestInExtraWideHandler	2115	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kTestIn
+BCH	ToNumberExtraWideHandler	2116	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kToNumber
+BCH	ToNumericExtraWideHandler	2117	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kToNumeric
+BCH	ToObjectExtraWideHandler	2118	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kToObject
+BCH	CreateRegExpLiteralExtraWideHandler	2119	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateRegExpLiteral
+BCH	CreateArrayLiteralExtraWideHandler	2120	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateArrayLiteral
+BCH	CreateEmptyArrayLiteralExtraWideHandler	2121	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateEmptyArrayLiteral
+BCH	CreateObjectLiteralExtraWideHandler	2122	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateObjectLiteral
+BCH	CloneObjectExtraWideHandler	2123	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCloneObject
+BCH	GetTemplateObjectExtraWideHandler	2124	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kGetTemplateObject
+BCH	CreateClosureExtraWideHandler	2125	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateClosure
+BCH	CreateBlockContextExtraWideHandler	2126	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateBlockContext
+BCH	CreateCatchContextExtraWideHandler	2127	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateCatchContext
+BCH	CreateFunctionContextExtraWideHandler	2128	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateFunctionContext
+BCH	CreateEvalContextExtraWideHandler	2129	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateEvalContext
+BCH	CreateWithContextExtraWideHandler	2130	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kCreateWithContext
+BCH	JumpLoopExtraWideHandler	2131	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpLoop
+BCH	JumpExtraWideHandler	2132	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJump
+BCH	JumpConstantExtraWideHandler	2133	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpConstant
+BCH	JumpIfNullConstantExtraWideHandler	2134	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfNullConstant
+BCH	JumpIfNotNullConstantExtraWideHandler	2135	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfNotNullConstant
+BCH	JumpIfUndefinedConstantExtraWideHandler	2136	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfUndefinedConstant
+BCH	JumpIfNotUndefinedConstantExtraWideHandler	2137	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfNotUndefinedConstant
+BCH	JumpIfUndefinedOrNullConstantExtraWideHandler	2138	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfUndefinedOrNullConstant
+BCH	JumpIfTrueConstantExtraWideHandler	2139	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfTrueConstant
+BCH	JumpIfFalseConstantExtraWideHandler	2140	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfFalseConstant
+BCH	JumpIfJSReceiverConstantExtraWideHandler	2141	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfJSReceiverConstant
+BCH	JumpIfForInDoneConstantExtraWideHandler	2142	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfForInDoneConstant
+BCH	JumpIfToBooleanTrueConstantExtraWideHandler	2143	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfToBooleanTrueConstant
+BCH	JumpIfToBooleanFalseConstantExtraWideHandler	2144	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfToBooleanFalseConstant
+BCH	JumpIfToBooleanTrueExtraWideHandler	2145	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfToBooleanTrue
+BCH	JumpIfToBooleanFalseExtraWideHandler	2146	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfToBooleanFalse
+BCH	JumpIfTrueExtraWideHandler	2147	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfTrue
+BCH	JumpIfFalseExtraWideHandler	2148	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfFalse
+BCH	JumpIfNullExtraWideHandler	2149	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfNull
+BCH	JumpIfNotNullExtraWideHandler	2150	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfNotNull
+BCH	JumpIfUndefinedExtraWideHandler	2151	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfUndefined
+BCH	JumpIfNotUndefinedExtraWideHandler	2152	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfNotUndefined
+BCH	JumpIfUndefinedOrNullExtraWideHandler	2153	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfUndefinedOrNull
+BCH	JumpIfJSReceiverExtraWideHandler	2154	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfJSReceiver
+BCH	JumpIfForInDoneExtraWideHandler	2155	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kJumpIfForInDone
+BCH	SwitchOnSmiNoFeedbackExtraWideHandler	2156	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kSwitchOnSmiNoFeedback
+BCH	ForInEnumerateExtraWideHandler	2157	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kForInEnumerate
+BCH	ForInPrepareExtraWideHandler	2158	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kForInPrepare
+BCH	ForInNextExtraWideHandler	2159	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kForInNext
+BCH	ForInStepExtraWideHandler	2160	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kForInStep
+BCH	ThrowReferenceErrorIfHoleExtraWideHandler	2161	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kThrowReferenceErrorIfHole
+BCH	ThrowIfNotSuperConstructorExtraWideHandler	2162	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kThrowIfNotSuperConstructor
+BCH	SwitchOnGeneratorStateExtraWideHandler	2163	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kSwitchOnGeneratorState
+BCH	SuspendGeneratorExtraWideHandler	2164	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kSuspendGenerator
+BCH	ResumeGeneratorExtraWideHandler	2165	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kResumeGenerator
+BCH	GetIteratorExtraWideHandler	2166	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kGetIterator
+BCH	IncBlockCounterExtraWideHandler	2167	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kIncBlockCounter
+BCH	AbortExtraWideHandler	2168	unchanged	interpreter::OperandScale::kQuadruple, interpreter::Bytecode::kAbort

@@ -1,0 +1,588 @@
+{
+  "measurement_date": "2026-10-20",
+  "runtime_selection_baseline_revision": "4ae08b0",
+  "target": "aarch64-apple-darwin",
+  "native_lto": false,
+  "selection": {
+    "generated_js_entries": 432,
+    "retained": 120,
+    "omitted": 312,
+    "previous_generated_omissions_covered": 119,
+    "additional_omissions": 193,
+    "other_generated_entries_unchanged": 1249,
+    "catalog_sha256": "0dec7ae4fdaf1bdf48b60a7571525c4bb5cca6f45438f2631b242a8d0ed3de7d",
+    "counts_by_kind": {
+      "ASM": {
+        "unchanged": 90
+      },
+      "BCH": {
+        "unchanged": 499
+      },
+      "CPP": {
+        "retain": 33,
+        "omit": 455
+      },
+      "TFC": {
+        "unchanged": 516
+      },
+      "TFH": {
+        "unchanged": 85
+      },
+      "TFJ": {
+        "retain": 120,
+        "omit": 312
+      },
+      "TFS": {
+        "unchanged": 59
+      }
+    }
+  },
+  "candidate_setup_uses_old_omission_policy": false,
+  "probes": {
+    "baseline": {
+      "context": {
+        "stripped_bytes": 12182336
+      },
+      "c-api": {
+        "stripped_bytes": 12199264
+      },
+      "c-api-gc": {
+        "stripped_bytes": 12199248
+      },
+      "heap": [
+        "used_heap_size=335496 total_heap_size=1884160",
+        "used_heap_size=335496 total_heap_size=1884160",
+        "used_heap_size=335496 total_heap_size=1884160"
+      ],
+      "wasm_modes_passed": 4,
+      "runtime_boundary_modes_passed": 4
+    },
+    "candidate": {
+      "context": {
+        "stripped_bytes": 11917952
+      },
+      "c-api": {
+        "stripped_bytes": 11951392
+      },
+      "c-api-gc": {
+        "stripped_bytes": 11951392
+      },
+      "heap": [
+        "used_heap_size=329672 total_heap_size=1884160",
+        "used_heap_size=329672 total_heap_size=1884160",
+        "used_heap_size=329672 total_heap_size=1884160"
+      ],
+      "wasm_modes_passed": 4,
+      "cpp_entry_contract": "identities=2169 retained=33 omitted=455 unique_cpp_entries=488",
+      "unsupported_cpp_traps_passed": [
+        "DateConstructor",
+        "TemporalPlainDateConstructor",
+        "JsonStringify",
+        "ArrayBufferConstructor",
+        "StringPrototypeToLowerCase"
+      ],
+      "runtime_entry_contract": "runtime_entries=619 retained=144 omitted=475 aliases=19 pairs=2",
+      "unsupported_runtime_traps_passed": [
+        "DateCurrentTime",
+        "IsInvalidTemporalCalendarField",
+        "DynamicImportCall",
+        "AsyncFunctionAwait",
+        "DebugBreakOnBytecode",
+        "LoadLookupSlotForCall"
+      ],
+      "runtime_boundary_modes_passed": 4
+    }
+  },
+  "generated_entry_checks": {
+    "builtin_identities": 2169,
+    "identity_kind_and_argc_unchanged": true,
+    "unselected_instruction_size_changes": [
+      {
+        "name": "ConvertToLocaleString",
+        "before": 216,
+        "after": 212
+      },
+      {
+        "name": "JoinStackPush",
+        "before": 784,
+        "after": 780
+      },
+      {
+        "name": "ArrayPrototypeJoin",
+        "before": 8800,
+        "after": 8780
+      },
+      {
+        "name": "ArrayPrototypeToString",
+        "before": 276,
+        "after": 272
+      },
+      {
+        "name": "ArrayReduceRightLoopContinuation",
+        "before": 4144,
+        "after": 4140
+      },
+      {
+        "name": "ArrayReduceLoopContinuation",
+        "before": 4196,
+        "after": 4192
+      },
+      {
+        "name": "ArrayTimSortIntoCopy",
+        "before": 5308,
+        "after": 5304
+      },
+      {
+        "name": "FastCreateDataProperty",
+        "before": 3908,
+        "after": 3900
+      },
+      {
+        "name": "BooleanPrototypeToString",
+        "before": 192,
+        "after": 184
+      },
+      {
+        "name": "BooleanPrototypeValueOf",
+        "before": 188,
+        "after": 180
+      },
+      {
+        "name": "StringPrototypeToString",
+        "before": 184,
+        "after": 176
+      },
+      {
+        "name": "StringPrototypeValueOf",
+        "before": 184,
+        "after": 176
+      },
+      {
+        "name": "StringPrototypeCharAt",
+        "before": 800,
+        "after": 796
+      },
+      {
+        "name": "StringPrototypeCharCodeAt",
+        "before": 684,
+        "after": 680
+      },
+      {
+        "name": "StringPrototypeCodePointAt",
+        "before": 1184,
+        "after": 1180
+      },
+      {
+        "name": "StringPrototypeConcat",
+        "before": 432,
+        "after": 428
+      },
+      {
+        "name": "ToObject",
+        "before": 976,
+        "after": 972
+      },
+      {
+        "name": "DataViewPrototypeGetByteLength",
+        "before": 712,
+        "after": 700
+      },
+      {
+        "name": "DataViewPrototypeGetUint8",
+        "before": 772,
+        "after": 764
+      },
+      {
+        "name": "DataViewPrototypeGetInt8",
+        "before": 772,
+        "after": 764
+      },
+      {
+        "name": "DataViewPrototypeGetUint16",
+        "before": 856,
+        "after": 848
+      },
+      {
+        "name": "DataViewPrototypeGetInt16",
+        "before": 852,
+        "after": 844
+      },
+      {
+        "name": "DataViewPrototypeGetUint32",
+        "before": 996,
+        "after": 988
+      },
+      {
+        "name": "DataViewPrototypeSetUint8",
+        "before": 1168,
+        "after": 1164
+      },
+      {
+        "name": "DataViewPrototypeSetInt8",
+        "before": 1168,
+        "after": 1164
+      },
+      {
+        "name": "DataViewPrototypeSetUint16",
+        "before": 1256,
+        "after": 1252
+      },
+      {
+        "name": "DataViewPrototypeSetInt16",
+        "before": 1256,
+        "after": 1252
+      },
+      {
+        "name": "DataViewPrototypeSetUint32",
+        "before": 1288,
+        "after": 1284
+      },
+      {
+        "name": "ArrayTimSort",
+        "before": 3652,
+        "after": 3648
+      }
+    ],
+    "unsupported_generated_entries_passed": [
+      "ArrayIncludes",
+      "ArrayIndexOf",
+      "ArrayPrototypePop",
+      "ArrayPrototypePush",
+      "ArrayPrototypeEntries",
+      "ArrayPrototypeKeys",
+      "AsyncFunctionAwaitRejectClosure",
+      "AsyncFunctionAwaitResolveClosure",
+      "DatePrototypeGetDate",
+      "DatePrototypeGetDay",
+      "DatePrototypeGetFullYear",
+      "DatePrototypeGetHours",
+      "DatePrototypeGetMilliseconds",
+      "DatePrototypeGetMinutes",
+      "DatePrototypeGetMonth",
+      "DatePrototypeGetSeconds",
+      "DatePrototypeGetTime",
+      "DatePrototypeGetTimezoneOffset",
+      "DatePrototypeGetUTCDate",
+      "DatePrototypeGetUTCDay",
+      "DatePrototypeGetUTCFullYear",
+      "DatePrototypeGetUTCHours",
+      "DatePrototypeGetUTCMilliseconds",
+      "DatePrototypeGetUTCMinutes",
+      "DatePrototypeGetUTCMonth",
+      "DatePrototypeGetUTCSeconds",
+      "DatePrototypeValueOf",
+      "DatePrototypeToPrimitive",
+      "GeneratorPrototypeNext",
+      "GeneratorPrototypeReturn",
+      "GeneratorPrototypeThrow",
+      "MapConstructor",
+      "MapPrototypeSet",
+      "MapPrototypeDelete",
+      "MapPrototypeGet",
+      "MapPrototypeHas",
+      "MapPrototypeEntries",
+      "MapPrototypeGetSize",
+      "MapPrototypeForEach",
+      "MapPrototypeKeys",
+      "MapPrototypeValues",
+      "MapIteratorPrototypeNext",
+      "ObjectAssign",
+      "ObjectCreate",
+      "ObjectEntries",
+      "ObjectGetOwnPropertyDescriptor",
+      "ObjectGetOwnPropertyNames",
+      "ObjectHasOwn",
+      "ObjectIs",
+      "ObjectKeys",
+      "ObjectPrototypeHasOwnProperty",
+      "ObjectPrototypeIsPrototypeOf",
+      "ObjectValues",
+      "SetConstructor",
+      "SetPrototypeHas",
+      "SetPrototypeAdd",
+      "SetPrototypeDelete",
+      "SetPrototypeEntries",
+      "SetPrototypeGetSize",
+      "SetPrototypeForEach",
+      "SetPrototypeValues",
+      "SetIteratorPrototypeNext",
+      "ShadowRealmPrototypeImportValue",
+      "ShadowRealmImportValueFulfilled",
+      "ShadowRealmImportValueRejected",
+      "AtomicsLoad",
+      "AtomicsStore",
+      "AtomicsExchange",
+      "AtomicsCompareExchange",
+      "AtomicsAdd",
+      "AtomicsSub",
+      "AtomicsAnd",
+      "AtomicsOr",
+      "AtomicsXor",
+      "TypedArrayBaseConstructor",
+      "TypedArrayConstructor",
+      "TypedArrayPrototypeByteLength",
+      "TypedArrayPrototypeByteOffset",
+      "TypedArrayPrototypeLength",
+      "TypedArrayPrototypeToStringTag",
+      "TypedArrayPrototypeMap",
+      "WeakMapConstructor",
+      "WeakMapGet",
+      "WeakMapPrototypeHas",
+      "WeakMapPrototypeSet",
+      "WeakMapPrototypeDelete",
+      "WeakSetConstructor",
+      "WeakSetPrototypeHas",
+      "WeakSetPrototypeAdd",
+      "WeakSetPrototypeDelete",
+      "AsyncGeneratorPrototypeNext",
+      "AsyncGeneratorPrototypeReturn",
+      "AsyncGeneratorPrototypeThrow",
+      "AsyncGeneratorAwaitResolveClosure",
+      "AsyncGeneratorAwaitRejectClosure",
+      "AsyncGeneratorYieldWithAwaitResolveClosure",
+      "AsyncGeneratorReturnClosedResolveClosure",
+      "AsyncGeneratorReturnClosedRejectClosure",
+      "AsyncGeneratorReturnResolveClosure",
+      "AsyncFromSyncIteratorPrototypeNext",
+      "AsyncFromSyncIteratorPrototypeThrow",
+      "AsyncFromSyncIteratorPrototypeReturn",
+      "AsyncFromSyncIteratorCloseSyncAndRethrow",
+      "AsyncIteratorValueUnwrap",
+      "AsyncModuleEvaluate",
+      "TemporalCalendarPrototypeFields",
+      "StringFixedArrayFromIterable",
+      "TemporalInstantFixedArrayFromIterable",
+      "AggregateErrorConstructor",
+      "ArrayPrototypeAt",
+      "ArrayPrototypeConcat",
+      "ArrayPrototypeCopyWithin",
+      "ArrayEveryLoopEagerDeoptContinuation",
+      "ArrayEveryLoopLazyDeoptContinuation",
+      "ArrayEvery",
+      "ArrayFilterLoopEagerDeoptContinuation",
+      "ArrayFilterLoopLazyDeoptContinuation",
+      "ArrayFilter",
+      "ArrayFindLoopEagerDeoptContinuation",
+      "ArrayFindLoopLazyDeoptContinuation",
+      "ArrayFindLoopAfterCallbackLazyDeoptContinuation",
+      "ArrayPrototypeFind",
+      "ArrayFindIndexLoopEagerDeoptContinuation",
+      "ArrayFindIndexLoopLazyDeoptContinuation",
+      "ArrayFindIndexLoopAfterCallbackLazyDeoptContinuation",
+      "ArrayPrototypeFindIndex",
+      "ArrayPrototypeFindLast",
+      "ArrayPrototypeFindLastIndex",
+      "ArrayPrototypeFlat",
+      "ArrayPrototypeFlatMap",
+      "ArrayForEachLoopEagerDeoptContinuation",
+      "ArrayForEachLoopLazyDeoptContinuation",
+      "ArrayForEach",
+      "ArrayFromAsyncIterableOnFulfilled",
+      "ArrayFromAsyncIterableOnRejected",
+      "ArrayFromAsyncArrayLikeOnFulfilled",
+      "ArrayFromAsyncArrayLikeOnRejected",
+      "ArrayFromAsync",
+      "ArrayFrom",
+      "ArrayIsArray",
+      "ArrayPrototypeToLocaleString",
+      "TypedArrayPrototypeJoin",
+      "TypedArrayPrototypeToLocaleString",
+      "ArrayPrototypeLastIndexOf",
+      "ArrayMapPreLoopLazyDeoptContinuation",
+      "ArrayMapLoopEagerDeoptContinuation",
+      "ArrayMapLoopLazyDeoptContinuation",
+      "ArrayMap",
+      "ArrayOf",
+      "ArrayReduceRightPreLoopEagerDeoptContinuation",
+      "ArrayReduceRightLoopEagerDeoptContinuation",
+      "ArrayReduceRightLoopLazyDeoptContinuation",
+      "ArrayReduceRight",
+      "ArrayReducePreLoopEagerDeoptContinuation",
+      "ArrayReduceLoopEagerDeoptContinuation",
+      "ArrayReduceLoopLazyDeoptContinuation",
+      "ArrayReduce",
+      "ArrayPrototypeReverse",
+      "ArrayPrototypeShift",
+      "ArrayPrototypeSlice",
+      "ArraySomeLoopEagerDeoptContinuation",
+      "ArraySomeLoopLazyDeoptContinuation",
+      "ArraySome",
+      "ArrayPrototypeSplice",
+      "ArrayPrototypeToReversed",
+      "ArrayPrototypeToSorted",
+      "ArrayPrototypeToSpliced",
+      "ArrayPrototypeUnshift",
+      "ArrayPrototypeWith",
+      "ArrayBufferPrototypeGetByteLength",
+      "ArrayBufferPrototypeGetMaxByteLength",
+      "ArrayBufferPrototypeGetResizable",
+      "ArrayBufferPrototypeGetDetached",
+      "SharedArrayBufferPrototypeGetMaxByteLength",
+      "SharedArrayBufferPrototypeGetGrowable",
+      "ArrayBufferIsView",
+      "StringCreateLazyDeoptContinuation",
+      "FastConsoleAssert",
+      "DataViewPrototypeGetBuffer",
+      "DataViewPrototypeGetByteOffset",
+      "DataViewPrototypeGetFloat16",
+      "DataViewPrototypeSetFloat16",
+      "FinalizationRegistryConstructor",
+      "FinalizationRegistryRegister",
+      "FinalizationRegistryPrototypeCleanupSome",
+      "FunctionPrototypeHasInstance",
+      "FastFunctionPrototypeBind",
+      "IteratorConstructor",
+      "IteratorPrototypeGetToStringTag",
+      "IteratorPrototypeSetToStringTag",
+      "IteratorPrototypeGetConstructor",
+      "IteratorPrototypeSetConstructor",
+      "IteratorFrom",
+      "WrapForValidIteratorPrototypeNext",
+      "WrapForValidIteratorPrototypeReturn",
+      "IteratorHelperPrototypeNext",
+      "IteratorHelperPrototypeReturn",
+      "IteratorPrototypeMap",
+      "IteratorPrototypeFilter",
+      "IteratorPrototypeTake",
+      "IteratorPrototypeDrop",
+      "IteratorPrototypeFlatMap",
+      "IteratorPrototypeReduce",
+      "IteratorPrototypeToArray",
+      "IteratorPrototypeForEach",
+      "IteratorPrototypeSome",
+      "IteratorPrototypeEvery",
+      "IteratorPrototypeFind",
+      "MapGroupBy",
+      "ObjectFromEntries",
+      "ObjectGroupBy",
+      "ObjectIsExtensible",
+      "ObjectPreventExtensions",
+      "ObjectGetPrototypeOf",
+      "ObjectSetPrototypeOf",
+      "ObjectPrototypeToLocaleString",
+      "PromiseCapabilityDefaultReject",
+      "PromiseCapabilityDefaultResolve",
+      "PromiseReject",
+      "PromiseGetCapabilitiesExecutor",
+      "PromiseConstructorLazyDeoptContinuation",
+      "PromiseAll",
+      "PromiseAllSettled",
+      "PromiseAllResolveElementClosure",
+      "PromiseAllSettledResolveElementClosure",
+      "PromiseAllSettledRejectElementClosure",
+      "PromiseAnyRejectElementClosure",
+      "PromiseAny",
+      "PromiseConstructor",
+      "PromisePrototypeCatch",
+      "PromiseValueThunkFinally",
+      "PromiseThrowerFinally",
+      "PromiseCatchFinally",
+      "PromiseThenFinally",
+      "PromisePrototypeFinally",
+      "GetContinuationPreservedEmbedderData",
+      "SetContinuationPreservedEmbedderData",
+      "PromiseRace",
+      "PromiseResolveTrampoline",
+      "PromisePrototypeThen",
+      "PromiseTry",
+      "PromiseWithResolvers",
+      "ProxyConstructor",
+      "ProxyRevocable",
+      "ProxyRevoke",
+      "ReflectIsExtensible",
+      "ReflectPreventExtensions",
+      "ReflectGetPrototypeOf",
+      "ReflectSetPrototypeOf",
+      "ReflectGet",
+      "ReflectDeleteProperty",
+      "ReflectHas",
+      "ReflectGetOwnPropertyDescriptor",
+      "SetPrototypeDifference",
+      "SetPrototypeIntersection",
+      "SetPrototypeIsDisjointFrom",
+      "SetPrototypeIsSubsetOf",
+      "SetPrototypeIsSupersetOf",
+      "SetPrototypeSymmetricDifference",
+      "SetPrototypeUnion",
+      "StringPrototypeAt",
+      "StringPrototypeEndsWith",
+      "StringPrototypeAnchor",
+      "StringPrototypeBig",
+      "StringPrototypeBlink",
+      "StringPrototypeBold",
+      "StringPrototypeFontcolor",
+      "StringPrototypeFontsize",
+      "StringPrototypeFixed",
+      "StringPrototypeItalics",
+      "StringPrototypeLink",
+      "StringPrototypeSmall",
+      "StringPrototypeStrike",
+      "StringPrototypeSub",
+      "StringPrototypeSup",
+      "StringPrototypeIncludes",
+      "StringPrototypePadStart",
+      "StringPrototypePadEnd",
+      "StringPrototypeRepeat",
+      "StringPrototypeSlice",
+      "StringPrototypeStartsWith",
+      "StringPrototypeSubstr",
+      "StringPrototypeTrim",
+      "StringPrototypeTrimStart",
+      "StringPrototypeTrimEnd",
+      "SuppressedErrorConstructor",
+      "SymbolPrototypeDescriptionGetter",
+      "TypedArrayPrototypeAt",
+      "TypedArrayPrototypeEvery",
+      "TypedArrayPrototypeEntries",
+      "TypedArrayPrototypeFilter",
+      "TypedArrayPrototypeFind",
+      "TypedArrayPrototypeFindIndex",
+      "TypedArrayPrototypeFindLast",
+      "TypedArrayPrototypeFindLastIndex",
+      "TypedArrayPrototypeForEach",
+      "TypedArrayFrom",
+      "TypedArrayPrototypeKeys",
+      "TypedArrayOf",
+      "TypedArrayPrototypeReduce",
+      "TypedArrayPrototypeReduceRight",
+      "TypedArrayPrototypeSet",
+      "TypedArrayPrototypeSlice",
+      "TypedArrayPrototypeSome",
+      "TypedArrayPrototypeSort",
+      "TypedArrayPrototypeSubArray",
+      "TypedArrayPrototypeToReversed",
+      "TypedArrayPrototypeToSorted",
+      "TypedArrayPrototypeWith",
+      "WeakRefConstructor",
+      "WeakRefDeref",
+      "ArrayPrototypeSort"
+    ]
+  },
+  "payload_bytes": {
+    "baseline": {
+      "embedded_code": 1464800,
+      "embedded_data": 81588,
+      "snapshot": 316920,
+      "archive": 60690824
+    },
+    "candidate": {
+      "embedded_code": 1234528,
+      "embedded_data": 75520,
+      "snapshot": 310932,
+      "archive": 60449392
+    }
+  },
+  "rust_wrapper": {
+    "unit_and_integration_passed": 20,
+    "doctests_passed": 4,
+    "failed": 0
+  },
+  "limits": [
+    "Probe/profile sizes, not a full Moonrun application measurement.",
+    "Positive selection covers CPP, runtime and TFJ entries; 1249 other generated stubs/handlers remain unchanged.",
+    "No new native LTO or performance measurement.",
+    "No production GN integration, consumer pin update, supported-platform matrix or release.",
+    "The new native exception-tag interface on main is not included in this prototype base.",
+    "Shared-memory tests are guest-internal; no multithreaded wakeup stress."
+  ]
+}

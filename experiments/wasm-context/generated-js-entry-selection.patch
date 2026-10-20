@@ -1,0 +1,88 @@
+--- a/v8/src/builtins/setup-builtins-internal.cc
++++ b/v8/src/builtins/setup-builtins-internal.cc
+@@ -5,12 +5,10 @@
+ #include <fstream>
+ 
+ #include "src/builtins/builtins-inl.h"
++#include "src/builtins/profile-data-reader.h"
++
+ #include "cpp-builtin-selection.h"
+-#include "src/builtins/profile-data-reader.h"
+-
+-#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
+-#include "src/builtins/moonrun-omitted-builtins.h"
+-#endif
++#include "generated-js-builtin-selection.h"
+ #include "src/codegen/assembler-inl.h"
+ #include "src/codegen/interface-descriptors.h"
+ #include "src/codegen/macro-assembler-inl.h"
+@@ -419,60 +417,25 @@
+   // Create a scope for the handles in the builtins.
+   HandleScope scope(isolate);
+ 
+-  // Select bodies here, without changing the builtin tables, descriptors,
+-  // registration, placeholders or bootstrap references. The normal TFJ builder
+-  // still creates a distinct Code with the original builtin ID and argc.
+-#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
+-#define CHECK_OMITTED_KIND(Name, Receiver, Method) \
+-  CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::TFJ);
+-  MOONRUN_OMITTED_TFJ_BUILTINS(CHECK_OMITTED_KIND)
+-#undef CHECK_OMITTED_KIND
+-#define CHECK_CLOSURE_KIND(Name, Root) \
+-  CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::TFJ);
+-  MOONRUN_OMITTED_PROMISE_CLOSURES(CHECK_CLOSURE_KIND)
+-#undef CHECK_CLOSURE_KIND
+-#define CHECK_OMITTED_CPP_KIND(Name, Receiver, Method) \
+-  CHECK_EQ(Builtins::KindOf(Builtin::k##Name), Builtins::CPP);
+-  MOONRUN_OMITTED_CPP_BUILTINS(CHECK_OMITTED_CPP_KIND)
+-#undef CHECK_OMITTED_CPP_KIND
+-#endif
++  // One positive selection per entry kind; preserve the original builders,
++  // descriptors and Code identities for both retained and unsupported entries.
+   const auto select_js_body = [](Builtin builtin,
+                                  CodeAssemblerGenerator original) {
+-#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
+-    switch (builtin) {
+-#define OMITTED_CASE(Name, Receiver, Method) case Builtin::k##Name:
+-      MOONRUN_OMITTED_TFJ_BUILTINS(OMITTED_CASE)
+-#undef OMITTED_CASE
+-#define OMITTED_CLOSURE_CASE(Name, Root) case Builtin::k##Name:
+-      MOONRUN_OMITTED_PROMISE_CLOSURES(OMITTED_CLOSURE_CASE)
+-#undef OMITTED_CLOSURE_CASE
+-        // Intentional unsupported-API trap, not an Illegal code alias or a
+-        // fake return value. The owning builtin ID identifies the omitted API.
+-        return +[](compiler::CodeAssemblerState* state) {
+-          compiler::CodeAssembler(state).Unreachable();
+-        };
+-      default:
+-        break;
++#if defined(V8_WASM_CONTEXT_GENERATED_JS_ALLOWLIST)
++    if (!WasmContextKeepsJsBuiltin(builtin)) {
++      return +[](compiler::CodeAssemblerState* state) {
++        compiler::CodeAssembler(state).Unreachable();
++      };
+     }
+ #endif
+     return original;
+   };
+-
+   const auto omit_cpp_body = [](Builtin builtin) {
+ #if defined(V8_WASM_CONTEXT_CPP_ALLOWLIST)
+     return !WasmContextKeepsCppBuiltin(builtin);
++#else
++    return false;
+ #endif
+-#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)
+-    switch (builtin) {
+-#define OMITTED_CPP_CASE(Name, Receiver, Method) case Builtin::k##Name:
+-      MOONRUN_OMITTED_CPP_BUILTINS(OMITTED_CPP_CASE)
+-#undef OMITTED_CPP_CASE
+-        return true;
+-      default:
+-        break;
+-    }
+-#endif
+-    return false;
+   };
+ 
+   int index = 0;

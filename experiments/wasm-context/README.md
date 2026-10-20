@@ -10,10 +10,12 @@ The prototype executes native Wasm calls, callbacks, traps, memory growth, and
 WasmGC without initializing the public JS standard library. This establishes a
 useful bootstrap seam. The bootstrap alone does **not** establish the minimum
 possible runtime or remove implementations rooted by builtin tables.
-The subsequent [C++ entry allowlist](CPP-ENTRIES.md) and
-[runtime entry allowlist](RUNTIME-ENTRIES.md) remove unused implementation
-references while preserving identities, bringing the C API probe to
-**12.20 MB**.
+The subsequent [C++ entry allowlist](CPP-ENTRIES.md),
+[runtime entry allowlist](RUNTIME-ENTRIES.md), and
+[generated JS-entry allowlist](GENERATED-BUILTINS.md) remove unused
+implementations while preserving identities, bringing the C API probe to
+**11.95 MB**. The generated JS selection replaces the old omission-list policy
+in the candidate; production GN integration remains separate.
 
 ## Draft implementation
 
@@ -177,4 +179,5 @@ reviewing the new initializer and its shared helpers.
 
 The final size is unknown until the remaining roots are changed and the consumer
 is linked. The context-only C API probe measured 13.58 MB, CPP entry selection
-12.91 MB, and runtime entry selection 12.20 MB. None is a floor or a target.
+12.91 MB, runtime entry selection 12.20 MB, and generated JS selection 11.95 MB.
+None is a floor or a target.

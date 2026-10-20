@@ -19,7 +19,11 @@ parser.add_argument("--cxx", default="clang++")
 parser.add_argument("--ar", default="llvm-ar")
 parser.add_argument("--runtime-allowlist", action="store_true",
                     help="also select runtime implementations and inline fallbacks")
+parser.add_argument("--generated-js-allowlist", action="store_true",
+                    help="replace the old generated-JS omission policy; implies runtime selection")
 args = parser.parse_args()
+if args.generated_js_allowlist:
+    args.runtime_allowlist = True
 source, out, context, work = (
     p.resolve() for p in (args.source, args.out, args.context, args.work)
 )
@@ -84,10 +88,54 @@ for filename, changes in edits.items():
     entry = entries[0]
     original = (out / entry["file"]).read_text()
     patched = original
+    if filename == "setup-builtins-internal.cc" and args.generated_js_allowlist:
+        # Replace the old policy as a whole. Keep its generic trap builders, but
+        # leave no omission-list include, macro or selector in the candidate.
+        start = "  // Select bodies here, without changing the builtin tables, descriptors,\n"
+        end = "  int index = 0;\n"
+        if patched.count(start) != 1:
+            raise SystemExit("Expected one old generated-body policy")
+        policy_start = patched.index(start)
+        policy_end = patched.index(end, policy_start)
+        patched = patched[:policy_start] + """  // One positive selection per entry kind; preserve the original builders,
+  // descriptors and Code identities for both retained and unsupported entries.
+  const auto select_js_body = [](Builtin builtin,
+                                 CodeAssemblerGenerator original) {
+#if defined(V8_WASM_CONTEXT_GENERATED_JS_ALLOWLIST)
+    if (!WasmContextKeepsJsBuiltin(builtin)) {
+      return +[](compiler::CodeAssemblerState* state) {
+        compiler::CodeAssembler(state).Unreachable();
+      };
+    }
+#endif
+    return original;
+  };
+  const auto omit_cpp_body = [](Builtin builtin) {
+#if defined(V8_WASM_CONTEXT_CPP_ALLOWLIST)
+    return !WasmContextKeepsCppBuiltin(builtin);
+#else
+    return false;
+#endif
+  };
+
+""" + patched[policy_end:]
+        changes = [
+            ('#if defined(V8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES)\n'
+             '#include "src/builtins/moonrun-omitted-builtins.h"\n#endif',
+             '#include "cpp-builtin-selection.h"\n'
+             '#include "generated-js-builtin-selection.h"'),
+            ("  // The C++ implementation and function-pointer table remain intact.",
+             "  // Native entry selection is handled separately by the CPP tables."),
+            ("FUNCTION_ADDR(Builtin_##Name), #Name,",
+             "WASM_CONTEXT_CPP_ENTRY(Name), #Name,"),
+        ]
     for before, after in changes:
         if patched.count(before) != 1:
             raise SystemExit(f"Source drift in {filename}: {before!r}")
         patched = patched.replace(before, after)
+    if args.generated_js_allowlist and filename == "setup-builtins-internal.cc":
+        if "MOONRUN_OMIT" in patched:
+            raise SystemExit("Old generated-body policy remains in candidate")
     src = work / filename
     src.write_text(patched)
     relative = (out / entry["file"]).resolve().relative_to(source)
@@ -104,13 +152,19 @@ for filename, changes in edits.items():
     command += ["-DV8_WASM_CONTEXT_CPP_ALLOWLIST", "-I" + str(assets)]
     if args.runtime_allowlist:
         command += ["-DV8_WASM_CONTEXT_RUNTIME_ALLOWLIST"]
+    if args.generated_js_allowlist:
+        command = [arg for arg in command
+                   if arg != "-DV8_MOONRUN_OMIT_LIBRARY_BUILTIN_BODIES"]
+        command += ["-DV8_WASM_CONTEXT_GENERATED_JS_ALLOWLIST"]
     with (work / (src.stem + ".log")).open("w") as log:
         subprocess.run(command, cwd=out, env=env, stdout=log,
                        stderr=subprocess.STDOUT, check=True)
     replacement_objects[entry["output"]] = str(obj)
     print(f"Compiled {filename}", flush=True)
-(work / ("runtime-entry-selection.patch" if args.runtime_allowlist else
-         "cpp-entry-selection.patch")).write_text("".join(patches))
+patch_name = ("generated-js-entry-selection.patch" if args.generated_js_allowlist
+              else "runtime-entry-selection.patch" if args.runtime_allowlist
+              else "cpp-entry-selection.patch")
+(work / patch_name).write_text("".join(patches))
 
 # Derive the inventory from V8's own macro expansion, not source-name patterns.
 # A checked-in inventory makes new/renamed entries require review on a V8 bump.
@@ -127,6 +181,8 @@ flags = sum((config[k] for k in ("defines", "include_dirs", "cflags", "cflags_cc
 catalogs = [("cpp-builtin-catalog.cc", "cpp-builtins.tsv")]
 if args.runtime_allowlist:
     catalogs += [("runtime-catalog.cc", "runtime-entries.tsv")]
+if args.generated_js_allowlist:
+    catalogs += [("generated-builtin-catalog.cc", "generated-builtins.tsv")]
 for filename, inventory_name in catalogs:
     catalog = work / Path(filename).stem
     with catalog.with_suffix(".log").open("w") as log:
