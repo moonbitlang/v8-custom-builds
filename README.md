@@ -79,14 +79,15 @@ registration and call-site boundaries:
   in their original file. Existing heap layouts, GC metadata and stack/cache
   lifecycle remain. Unreachable shared code is left for final-link stripping
   or LTO; build-time source exclusion is not the size objective.
-- Ordinary string predicates (`includes`, `startsWith`, `endsWith`) retain their
-  actual `Symbol.match` protocol check; TypedArray registrations are unchanged.
+- The RegExp capability alone preserves ordinary string protocol checks and
+  TypedArray registrations; the native-context profile below makes its own
+  explicit selection of objects and implementation bodies.
 
 Removing IDs requires fresh generated tables and snapshots. Do not mix generated
 files or snapshots from different recipes. This runtime is not a general-purpose
 JavaScript implementation. The object machinery and other libraries still exist;
 the source-parser boundary below removes JavaScript parsing separately.
-Temporal, JSON and Date require separate dependency analysis. Platform clocks,
+The native-context profile below omits unused Temporal, JSON and Date entries. Platform clocks,
 Wasm memory, traps, interrupts and debug machinery are outside this RegExp cut.
 A custom debugger and fuel controls are not implemented yet.
 
@@ -134,38 +135,33 @@ runtime entry directly and checks its explicit exception; source rejection alone
 would only prove the earlier JS parser cut. Existing binary Wasm tests then
 check that the runtime remains usable after the error.
 
-## Unsupported JS library methods
+## Native Wasm context and implementation selection
 
-`wee8-without-library-bodies.patch` makes 149 named JS library entry points
-unsupported in custom wee8 by emitting distinct trap bodies. IDs, descriptors,
-registrations, object layouts and C++ dispatch tables remain. Invoking an omitted
-method terminates the process; preserving interface structure does not preserve
-that method's functionality. Ordinary V8 retains the original implementations.
+`custom_wee8` enables `v8_enable_wasm_native_context`, selecting a private native
+context and positive lists for C++ builtin entries, runtime helpers and generated
+JS-entry bodies. This replaces the earlier horizontal omission patch. Ordinary
+V8 retains its original context and implementations.
 
-See [the selection and retained dependencies](ci/library-builtins/README.md) and
-[the exact method list](ci/library-builtins/omitted-builtins.md). Native candidate
-CI checks every omitted entry and retained Wasm/iterator/Promise behavior.
+See [the profile contract and dependency rationale](profiles/wasm/README.md) and
+[the complete reviewed inventories](ci/wasm-profile). No JS library globals are
+installed. Wasm memory's buffer maps, native callback machinery, GC and error
+objects remain. IDs, descriptors, metadata and distinct Code/entry identities
+are preserved; omitted APIs terminate at explicit unsupported traps. This
+preserves interface structure, not omitted API functionality.
 
-## Parser-cut validation
+Native CI builds only the custom artifact. It checks an empty global object,
+script/module/function source rejection, streaming rejection, actual entry tables
+and external references, snapshot identities, all omitted TFJ and C++ adaptor invocations, and
+native Wasm execution in baseline-only, optimizing-only, lazy and synchronous
+tier-up modes. Native guests cover tables, bulk memory, guest exception handling,
+GC allocation, interrupts, shared-memory atomics and serialization. The packaged
+C API and Rust suites cover host callbacks, reference ownership, memory growth,
+traps and native exception tags.
 
-CI builds and tests the custom artifact only. The runtime probe checks the
-changed boundary rather than retesting ordinary V8 language semantics:
-
-| Contract | Check | Regression caught |
-| --- | --- | --- |
-| JS source is unavailable | Script, module, function, `eval` and `Function` entry points return the explicit parser-disabled exception | A source-compilation path still accepts text, crashes, or reports an unrelated failure |
-| Streaming is unavailable | `StartStreaming` returns no task and does not read the supplied stream | Background parsing remains reachable |
-| Runtime execution remains available | Create a context from the generated snapshot; compile binary Wasm; instantiate through the retained `WebAssembly.Instance` builtin and call exported functions | Snapshot/runtime mismatch or accidental removal of JS API execution machinery |
-| GC survives host calls | WasmGC retains objects across a native callback that requests collection | Broken wrappers or rooting after the build cuts |
-| Wasm tiers still work | Run the probe with baseline-only, optimizing-only, lazy compilation and synchronous tier-up | A shared Wasm compiler path was disabled with the JS frontend |
-
-The existing packaged C API and Rust tests are reused for callbacks, ownership,
-memory, traps, serialization and start functions. They link the candidate archive;
-passing the published rusty_v8 library's tests would not validate this artifact.
-The native producer already reuses rusty_v8's pinned toolchain/bootstrap. Its
-full Rust adapter and source-based JS test suite are not part of this profile's
-test target. Debugger protocol behavior and precompiled JS cache compatibility
-are not claimed by these checks.
+The generated blob and snapshot are rebuilt together through GN. The producer
+never rewrites archives after compilation. For version bumps, the compiled
+inventories must match the reviewed names, kinds, signatures and selections;
+architecture-specific IDs and code sizes are obtained from each target.
 
 ## C API scope
 
@@ -198,9 +194,9 @@ macOS x86_64/ARM64, and Windows x86_64.
 
 Native validation uses the freshly built artifacts:
 
-- A GN-built runtime probe checks JavaScript script/module/function rejection,
-  absent RegExp/Intl registrations, forced GC, and Wasm execution under Liftoff,
-  optimizing, lazy-compilation and synchronous tier-up settings.
+- GN-built probes check the private context, source rejection, implementation
+  inventories, entry identities and native Wasm boundaries across four compiler
+  modes. The unsupported-entry checks run in isolated child processes.
 - The C API consumer checks calls, callbacks, ownership/finalization, vectors,
   traps, silent instantiation failures and memory growth. Its minimal exception
   round trip checks that the packaged header and archive agree.

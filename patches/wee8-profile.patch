@@ -1,8 +1,8 @@
-Subject: Scope existing tier and asm.js cuts to the custom target
+Subject: Scope the native context and existing tier cuts to custom wee8
 
 --- a/v8/BUILD.gn
 +++ b/v8/BUILD.gn
-@@ -26,6 +26,8 @@
+@@ -26,8 +26,13 @@
  emit_builtins_as_inline_asm = is_win && is_clang
  
  declare_args() {
@@ -10,11 +10,24 @@ Subject: Scope existing tier and asm.js cuts to the custom target
 +
    # Disable JavaScript source parsing for native Wasm embedders.
    v8_enable_javascript_parser = true
++
++  # Native Wasm contexts and their builtin/runtime implementation allowlists.
++  v8_enable_wasm_native_context = false
  
-@@ -1084,6 +1086,10 @@
+   # The Wasm-only producer disables the JavaScript RegExp library.
+   v8_enable_regexp = true
+@@ -1084,6 +1089,18 @@
  
    defines =
        [ "V8_TYPED_ARRAY_MAX_SIZE_IN_HEAP=${v8_typed_array_max_size_in_heap}" ]
++
++  if (v8_enable_wasm_native_context) {
++    assert(v8_custom_wee8 && v8_enable_webassembly &&
++               !v8_enable_javascript_parser && !v8_enable_i18n_support &&
++               !v8_enable_regexp && !v8_enable_maglev && !v8_enable_sparkplug,
++           "The native Wasm context requires the custom wee8 profile")
++    defines += [ "V8_WASM_NATIVE_CONTEXT" ]
++  }
 +
 +  if (v8_custom_wee8) {
 +    defines += [ "V8_CUSTOM_WEE8" ]
@@ -22,3 +35,14 @@ Subject: Scope existing tier and asm.js cuts to the custom target
  
    if (v8_enable_javascript_parser) {
      defines += [ "V8_ENABLE_JAVASCRIPT_PARSER=1" ]
+@@ -3316,6 +3333,10 @@
+   public_configs = [ "src/inspector:inspector_config" ]
+ 
+   sources = [
++    "src/wasm-profile/cpp-builtin-selection.h",
++    "src/wasm-profile/generated-js-builtin-selection.h",
++    "src/wasm-profile/runtime-selection.h",
++    "src/wasm-profile/wasm-context-bootstrap.inc",
+     ### gcmole(all) ###
+     "$target_gen_dir/builtins-generated/bytecodes-builtins-list.h",
+     "include/cppgc/common.h",

@@ -1,4 +1,3 @@
-#include "gc-bytes.h"
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 #include "src/api/api-inl.h"
@@ -12,6 +11,9 @@
 #include <utility>
 
 static_assert(!V8_ENABLE_ASMJS, "The custom runtime must exclude asm.js");
+#ifndef V8_WASM_NATIVE_CONTEXT
+#error The runtime probe requires the native Wasm context profile
+#endif
 
 int main(int argc, char **argv) {
   if (argc > 1)
@@ -123,84 +125,13 @@ int main(int argc, char **argv) {
       if (task || stream_ptr->read)
         status = 3;
     }
-    auto get = [&](v8::Local<v8::Object> object, const char *name) {
-      return object
-          ->Get(context,
-                v8::String::NewFromUtf8(isolate, name).ToLocalChecked())
-          .ToLocalChecked();
-    };
-    // These builtins are retained public APIs, but their source-text paths
-    // must reach the same rejection boundary as ScriptCompiler.
-    for (const char *name : {"eval", "Function"}) {
-      v8::TryCatch caught(isolate);
-      auto value = get(context->Global(), name);
-      if (!value->IsFunction()) {
-        status = 3;
-        continue;
-      }
-      v8::Local<v8::Value> args[] = {
-          v8::String::NewFromUtf8Literal(isolate, "42")};
-      if (!value.As<v8::Function>()
-               ->Call(context, context->Global(), 1, args)
-               .IsEmpty() ||
-          !caught.HasCaught())
-        status = 3;
-      else {
-        v8::String::Utf8Value message(isolate, caught.Exception());
-        if (!*message ||
-            std::string(*message).find(
-                "JavaScript source parsing is disabled") == std::string::npos)
-          status = 3;
-      }
-    }
-    if (!get(context->Global(), "RegExp")->IsUndefined() ||
-        !get(context->Global(), "Intl")->IsUndefined())
-      status = 4;
-
-    auto wasm = get(context->Global(), "WebAssembly").As<v8::Object>();
-    auto instance_constructor = get(wasm, "Instance").As<v8::Function>();
-    constexpr uint8_t numeric_bytes[] = {
-        0, 97, 115, 109, 1, 0,   0,   0,   1, 5, 1,  96, 0, 1, 127, 3,  2,  1,
-        0, 7,  7,   1,   3, 114, 117, 110, 0, 0, 10, 6,  1, 4, 0,   65, 42, 11};
-    auto collect =
-        v8::Function::New(context,
-                          [](const v8::FunctionCallbackInfo<v8::Value> &args) {
-                            args.GetIsolate()->LowMemoryNotification();
-                          })
-            .ToLocalChecked();
-    auto env = v8::Object::New(isolate);
-    env->Set(context, v8::String::NewFromUtf8Literal(isolate, "collect"),
-             collect)
-        .Check();
-    auto imports = v8::Object::New(isolate);
-    imports->Set(context, v8::String::NewFromUtf8Literal(isolate, "env"), env)
-        .Check();
-    // The GC module retains a struct in an array across the collect callback.
-    for (auto bytes :
-         {v8::MemorySpan<const uint8_t>(numeric_bytes, sizeof(numeric_bytes)),
-          v8::MemorySpan<const uint8_t>(kWasmGc, sizeof(kWasmGc))}) {
-      v8::Local<v8::WasmModuleObject> module;
-      if (!v8::WasmModuleObject::Compile(isolate, bytes).ToLocal(&module)) {
-        status = 5;
-        continue;
-      }
-      v8::Local<v8::Value> args[] = {module, imports};
-      v8::Local<v8::Object> instance;
-      if (!instance_constructor->NewInstance(context, 2, args)
-               .ToLocal(&instance)) {
-        status = 5;
-        continue;
-      }
-      auto run = get(get(instance, "exports").As<v8::Object>(), "run")
-                     .As<v8::Function>();
-      for (int n = 0; n < 100; ++n) {
-        v8::Local<v8::Value> result;
-        if (!run->Call(context, v8::Undefined(isolate), 0, nullptr)
-                 .ToLocal(&result) ||
-            result->Int32Value(context).FromMaybe(0) != 42)
-          status = 7;
-      }
-    }
+    // No library globals are installed. Private maps still back Wasm memory,
+    // native callbacks and error objects; their behavior is checked via C API.
+    auto names = context->Global()->GetOwnPropertyNames(
+        context, v8::ALL_PROPERTIES, v8::KeyConversionMode::kConvertToString)
+        .ToLocalChecked();
+    if (names->Length() != 0) status = 4;
+    isolate->LowMemoryNotification();
     {
       v8::TryCatch caught(isolate);
       auto pattern = v8::String::NewFromUtf8Literal(isolate, "x");
@@ -213,8 +144,7 @@ int main(int argc, char **argv) {
   v8::V8::Dispose();
   v8::V8::DisposePlatform();
   if (status == 0)
-    std::puts("JavaScript source rejection, numeric Wasm and "
-              "WasmGC passed");
+    std::puts("Private native context and JavaScript source rejection passed");
   if (status != 0)
     std::fprintf(stderr, "Runtime check failed: %d\n", status);
   return status;

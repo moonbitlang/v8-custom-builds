@@ -35,14 +35,18 @@ the same bootstrap with the wee8 build group and does not compile that crate.
  fn print_gn_args(gn_out_dir: &Path) {
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -48,3 +48,36 @@
+@@ -48,3 +48,40 @@
      ]
    }
  }
 +
 +# Build the Wasm C API and its native regression probe with identical settings.
 +group("wee8-build") {
-+  deps = [ ":custom_wee8", ":wee8-runtime-check(//custom_wee8:custom_wee8)" ]
++  deps = [
++    ":custom_wee8",
++    ":wee8-runtime-check(//custom_wee8:custom_wee8)",
++    "//wee8-profile:checks(//custom_wee8:custom_wee8)",
++  ]
 +}
 +
 +# Public entry point for the isolated native Wasm profile.
