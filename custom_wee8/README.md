@@ -9,6 +9,7 @@ Ordinary V8 defaults to `false` and keeps its original behavior.
 | --- | --- |
 | `BUILD.gn` | Native toolchain scope and capability settings |
 | `src/wasm-context-bootstrap.inc` | Private native context initialization |
+| `src/wasm-feature-policy.h` | Positive list of optional Wasm features |
 | `src/cpp-builtin-selection.h` | C++ builtin entries |
 | `src/runtime-selection.h` | Runtime helpers and inline aliases |
 | `src/generated-js-builtin-selection.h` | Generated JS-entry bodies (TFJ) |
@@ -54,6 +55,40 @@ registration still use upstream machinery. Other generated kinds
 (TFC/TFS/TFH/ASM/BCH) retain their bodies. Source exclusion, bytecode-handler removal
 and a smaller Wasm registration layer remain separate work.
 
+## Wasm feature policy
+
+The C API applies `src/wasm-feature-policy.h` before engine initialization. Its
+positive list retains modern exception handling (`exnref` in V8 12.9's flags)
+and Wasm inlining. All other optional flags are disabled, including the broad
+`wasm_staging` switch. Feature-set construction also applies the list, so V8's
+origin-trial callbacks cannot re-enable excluded proposals. This matters because
+the pinned imported-strings callback also enables legacy stringref upstream.
+
+| Capability | Policy |
+| --- | --- |
+| Modern `try_table`, `throw_ref`, tags and exceptions | Retained |
+| `wasm:js-string` builtins and imported string literals | Explicit per-module compile options, independent of proposal flags |
+| Legacy `stringref` types, instructions and string views | Disabled (already off by default upstream) |
+| Legacy `try`, `catch`, `catch_all`, `delegate`, `rethrow` opcodes | Disabled (enabled by default upstream); use modern exception handling |
+| Memory64, JSPI/type reflection, stack switching, shared-everything GC types, FP16, hints/tracing and unsafe GC experiments | Remain disabled in this pinned runtime |
+| Unconditional V8 features, including GC, typed references, SIMD, threads/atomics and multiple memories | Unchanged; host C API restrictions still apply |
+
+Disabled does not mean obsolete: for example, [Memory64 and JS-string builtins
+are standardized](https://github.com/WebAssembly/proposals/blob/main/finished-proposals.md).
+The [modern exception design](https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md)
+is distinct from the legacy exception instructions. We do not turn on every
+prototype from this older V8 just because its proposal later advanced.
+
+The new string wrapper represents a rooted V8 primitive transported as
+`externref`. It does not expose the [old stringref proposal](https://github.com/WebAssembly/stringref).
+The [JS-string builtins interface](https://github.com/WebAssembly/js-string-builtins/blob/main/proposals/js-string-builtins/Overview.md)
+uses imports instead of adding those string types/instructions to the wire format.
+
+This policy bounds accepted modules; it does not remove compiler implementations
+or promise an archive-size reduction. Existing compiled caches are not a portable
+interchange format across policy/version changes. On a V8 upgrade, review both
+optional flags and features made unconditional upstream.
+
 ## Upstream patches
 
 The recipe applies patches in filename order. The files retain separate purposes;
@@ -68,6 +103,7 @@ none is an additional runtime selection layer.
 | `no-source-parser.patch` | Optional parser capability; exclude parser/scanner sources and reject source compilation |
 | `wasm-c-api.patch` | Adapt the pinned C API implementation and native link dependencies |
 | `wasm-exceptions.patch` | Implement native tags and catchable exception extensions |
+| `wasm-feature-policy.patch` | Apply the optional-feature list at engine startup and feature-set construction |
 | `wasm-native-context.patch` | Connect the context and three implementation selections to V8 |
 | `wee8-profile.patch` | Declare the single custom switch, common define and owned headers |
 | `wee8-without-asmjs.patch` | Optional asm.js capability; exclude the translator and guard direct callers |
@@ -100,7 +136,10 @@ python3 custom_wee8/tests/check.py target/native-checks/<target>
 Unsupported invocations run in isolated processes and must reach the named entry
 or generated trap. Null dereferences, ordinary returns and unrelated failures do
 not pass. Context and guest checks run in Liftoff-only, optimizing-only, lazy and
-synchronous-tier-up modes. The packaged C API harness reassembles the WAT fixtures
+synchronous-tier-up modes. The boundary probe attempts to enable every excluded feature and the imported-string
+origin-trial callback. Packaged tests reject legacy exception opcodes, old stringref,
+Memory64 and shared GC types through both ordinary and JS-string-enabled compilation.
+The packaged C API harness reassembles the WAT fixtures
 with its existing pinned dependency and checks the binaries match.
 
 IDs and machine-code sizes are architecture-dependent; inventories do not freeze

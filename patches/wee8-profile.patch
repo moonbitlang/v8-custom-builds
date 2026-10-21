@@ -29,7 +29,7 @@ context, implementation lists and JavaScript tier settings together.
  
    if (v8_enable_javascript_parser) {
      defines += [ "V8_ENABLE_JAVASCRIPT_PARSER=1" ]
-@@ -3316,6 +3327,11 @@
+@@ -3316,6 +3327,12 @@
    public_configs = [ "src/inspector:inspector_config" ]
  
    sources = [
@@ -38,6 +38,7 @@ context, implementation lists and JavaScript tier settings together.
 +    "//custom_wee8/src/generated-js-builtin-selection.h",
 +    "//custom_wee8/src/runtime-selection.h",
 +    "//custom_wee8/src/wasm-context-bootstrap.inc",
++    "//custom_wee8/src/wasm-feature-policy.h",
      ### gcmole(all) ###
      "$target_gen_dir/builtins-generated/bytecodes-builtins-list.h",
      "include/cppgc/common.h",

@@ -4,6 +4,19 @@
 #include "wasm.h"
 
 extern "C" void test_strings(wasm_engine_t*, wasm_store_t*);
+extern "C" void test_proposals(wasm_store_t*);
+
+extern "C" void wee8_reject_proposal(wasm_store_t* store, const uint8_t* bytes,
+                                    size_t len) {
+  wasm_byte_vec_t binary = {len, reinterpret_cast<char*>(const_cast<uint8_t*>(bytes))};
+  assert(!wasm_module_validate(store, &binary));
+  assert(!wasm_module_new(store, &binary));
+  // Opting into JS-string imports must not enable old stringref or other
+  // excluded instructions. Exercise the new entry points as well as upstream.
+  wee8_compile_options_t options = {true, nullptr};
+  assert(!wee8_module_validate(store, &binary, &options));
+  assert(!wee8_module_new(store, &binary, &options));
+}
 
 struct HostState {
   int calls = 0;
@@ -152,6 +165,7 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   wasm_extern_vec_delete(&exports);
   wasm_instance_delete(instance);
   test_strings(engine, store);
+  test_proposals(store);
   wasm_store_delete(store);
   assert(state.finalized == 1);
   wasm_engine_delete(engine);

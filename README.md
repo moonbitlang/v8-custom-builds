@@ -94,7 +94,16 @@ roots retain their owning isolate explicitly, allowing primitive strings through
 calls, callbacks, globals, tables and exception payloads. Module sharing retains
 its compile options. These additions use the existing string implementation;
 they do not change the context allowlists, builtin blob or snapshot. Host-info
-attachment remains limited to receiver objects, not primitive strings.
+attachment remains limited to receiver objects, not primitive strings. These are
+V8 strings carried as `externref`, not the legacy Wasm `stringref` type.
+
+The custom runtime allows only modern exception handling and Wasm inlining among
+V8's optional feature flags. Legacy `stringref` and `try`/`catch`/`delegate`/`rethrow`
+exception opcodes are disabled. Modern `try_table`/`throw_ref` remain supported.
+JS-string builtins and literals are selected per module; enabling them does not
+enable legacy stringref. See the [feature policy](custom_wee8/README.md#wasm-feature-policy)
+for the distinction between obsolete proposals and features not enabled in this
+pinned runtime.
 
 Not every header declaration is implemented. WasmGC values and SIMD vectors
 crossing the host interface remain unsupported; some modern types reach
