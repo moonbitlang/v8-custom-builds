@@ -34,6 +34,8 @@ foreach(name, check_targets) {
 # Follow the upstream config wrapper for V8's private toolchain config, but
 # keep normal executable CRT linkage instead of the Rust adapter's /Zl flag.
 config("probe_config") {
+  # Every probe links the static wee8 archive, including on Windows.
+  defines = [ "LIBWASM_STATIC" ]
   configs = [
     "//v8:internal_config",
     "//v8:external_config",
