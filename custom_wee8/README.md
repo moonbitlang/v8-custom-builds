@@ -105,6 +105,7 @@ none is an additional runtime selection layer.
 | `wasm-exceptions.patch` | Implement native tags and catchable exception extensions |
 | `wasm-feature-policy.patch` | Apply the optional-feature list at engine startup and feature-set construction |
 | `wasm-native-context.patch` | Connect the context and three implementation selections to V8 |
+| `wee8-stack-limit.patch` | Expose per-store native stack boundaries and restoration |
 | `wee8-profile.patch` | Declare the single custom switch, common define and owned headers |
 | `wee8-without-asmjs.patch` | Optional asm.js capability; exclude the translator and guard direct callers |
 
@@ -145,6 +146,8 @@ with its existing pinned dependency and checks the binaries match.
 IDs and machine-code sizes are architecture-dependent; inventories do not freeze
 them. Probes validate IDs against each target's enums and deserialized Code.
 Packaged C API/Rust tests validate the consumer interface, including exceptions;
+The packaged stack-limit guest checks independent store limits, deeper recursion
+with a larger budget, zero rejection, and recovery after restoring the boundary.
 Moonrun validation uses the wee8 backend in `moonbitlang/moon/crates/moonrun`.
 
 ## V8 upgrades

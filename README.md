@@ -105,6 +105,12 @@ enable legacy stringref. See the [feature policy](custom_wee8/README.md#wasm-fea
 for the distinction between obsolete proposals and features not enabled in this
 pinned runtime.
 
+`wee8-stack-limit.patch` exposes `wee8_store_set_stack_limit`, setting a per-store
+native stack boundary and returning its previous address for restoration. It does
+not resize the OS thread stack. The caller must supply a valid address on the
+store's owning thread, reserve space for host/V8 frames, and avoid changing the
+boundary during Wasm execution. Zero is rejected without changing the limit.
+
 Not every header declaration is implemented. WasmGC values and SIMD vectors
 crossing the host interface remain unsupported; some modern types reach
 unimplemented V8 conversions. Legacy `ANYREF` means `externref`. The runtime does

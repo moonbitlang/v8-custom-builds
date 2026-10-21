@@ -1,0 +1,37 @@
+Subject: Expose per-store native stack boundaries with restoration
+
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -3660,6 +3660,16 @@
+   return memory->grow(delta);
+ }
+ 
++// Per-store native stack boundary (wee8 extension).
++uintptr_t wee8_store_set_stack_limit(wasm_store_t* store, uintptr_t limit) {
++  if (limit == 0) return 0;
++  auto* impl = wasm::impl(reveal_store(store));
++  v8::Isolate::Scope scope(impl->isolate());
++  uintptr_t previous = impl->i_isolate()->stack_guard()->real_climit();
++  impl->isolate()->SetStackLimit(limit);
++  return previous;
++}
++
+ // Tags and catchable exceptions (wee8 extension).
+ 
+ WASM_DEFINE_REF(tag, wasm::Tag)
+--- a/v8/third_party/wasm-api/wasm.h
++++ b/v8/third_party/wasm-api/wasm.h
+@@ -143,6 +143,13 @@
+ 
+ WASM_API_EXTERN own wasm_store_t* wasm_store_new(wasm_engine_t*);
+ 
++// Set the native stack boundary for this store on its owning thread. Returns
++// the previous boundary for restoration; zero is rejected and returns zero.
++// The embedder must supply an address within the thread's actual stack and
++// leave room for host/V8 frames. This does not allocate/grow the OS stack.
++// Keep the store on that thread and do not change the limit while Wasm runs.
++WASM_API_EXTERN uintptr_t wee8_store_set_stack_limit(wasm_store_t*, uintptr_t);
++
+ 
+ ///////////////////////////////////////////////////////////////////////////////
+ // Type Representations
