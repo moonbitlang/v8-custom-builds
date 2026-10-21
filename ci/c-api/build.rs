@@ -5,6 +5,7 @@ fn main() {
     println!("cargo:rerun-if-changed=probe.cc");
     println!("cargo:rerun-if-changed=strings.cc");
     println!("cargo:rerun-if-changed=stack-limit.cc");
+    println!("cargo:rerun-if-changed=exception-traces.cc");
     let dir = PathBuf::from(env::var_os("WEE8_DIR").expect("set WEE8_DIR"));
     println!("cargo:rerun-if-changed={}", dir.display());
     cc::Build::new()
@@ -15,6 +16,7 @@ fn main() {
         .file("probe.cc")
         .file("strings.cc")
         .file("stack-limit.cc")
+        .file("exception-traces.cc")
         .compile("wee8_probe");
     println!("cargo:rustc-link-search=native={}", dir.display());
     println!("cargo:rustc-link-lib=static=wee8");

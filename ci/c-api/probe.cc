@@ -5,6 +5,7 @@
 
 extern "C" void test_strings(wasm_engine_t*, wasm_store_t*);
 extern "C" void test_proposals(wasm_store_t*);
+extern "C" void test_exception_traces(wasm_store_t*);
 extern "C" void test_stack_limit(wasm_engine_t*, wasm_store_t*);
 
 extern "C" void wee8_reject_proposal(wasm_store_t* store, const uint8_t* bytes,
@@ -167,6 +168,7 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   wasm_instance_delete(instance);
   test_strings(engine, store);
   test_proposals(store);
+  test_exception_traces(store);
   test_stack_limit(engine, store);
   wasm_store_delete(store);
   assert(state.finalized == 1);
