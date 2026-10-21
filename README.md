@@ -86,6 +86,16 @@ flag is enabled before initialization for `try_table` and `throw_ref`. Host-crea
 exceptions carry native tag identity; ordinary host traps remain uncatchable.
 Payloads support scalar numbers and nullable externref. Use the matching header.
 
+`wasm-strings.patch` connects `custom_wee8/src/c-api-strings.inc` to the native
+adapter. It adds explicit per-module options for V8's JS-string builtins
+and imported string constants, plus owned string creation and UTF-16 copying.
+Only V8-validated builtin imports are omitted from the host import list. Native
+roots retain their owning isolate explicitly, allowing primitive strings through
+calls, callbacks, globals, tables and exception payloads. Module sharing retains
+its compile options. These additions use the existing string implementation;
+they do not change the context allowlists, builtin blob or snapshot. Host-info
+attachment remains limited to receiver objects, not primitive strings.
+
 Not every header declaration is implemented. WasmGC values and SIMD vectors
 crossing the host interface remain unsupported; some modern types reach
 unimplemented V8 conversions. Legacy `ANYREF` means `externref`. The runtime does

@@ -3,6 +3,8 @@
 #undef NDEBUG
 #include "wasm.h"
 
+extern "C" void test_strings(wasm_engine_t*, wasm_store_t*);
+
 struct HostState {
   int calls = 0;
   int finalized = 0;
@@ -149,6 +151,7 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
 
   wasm_extern_vec_delete(&exports);
   wasm_instance_delete(instance);
+  test_strings(engine, store);
   wasm_store_delete(store);
   assert(state.finalized == 1);
   wasm_engine_delete(engine);
