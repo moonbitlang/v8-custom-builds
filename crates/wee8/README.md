@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and header
-from `v0.106.0-moonbit.2`. It verifies the release SHA-256 manifest and a separately
+from `v0.106.0-moonbit.3`. It verifies the release SHA-256 manifest and a separately
 pinned header hash, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
@@ -26,8 +26,8 @@ because older V8 C APIs used identical symbols with incompatible signatures.
 ## Supported interface
 
 The validated guest subset is Wasm 1.0 plus bulk-memory, multi-value, saturating
-float-to-integer conversions, SIMD, reference types, typed function references
-and GC. Structs, arrays and typed
+float-to-integer conversions, SIMD, reference types, typed function references,
+GC and standardized exception handling. Structs, arrays and typed
 function references may stay inside the guest. The C API boundary is checked
 separately: only scalar numbers and nullable `externref`/`funcref` can appear in
 import/export metadata. GC references, non-null references and `v128` at that
@@ -61,8 +61,8 @@ handles, while externalizing an `i31ref` can produce a native immediate. The
 wrapper cannot safely expose every result of that operation yet. Thus this is
 internal GC support, not support for every GC module or GC values at the host
 boundary. Relaxed SIMD, shared memory and other unlisted proposals remain
-excluded. Exceptions/tags require the opt-in feature below. Imports are supplied
-in declaration order.
+excluded. Standardized exception handling and tags are supported by default;
+legacy EH instructions remain excluded. Imports are supplied in declaration order.
 
 A store owns its native objects; native-root handles borrow the store and stay on
 its creating thread. `Compiled` may move between threads and create modules in
@@ -91,18 +91,16 @@ The Rust-crate workflow runs these checks on Linux, macOS, and Windows without
 building V8. Native archive production remains in the separately dispatched
 build workflow.
 
-## Exception tags (candidate native archive)
+## Exception tags
 
-The `exceptions` feature requires `WEE8_ARCHIVE` and `WEE8_HEADER` from a matching
-source build of this revision. The pinned published release has no tag/exception
-symbols, so enabling this feature without those overrides fails before download.
-It enables standardized `try_table`/`throw_ref` handling; legacy EH instructions
-remain outside the Rust validator's allowlist. The native build workflow tests
-the feature against its freshly built archive. Published-release consumer CI
-continues to test the default interface.
+Tags and exceptions are part of the normal interface. The pinned release supplies
+the matching native symbols and header; no Cargo feature or source-build override
+is needed. Remove `features = ["exceptions"]` from older dependency declarations.
+Standardized `try_table`/`throw_ref` handling is enabled, while legacy EH
+instructions remain outside the Rust validator's allowlist.
 
-The feature's integration tests exercise real Wasm through this crate's public
-API. Their goals are:
+Integration tests exercise real Wasm through this crate's public API in both the
+native build and published-release consumer workflows. Their goals are:
 
 - **Correct propagation:** only matching tags catch an exception, and throws and
   rethrows preserve its payload across the host/guest boundary.
@@ -111,7 +109,7 @@ API. Their goals are:
 - **Failure separation:** ordinary host errors and panics cannot be swallowed by
   guest `catch_all`; pending exceptions do not contaminate later execution.
 
-These are ordinary `cargo test --features exceptions` tests. The packaged C API
+These run with ordinary `cargo test`. The packaged C API
 consumer has only a small additional header/archive compatibility check for the
 new functions; it does not duplicate the exception behavior tests.
 

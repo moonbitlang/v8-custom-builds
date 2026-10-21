@@ -9,10 +9,6 @@ repository = "https://github.com/moonbitlang/v8-custom-builds"
 links = "wee8"
 publish = false
 
-[features]
-# Requires the matching source-built archive until the next native release.
-exceptions = []
-
 [dependencies]
 thiserror = "1.0"
 wasmparser = { version = "=0.258.0", default-features = false, features = ["std", "validate", "features", "simd"] }

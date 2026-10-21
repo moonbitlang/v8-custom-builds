@@ -49,9 +49,7 @@
 //! module.instantiate(&[]).unwrap();
 //! ```
 
-#[cfg(feature = "exceptions")]
 mod exceptions;
-#[cfg(feature = "exceptions")]
 pub use exceptions::{Exception, Tag};
 mod ffi;
 mod references;
@@ -76,7 +74,6 @@ pub enum Error {
     #[error("{0}")]
     Trap(String),
     /// The store holds a catchable Wasm exception. Retrieve it with take_exception.
-    #[cfg(feature = "exceptions")]
     #[error("uncaught Wasm exception")]
     ThrownException,
 }
@@ -255,7 +252,6 @@ struct StoreOpaque {
     executing: Cell<bool>,
     memory: Cell<*mut ffi::wasm_memory_t>,
     host_error: RefCell<Option<String>>,
-    #[cfg(feature = "exceptions")]
     exceptions: exceptions::Exceptions,
 }
 
@@ -269,7 +265,6 @@ impl StoreOpaque {
         if self.executing.replace(true) {
             return Err("wee8 does not support guest re-entry from a host callback yet".into());
         }
-        #[cfg(feature = "exceptions")]
         self.exceptions.pending.borrow_mut().take();
         Ok(Execution(self))
     }
@@ -371,7 +366,6 @@ impl<T> Store<T> {
                     executing: Cell::new(false),
                     memory: Cell::new(ptr::null_mut()),
                     host_error: RefCell::new(None),
-                    #[cfg(feature = "exceptions")]
                     exceptions: exceptions::Exceptions::new(),
                 },
                 data: RefCell::new(data),
@@ -391,7 +385,6 @@ impl<T> Store<T> {
     }
 
     fn take_trap(&self, trap: *mut ffi::wasm_trap_t) -> Error {
-        #[cfg(feature = "exceptions")]
         if unsafe { ffi::wee8_trap_is_exception(trap) } {
             *self.state.inner.exceptions.pending.borrow_mut() =
                 Some(exceptions::ExceptionRoot(NonNull::new(trap).unwrap()));
@@ -407,7 +400,6 @@ impl<T> Store<T> {
 
 impl<T> Drop for Store<T> {
     fn drop(&mut self) {
-        #[cfg(feature = "exceptions")]
         self.state.inner.exceptions.clear();
         // Native finalizers still have their own Rc to Rust state during teardown.
         unsafe { ffi::wasm_store_delete(self.state.inner.raw.as_ptr()) }
@@ -517,7 +509,6 @@ unsafe extern "C" fn call_host<T>(
             }
             Ok::<(), Error>(())
         }));
-        #[cfg(feature = "exceptions")]
         {
             let pending = env.state.inner.exceptions.pending.borrow_mut().take();
             if matches!(&outcome, Ok(Err(Error::ThrownException)))
@@ -557,9 +548,8 @@ impl<T: 'static> Store<T> {
             | wasmparser::WasmFeatures::SIMD
             | wasmparser::WasmFeatures::REFERENCE_TYPES
             | wasmparser::WasmFeatures::GC
-            | wasmparser::WasmFeatures::FUNCTION_REFERENCES;
-        #[cfg(feature = "exceptions")]
-        let features = features | wasmparser::WasmFeatures::EXCEPTIONS;
+            | wasmparser::WasmFeatures::FUNCTION_REFERENCES
+            | wasmparser::WasmFeatures::EXCEPTIONS;
         let types = wasmparser::Validator::new_with_features(features)
             .validate_all(bytes)
             .map_err(|error| {
@@ -751,8 +741,9 @@ pub enum ExternType {
         params: Vec<Kind>,
         results: Vec<Kind>,
     },
-    #[cfg(feature = "exceptions")]
-    Tag { params: Vec<Kind> },
+    Tag {
+        params: Vec<Kind>,
+    },
 }
 
 #[derive(Debug)]
@@ -765,12 +756,11 @@ pub struct ImportType {
 /// Borrowed function or store-owned tag supplied to an instance.
 pub enum Extern<'a, T> {
     Func(&'a HostFunc<'a, T>),
-    #[cfg(feature = "exceptions")]
     Tag(Tag),
 }
 
 impl<T> Module<'_, T> {
-    /// Describe function imports. Kept for consumers without tag support.
+    /// Describe function imports; tag imports require import_types.
     pub fn imports(&self) -> Result<Vec<Import>> {
         self.import_types()?
             .into_iter()
@@ -781,7 +771,6 @@ impl<T> Module<'_, T> {
                     params,
                     results,
                 }),
-                #[cfg(feature = "exceptions")]
                 ExternType::Tag { .. } => Err(format!(
                     "tag import {}::{} requires import_types",
                     import.module, import.name
@@ -817,7 +806,6 @@ impl<T> Module<'_, T> {
                     let name = read_name(ffi::wasm_importtype_name(import));
                     let ty = ffi::wasm_importtype_type(import);
                     let function = ffi::wasm_externtype_as_functype_const(ty);
-                    #[cfg(feature = "exceptions")]
                     let function = if function.is_null() {
                         let tag = ffi::wasm_externtype_as_tagtype_const(ty);
                         if tag.is_null() {
@@ -840,9 +828,6 @@ impl<T> Module<'_, T> {
                     };
                     let params = read_kinds(ffi::wasm_functype_params(function))?;
                     let results = read_kinds(ffi::wasm_functype_results(function))?;
-                    #[cfg(not(feature = "exceptions"))]
-                    let kind = ExternType::Func { params, results };
-                    #[cfg(feature = "exceptions")]
                     let kind = if ffi::wasm_externtype_kind(ty)
                         == ffi::wasm_externkind_enum_WASM_EXTERN_TAG as u8
                     {
@@ -888,7 +873,7 @@ impl<T> Drop for Module<'_, T> {
 }
 
 impl<'store, T> Module<'store, T> {
-    /// Imports follow module declaration order. The MVP accepts function imports.
+    /// Instantiate with function-only imports in module declaration order.
     pub fn instantiate(&self, imports: &[&HostFunc<'_, T>]) -> Result<Instance<'store, T>> {
         if imports.iter().any(|f| !ptr::eq(f.store, self.store)) {
             return Err("imports must belong to the module's store".into());
@@ -915,7 +900,6 @@ impl<'store, T> Module<'store, T> {
                     }
                     Ok(unsafe { ffi::wasm_func_as_extern(function.raw.as_ptr()) })
                 }
-                #[cfg(feature = "exceptions")]
                 Extern::Tag(tag) => Ok(unsafe {
                     ffi::wasm_tag_as_extern(tag.raw(&self.store.state.inner)?.as_ptr())
                 }),

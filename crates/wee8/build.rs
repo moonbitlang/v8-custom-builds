@@ -34,11 +34,7 @@ use std::{
     time::Duration,
 };
 
-const RELEASE: &str = "v0.106.0-moonbit.2";
-#[cfg(not(feature = "exceptions"))]
-const HEADER_SHA256: &str = "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301";
-
-#[cfg(feature = "exceptions")]
+const RELEASE: &str = "v0.106.0-moonbit.3";
 const HEADER_SHA256: &str = "f6714cdea3bfbbfcafc09d5f61358a1aaebe43464644909864c50585c60630ab";
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -50,12 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         (Some(archive), Some(header)) => {
             (dunce::canonicalize(archive)?, dunce::canonicalize(header)?)
         }
-        (None, None) => {
-            if cfg!(feature = "exceptions") {
-                return Err("the exceptions feature requires matching WEE8_ARCHIVE and WEE8_HEADER from a source build; the pinned release has no exception API".into());
-            }
-            release_files(&out, &env::var("TARGET")?)?
-        }
+        (None, None) => release_files(&out, &env::var("TARGET")?)?,
         _ => {
             return Err(
                 "set both WEE8_ARCHIVE and WEE8_HEADER, or neither to download the release".into(),
@@ -95,7 +86,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         _ => {}
     }
-    let mut bindings = bindgen::Builder::default()
+    bindgen::Builder::default()
         .rust_edition(bindgen::RustEdition::Edition2024)
         .header(header.to_string_lossy())
         .clang_args(["-xc++", "-std=c++17", "-DLIBWASM_STATIC"])
@@ -103,13 +94,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .allowlist_function("(wasm|wee8)_.*")
         .allowlist_var("WASM_.*")
         .layout_tests(false)
-        .generate_comments(false);
-    if !cfg!(feature = "exceptions") {
-        bindings = bindings
-            .blocklist_item(".*tagtype.*")
-            .blocklist_item("WASM_EXTERN_TAG");
-    }
-    bindings
+        .generate_comments(false)
         .generate()?
         .write_to_file(out.join("wee8_bindings.rs"))?;
     Ok(())

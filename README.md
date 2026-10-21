@@ -103,7 +103,7 @@ Windows x86_64. It validates the freshly built archive with:
 - The packaged C API consumer: calls, callbacks, ownership/finalization, vectors,
   traps, silent instantiation failures, memory growth and an exception round trip.
 - The Rust wrapper suite: scalar calls, serialization into fresh stores, start
-  callbacks, growth, trap recovery and, with `exceptions`, matching, catch/rethrow,
+  callbacks, growth, trap recovery, tag matching, catch/rethrow,
   payload ownership, store safety and host errors bypassing guest catches.
 - Linux x86_64 linking against glibc 2.23 using Zig, with a dynamic-symbol check.
 
