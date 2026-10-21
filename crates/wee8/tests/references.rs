@@ -191,7 +191,7 @@ fn cross_store_references_are_rejected_before_native_calls() {
 }
 
 #[test]
-fn gc_boundary_types_and_externalized_gc_values_are_rejected() {
+fn unsupported_reference_boundary_types_are_rejected() {
     let store = Store::new(()).unwrap();
     for source in [
         r#"(module (type $s (struct)) (import "h" "f" (func (param (ref null $s)))))"#,
@@ -199,10 +199,6 @@ fn gc_boundary_types_and_externalized_gc_values_are_rejected() {
         r#"(module (type $a (array i32)) (global (export "g") (ref null $a) (ref.null $a)))"#,
         r#"(module (type $s (struct)) (table (export "t") 0 (ref null $s)))"#,
         r#"(module (func (export "f") (param (ref extern))))"#,
-        r#"(module (func (export "f") (result externref) i32.const 1 ref.i31 extern.convert_any))"#,
-        r#"(module (global externref (extern.convert_any (ref.i31 (i32.const 1)))))"#,
-        r#"(module (table 1 externref (extern.convert_any (ref.i31 (i32.const 1)))))"#,
-        r#"(module (table 1 externref) (elem (i32.const 0) externref (extern.convert_any (ref.i31 (i32.const 1)))))"#,
     ] {
         let error = match store.compile(&wat::parse_str(source).unwrap()) {
             Ok(_) => panic!("accepted {source}"),

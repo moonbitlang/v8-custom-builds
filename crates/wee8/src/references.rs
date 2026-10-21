@@ -84,6 +84,11 @@ unsafe extern "C" fn finalize(data: *mut c_void) {
 }
 
 impl ExternRef<'_> {
+    /// Whether this reference is a native V8 string, independent of host payloads.
+    pub fn is_string(&self) -> bool {
+        unsafe { ffi::wee8_ref_is_string(self.raw.as_ptr()) }
+    }
+
     /// Borrow this object's host payload if it has the requested Rust type.
     pub fn data<D: Any>(&self) -> Option<&D> {
         let data = unsafe { ffi::wasm_ref_get_host_info(self.raw.as_ptr()) };
