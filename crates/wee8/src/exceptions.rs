@@ -148,6 +148,15 @@ impl ExceptionRoot {
     }
 }
 
+/// One captured Wasm call site. Indices and byte offsets refer to the frame's
+/// module, not native addresses or source lines. This snapshot owns no V8 roots.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StackFrame {
+    pub function_index: u32,
+    pub function_offset: usize,
+    pub module_offset: usize,
+}
+
 /// A native root for a catchable Wasm exception, borrowing its store.
 /// Payload references are retained by the native exception object itself.
 ///
@@ -188,6 +197,31 @@ impl<'store> Exception<'store> {
             root: ExceptionRoot(raw),
             store,
         })
+    }
+
+    /// The Wasm stack captured when a native exception was constructed.
+    /// Rethrowing preserves those frames. Construction outside guest execution
+    /// yields an empty trace; guest-created exceptions may also lack a trace.
+    pub fn trace(&self) -> Vec<StackFrame> {
+        unsafe {
+            let mut frames = ffi::wasm_frame_vec_t {
+                size: 0,
+                data: ptr::null_mut(),
+            };
+            ffi::wasm_trap_trace(self.root.0.as_ptr(), &mut frames);
+            let result = (0..frames.size)
+                .map(|index| {
+                    let frame = *frames.data.add(index);
+                    StackFrame {
+                        function_index: ffi::wasm_frame_func_index(frame),
+                        function_offset: ffi::wasm_frame_func_offset(frame),
+                        module_offset: ffi::wasm_frame_module_offset(frame),
+                    }
+                })
+                .collect();
+            ffi::wasm_frame_vec_delete(&mut frames);
+            result
+        }
     }
 
     /// Read a payload only with the matching tag. Returned references own roots.

@@ -34,13 +34,10 @@ use std::{
     time::Duration,
 };
 
-const RELEASE: &str = "v0.106.0-moonbit.3";
-const HEADER_SHA256: &str = "f6714cdea3bfbbfcafc09d5f61358a1aaebe43464644909864c50585c60630ab";
+const RELEASE: &str = "v0.106.0-moonbit.4";
+const HEADER_SHA256: &str = "985638e18622d37c87787ae8693177a110e7fbb0617b9f131c96564e77c1d746";
 
-// New native candidates provide an unmodified upstream header plus extensions.
-// Ordinary consumers still use the published release's single combined header.
 const WASM_HEADER_SHA256: &str = "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301";
-const WEE8_HEADER_SHA256: &str = "985638e18622d37c87787ae8693177a110e7fbb0617b9f131c96564e77c1d746";
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-env-changed=WEE8_ARCHIVE");
@@ -60,17 +57,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     // This interface depends on the sized-vector ABI from this exact header.
     // V8's older header has the same symbol names but incompatible signatures.
-    match sha256(&header)?.as_str() {
-        HEADER_SHA256 => {} // Published .3 combined header.
-        WEE8_HEADER_SHA256 => {
-            let upstream = header.with_file_name("wasm.h");
-            if sha256(&upstream)? != WASM_HEADER_SHA256 {
-                return Err("wee8.h requires its matching upstream wasm.h alongside it".into());
-            }
-            println!("cargo:rerun-if-changed={}", upstream.display());
-        }
-        _ => return Err("WEE8_HEADER does not match the supported Wasm C API revision".into()),
+    let upstream = header.with_file_name("wasm.h");
+    if sha256(&header)? != HEADER_SHA256 || sha256(&upstream)? != WASM_HEADER_SHA256 {
+        return Err(
+            "WEE8_HEADER must be wee8.h with its matching upstream wasm.h alongside it".into(),
+        );
     }
+    println!("cargo:rerun-if-changed={}", upstream.display());
     println!("cargo:rerun-if-changed={}", archive.display());
     println!("cargo:rerun-if-changed={}", header.display());
     let msvc = env::var("CARGO_CFG_TARGET_ENV")? == "msvc";
@@ -103,7 +96,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .rust_edition(bindgen::RustEdition::Edition2024)
         .header(header.to_string_lossy())
         .clang_args(["-xc++", "-std=c++17", "-DLIBWASM_STATIC"])
-        .allowlist_type("wasm_.*")
+        .allowlist_type("(wasm|wee8)_.*")
         .allowlist_function("(wasm|wee8)_.*")
         .allowlist_var("WASM_.*")
         .layout_tests(false)
@@ -145,21 +138,28 @@ fn release_files(out: &Path, target: &str) -> Result<(PathBuf, PathBuf), Box<dyn
             None,
         )?;
     }
-    // The pinned release's HTTPS manifest covers the compressed archive and
-    // paired header. The independent header hash below enforces our known ABI.
+    // The pinned release's manifest covers the archive and both public headers.
+    // Independent header hashes enforce our known ABI before binding generation.
     let checksums = fs::read_to_string(&manifest)?;
-    let header_name = format!("wasm_c_api_{target}.h");
-    for name in [&archive_name, &header_name] {
+    let header_name = format!("wee8_c_api_{target}.h");
+    let upstream_name = format!("wasm_c_api_{target}.h");
+    for name in [&archive_name, &header_name, &upstream_name] {
         let checksum = checksums::checksum(&checksums, name)?;
         let path = cache.join(name);
         if !path.exists() || !sha256(&path)?.eq_ignore_ascii_case(checksum) {
             download(&client, &format!("{url}/{name}"), &path, Some(checksum))?;
         }
     }
-    let header = cache.join(header_name);
-    if sha256(&header)? != HEADER_SHA256 {
-        return Err("downloaded wee8 header has an incompatible ABI".into());
+    if sha256(&cache.join(&header_name))? != HEADER_SHA256
+        || sha256(&cache.join(&upstream_name))? != WASM_HEADER_SHA256
+    {
+        return Err("downloaded wee8 headers have an incompatible ABI".into());
     }
+    // wee8.h includes wasm.h by name. Stage the verified pair together under
+    // their public include names, independent of platform-specific asset names.
+    let header = cache.join("wee8.h");
+    fs::copy(cache.join(header_name), &header)?;
+    fs::copy(cache.join(upstream_name), cache.join("wasm.h"))?;
     let archive = cache.join(if target.ends_with("-msvc") {
         "wee8.lib"
     } else {

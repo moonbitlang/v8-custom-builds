@@ -19,7 +19,7 @@
 //! Experimental Wasm interface over the wee8 archive. All C ownership rules
 //! live here. Stores and their borrowed handles stay on their creating thread;
 //! Rust host state is retained through callback finalization. No JS handles cross
-//! this interface. V8 still uses JS objects internally.
+//! this interface. Native strings are exposed as store-bound Wasm externrefs.
 //!
 //! Host services such as WASI belong to the embedder. This crate only compiles,
 //! instantiates, and calls Wasm with numeric values and store-bound host references.
@@ -50,10 +50,11 @@
 //! ```
 
 mod exceptions;
-pub use exceptions::{Exception, Tag};
+pub use exceptions::{Exception, StackFrame, Tag};
 mod ffi;
 mod references;
 pub use references::ExternRef;
+mod strings;
 use std::{
     cell::{Cell, RefCell},
     ffi::c_void,
@@ -62,6 +63,7 @@ use std::{
     rc::Rc,
     sync::OnceLock,
 };
+pub use strings::StringRef;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -277,59 +279,15 @@ impl Drop for Execution<'_> {
     }
 }
 
-// GC constant expressions can also externalize values; scan every expression
-// location, not just function bodies. This is intentionally conservative until
-// the native adapter supports all representations of externref.
-fn validate_reference_conversions(bytes: &[u8]) -> Result<()> {
-    use wasmparser::{DataKind, ElementItems, ElementKind, Payload, TableInit};
-    fn check(mut operators: wasmparser::OperatorsReader<'_>) -> Result<()> {
-        while !operators.eof() {
-            let offset = operators.original_position();
-            if matches!(operators.read()?, wasmparser::Operator::ExternConvertAny) {
-                return Err(format!("extern.convert_any is unsupported by this V8 C API's externref representation (at offset {offset:#x})").into());
-            }
-        }
-        Ok(())
-    }
-    for payload in wasmparser::Parser::new(0).parse_all(bytes) {
-        match payload? {
-            Payload::CodeSectionEntry(body) => check(body.get_operators_reader()?)?,
-            Payload::GlobalSection(globals) => {
-                for global in globals {
-                    check(global?.init_expr.get_operators_reader())?;
-                }
-            }
-            Payload::TableSection(tables) => {
-                for table in tables {
-                    if let TableInit::Expr(expr) = table?.init {
-                        check(expr.get_operators_reader())?;
-                    }
-                }
-            }
-            Payload::ElementSection(elements) => {
-                for element in elements {
-                    let element = element?;
-                    if let ElementKind::Active { offset_expr, .. } = element.kind {
-                        check(offset_expr.get_operators_reader())?;
-                    }
-                    if let ElementItems::Expressions(_, expressions) = element.items {
-                        for expr in expressions {
-                            check(expr?.get_operators_reader())?;
-                        }
-                    }
-                }
-            }
-            Payload::DataSection(data) => {
-                for segment in data {
-                    if let DataKind::Active { offset_expr, .. } = segment?.kind {
-                        check(offset_expr.get_operators_reader())?;
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-    Ok(())
+/// Per-module native imports. The default leaves every import to the host.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CompileOptions {
+    /// Resolve the validated `wasm:js-string` builtins inside V8.
+    pub js_string_builtins: bool,
+    /// Resolve immutable string globals from this namespace inside V8.
+    /// `None` disables constants; an empty string selects the empty namespace.
+    /// This pinned engine supports ASCII namespace names (including NUL).
+    pub imported_string_constants: Option<String>,
 }
 
 /// Native store and host state. Native handles borrow it and cannot cross threads.
@@ -371,6 +329,27 @@ impl<T> Store<T> {
                 data: RefCell::new(data),
             }),
         })
+    }
+
+    /// Set this store's native stack boundary, returning its previous address.
+    /// This does not allocate or enlarge the operating-system thread stack.
+    ///
+    /// # Safety
+    /// A nonzero `limit` must be an address inside the current thread's live stack,
+    /// with enough space reserved for host callbacks and V8's error handling.
+    /// Keep the store on that thread. Restore the returned limit before leaving
+    /// the stack region whose bounds were used. An invalid boundary can allow
+    /// native stack overflow; a byte count is not a stack address.
+    pub unsafe fn set_stack_limit(&self, limit: usize) -> Result<usize> {
+        if self.state.inner.executing.get() {
+            return Err("cannot change stack limit during guest execution".into());
+        }
+        let previous =
+            unsafe { ffi::wee8_store_set_stack_limit(self.state.inner.raw.as_ptr(), limit) };
+        if previous == 0 {
+            return Err("stack limit must be a nonzero native stack address".into());
+        }
+        Ok(previous)
     }
 
     /// Borrow this store through the same interface available to host callbacks.
@@ -537,6 +516,26 @@ unsafe extern "C" fn call_host<T>(
 impl<T: 'static> Store<T> {
     /// Validate guest proposals and C API boundary types, then compile in this store.
     pub fn compile<'store>(&'store self, bytes: &[u8]) -> Result<Module<'store, T>> {
+        self.compile_with_options(bytes, &CompileOptions::default())
+    }
+
+    /// Compile with explicit native imports. Host import metadata excludes only
+    /// builtins whose signatures V8 has validated; ordinary boundaries retain
+    /// the same checks as [`Store::compile`]. Options are owned by the module.
+    pub fn compile_with_options<'store>(
+        &'store self,
+        bytes: &[u8],
+        options: &CompileOptions,
+    ) -> Result<Module<'store, T>> {
+        if options
+            .imported_string_constants
+            .as_ref()
+            .is_some_and(|name| !name.is_ascii())
+        {
+            return Err(
+                "imported string constant namespace must be ASCII in this V8 version".into(),
+            );
+        }
         // V8 can execute internal SIMD and GC, but its C API cannot describe
         // vectors or GC references in an import/export type. Keep the proposal
         // allowlist and check that boundary before native introspection.
@@ -556,12 +555,50 @@ impl<T: 'static> Store<T> {
                 format!("outside wee8's supported Wasm subset or invalid Wasm: {error}")
             })?;
         let types = types.as_ref();
-        // Use the validator's resolved types, including imported indices and
-        // duplicate import names, rather than rebuilding Wasm's index spaces.
-        let imports = types
-            .core_imports()
-            .unwrap()
-            .map(|(module, name, ty)| (format!("import `{module}::{name}`"), ty));
+        let binary = ffi::wasm_byte_vec_t {
+            size: bytes.len(),
+            data: bytes.as_ptr().cast_mut().cast(),
+        };
+        let constants = options
+            .imported_string_constants
+            .as_ref()
+            .map(|name| ffi::wasm_name_t {
+                size: name.len(),
+                data: name.as_ptr().cast_mut().cast(),
+            });
+        let raw_options = ffi::wee8_compile_options_t {
+            js_string_builtins: options.js_string_builtins,
+            imported_string_constants: constants.as_ref().map_or(ptr::null(), |name| name),
+        };
+        let raw = NonNull::new(unsafe {
+            ffi::wee8_module_new(self.state.inner.raw.as_ptr(), &binary, &raw_options)
+        })
+        .ok_or("module validation or compilation failed")?;
+        let module = Module {
+            raw,
+            store: self,
+            options: options.clone(),
+        };
+        // Compilation can handle internal GC types; metadata introspection
+        // cannot. V8's validated classification is authoritative for builtins.
+        // Walk the original declarations: core_imports groups duplicate names
+        // and therefore cannot supply native declaration indices.
+        let mut imports = Vec::new();
+        for payload in wasmparser::Parser::new(0).parse_all(bytes) {
+            if let wasmparser::Payload::ImportSection(section) = payload? {
+                for (index, import) in section.into_imports().enumerate() {
+                    let import = import?;
+                    if !unsafe { ffi::wee8_module_import_is_builtin(raw.as_ptr(), index) } {
+                        imports.push((
+                            format!("import `{}::{}`", import.module, import.name),
+                            types
+                                .entity_type_from_import(&import)
+                                .ok_or("missing validated import type")?,
+                        ));
+                    }
+                }
+            }
+        }
         let exports = types
             .core_exports()
             .unwrap()
@@ -579,7 +616,7 @@ impl<T: 'static> Store<T> {
             ) || ty == wasmparser::ValType::EXTERNREF
         };
         let supported = |ty| scalar_or_externref(ty) || ty == wasmparser::ValType::FUNCREF;
-        for (name, ty) in imports.chain(exports) {
+        for (name, ty) in imports.into_iter().chain(exports) {
             let unsupported = match ty {
                 wasmparser::types::EntityType::Func(id) => {
                     let function = types[id].unwrap_func();
@@ -613,19 +650,7 @@ impl<T: 'static> Store<T> {
                 return Err(format!("{ty} is unsupported in C API {name}").into());
             }
         }
-        // This V8 C API represents externref with JSReceiver handles. A guest
-        // can externalize i31 (a native immediate) through extern.convert_any,
-        // which violates that representation even with an externref signature.
-        // Permit GC internally, but do not expose that unsafe conversion yet.
-        validate_reference_conversions(bytes)?;
-        let bytes = ffi::wasm_byte_vec_t {
-            size: bytes.len(),
-            data: bytes.as_ptr().cast_mut().cast(),
-        };
-        let raw =
-            NonNull::new(unsafe { ffi::wasm_module_new(self.state.inner.raw.as_ptr(), &bytes) })
-                .ok_or("module validation or compilation failed")?;
-        Ok(Module { raw, store: self })
+        Ok(module)
     }
 
     /// Create a numeric or externref host function with at most one result.
@@ -688,7 +713,10 @@ impl<T: 'static> Store<T> {
 /// deserializing arbitrary input as compiled code would be unsafe. This permits
 /// Module reuse across fresh stores; it does not promise a zero-copy code cache.
 #[derive(Debug)]
-pub struct Compiled(Vec<u8>);
+pub struct Compiled {
+    bytes: Vec<u8>,
+    options: CompileOptions,
+}
 
 impl<T> Module<'_, T> {
     /// Retain compiled code for reuse in fresh stores of this process.
@@ -705,7 +733,10 @@ impl<T> Module<'_, T> {
                 std::slice::from_raw_parts(bytes.data.cast(), bytes.size).to_vec()
             };
             ffi::wasm_byte_vec_delete(&mut bytes);
-            Compiled(result)
+            Compiled {
+                bytes: result,
+                options: self.options.clone(),
+            }
         }
     }
 }
@@ -714,14 +745,30 @@ impl<T> Store<T> {
     /// Obtain a module from code previously compiled through this crate.
     pub fn module(&self, compiled: &Compiled) -> Result<Module<'_, T>> {
         let bytes = ffi::wasm_byte_vec_t {
-            size: compiled.0.len(),
-            data: compiled.0.as_ptr().cast_mut().cast(),
+            size: compiled.bytes.len(),
+            data: compiled.bytes.as_ptr().cast_mut().cast(),
+        };
+        let constants = compiled
+            .options
+            .imported_string_constants
+            .as_ref()
+            .map(|name| ffi::wasm_name_t {
+                size: name.len(),
+                data: name.as_ptr().cast_mut().cast(),
+            });
+        let options = ffi::wee8_compile_options_t {
+            js_string_builtins: compiled.options.js_string_builtins,
+            imported_string_constants: constants.as_ref().map_or(ptr::null(), |name| name),
         };
         let raw = NonNull::new(unsafe {
-            ffi::wasm_module_deserialize(self.state.inner.raw.as_ptr(), &bytes)
+            ffi::wee8_module_deserialize(self.state.inner.raw.as_ptr(), &bytes, &options)
         })
         .ok_or("failed to obtain compiled module in new store")?;
-        Ok(Module { raw, store: self })
+        Ok(Module {
+            raw,
+            store: self,
+            options: compiled.options.clone(),
+        })
     }
 }
 
@@ -864,6 +911,7 @@ impl<T> Drop for HostFunc<'_, T> {
 pub struct Module<'store, T> {
     raw: NonNull<ffi::wasm_module_t>,
     store: &'store Store<T>,
+    options: CompileOptions,
 }
 
 impl<T> Drop for Module<'_, T> {
