@@ -1,4 +1,5 @@
 unsafe extern "C" {
+    fn wee8_reject_proposal(store: *mut std::ffi::c_void, bytes: *const u8, len: usize);
     fn wee8_string_probe(
         engine: *mut std::ffi::c_void,
         store: *mut std::ffi::c_void,
@@ -8,6 +9,25 @@ unsafe extern "C" {
         echo_len: usize,
     );
     fn wee8_probe(bytes: *const u8, len: usize, start_bytes: *const u8, start_len: usize);
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn test_proposals(store: *mut std::ffi::c_void) {
+    for source in [
+        "(module (func try nop catch_all nop end))",
+        "(module (func try nop delegate 0))",
+        "(module (func try nop catch_all rethrow 0 end))",
+        "(module (memory i64 1))",
+        "(module (type (shared (struct))))",
+    ] {
+        let bytes = wat::parse_str(source).unwrap();
+        unsafe { wee8_reject_proposal(store, bytes.as_ptr(), bytes.len()) };
+    }
+    // The maintained WAT parser no longer accepts old stringref. This module
+    // has an unused () -> stringref function type (type code 0x67 in V8 12.9).
+    // Checking wire bytes reaches the native decoder without Rust validation.
+    let stringref = b"\0asm\x01\0\0\0\x01\x05\x01\x60\0\x01\x67";
+    unsafe { wee8_reject_proposal(store, stringref.as_ptr(), stringref.len()) };
 }
 
 fn main() {
@@ -28,7 +48,7 @@ fn main() {
             "unexpected native stderr: {output:?}"
         );
         println!(
-            "Packaged C API compatibility, calls, callbacks, ownership, strings, traps and memory passed"
+            "Packaged C API compatibility, calls, callbacks, ownership, strings, proposal policy, traps and memory passed"
         );
         return;
     }

@@ -29,9 +29,11 @@
     i32.const 16 i32.const 7 i32.const 4 memory.fill
     i32.const 17 i32.load8_u i32.const 7 i32.eq call $check
     data.drop $bytes
-    try (result i32)
-      i32.const 42 throw $problem
-    catch $problem
+    block $caught (result i32)
+      try_table (catch $problem $caught)
+        i32.const 42 throw $problem
+      end
+      unreachable
     end
     i32.const 42 i32.eq call $check
     i32.const 42 struct.new $cell global.set $last

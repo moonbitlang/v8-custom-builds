@@ -1,0 +1,74 @@
+Subject: Bound optional Wasm proposals in the custom wee8 runtime
+
+The custom layer owns a positive list of optional Wasm features. Keep modern
+exception handling and Wasm inlining; reject legacy stringref and exception
+opcodes. Imported JS strings use per-module CompileTimeImports independently.
+
+Limit flags before C API initialization for decoders that read flags directly,
+and cap both feature-set entry points so origin-trial callbacks cannot enable
+an excluded proposal. Ordinary V8 retains its existing behavior. This enforces
+the accepted feature set, not source removal or a promised binary size saving.
+
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -35,6 +35,9 @@
+ #include "src/objects/js-collection-inl.h"
+ #include "src/objects/managed-inl.h"
+ #include "src/wasm/canonical-types.h"
++#if defined(V8_CUSTOM_WEE8)
++#include "custom_wee8/src/wasm-feature-policy.h"
++#endif
+ #include "src/wasm/leb-helper.h"
+ #include "src/wasm/module-instantiate.h"
+ #include "src/wasm/serialized-signature-inl.h"
+@@ -416,6 +419,18 @@
+   if (!engine) return own<Engine>();
+   // The pinned V8 gates the standardized try_table/throw_ref instructions.
+   i::v8_flags.experimental_wasm_exnref = true;
++#if defined(V8_CUSTOM_WEE8)
++  // Apply the feature ceiling before flag implications and engine startup.
++  // This also covers prototype decoders that still consult flags directly.
++  i::v8_flags.wasm_staging = false;
++#define LIMIT_WASM_FEATURE(name, ...)                                      \
++  i::v8_flags.experimental_wasm_##name =                                    \
++      i::v8_flags.experimental_wasm_##name &&                               \
++      i::wasm::kCustomWee8OptionalFeatures.contains(                         \
++          i::wasm::WasmEnabledFeature::name);
++  FOREACH_WASM_FEATURE_FLAG(LIMIT_WASM_FEATURE)
++#undef LIMIT_WASM_FEATURE
++#endif
+   engine->platform = v8::platform::NewDefaultPlatform();
+   v8::V8::InitializePlatform(engine->platform.get());
+   v8::V8::Initialize();
+--- a/v8/src/wasm/wasm-features.cc
++++ b/v8/src/wasm/wasm-features.cc
+@@ -3,6 +3,9 @@
+ // found in the LICENSE file.
+ 
+ #include "src/wasm/wasm-features.h"
++#if defined(V8_CUSTOM_WEE8)
++#include "custom_wee8/src/wasm-feature-policy.h"
++#endif
+ 
+ #include "src/execution/isolate-inl.h"
+ #include "src/flags/flags.h"
+@@ -30,6 +33,9 @@
+     features.Add(WasmEnabledFeature::feat);
+   FOREACH_WASM_FEATURE_FLAG(CHECK_FEATURE_FLAG)
+ #undef CHECK_FEATURE_FLAG
++#if defined(V8_CUSTOM_WEE8)
++  features.Intersect(kCustomWee8OptionalFeatures);
++#endif
+   return features;
+ }
+ 
+@@ -58,6 +64,9 @@
+     }
+   }
+   // This space intentionally left blank for future Wasm origin trials.
++#if defined(V8_CUSTOM_WEE8)
++  features.Intersect(kCustomWee8OptionalFeatures);
++#endif
+   return features;
+ }
+ 
