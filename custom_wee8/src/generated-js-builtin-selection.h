@@ -7,7 +7,7 @@
 
 #include "src/builtins/builtins.h"
 
-#if defined(V8_WASM_NATIVE_CONTEXT)
+#if defined(V8_CUSTOM_WEE8)
 namespace v8::internal {
 
 // Native API trampolines and shared object coercion/diagnostics.
@@ -169,5 +169,5 @@ constexpr bool WasmContextKeepsJsBuiltin(Builtin builtin) {
 }
 
 } // namespace v8::internal
-#endif // V8_WASM_NATIVE_CONTEXT
+#endif // V8_CUSTOM_WEE8
 #endif // WASM_CONTEXT_GENERATED_JS_BUILTIN_SELECTION_H_

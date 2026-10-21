@@ -6,7 +6,6 @@ assert(target_os == host_os && target_cpu == host_cpu,
 
 profile_args = {
   v8_custom_wee8 = true
-  v8_enable_wasm_native_context = true
   v8_enable_asmjs = false
   v8_enable_javascript_parser = false
   v8_enable_regexp = false

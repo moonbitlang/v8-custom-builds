@@ -6,7 +6,7 @@
 #include "src/base/logging.h"
 #include "src/runtime/runtime.h"
 
-#if defined(V8_WASM_NATIVE_CONTEXT)
+#if defined(V8_CUSTOM_WEE8)
 namespace v8::internal {
 
 // Allocation slow paths and C/JS entry machinery remain shared with Wasm.
@@ -150,9 +150,9 @@ constexpr auto WasmContextRuntimeEntry() {
 }
 
 } // namespace v8::internal
-#endif // V8_WASM_NATIVE_CONTEXT
+#endif // V8_CUSTOM_WEE8
 
-#if defined(V8_WASM_NATIVE_CONTEXT)
+#if defined(V8_CUSTOM_WEE8)
 #define WASM_CONTEXT_RUNTIME_ENTRY(Name)                                       \
   FUNCTION_ADDR((WasmContextRuntimeEntry<Runtime::k##Name, &Runtime_##Name>()))
 #else

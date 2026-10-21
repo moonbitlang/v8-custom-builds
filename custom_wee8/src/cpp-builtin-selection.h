@@ -7,7 +7,7 @@
 #include "src/base/logging.h"
 #include "src/builtins/builtins.h"
 
-#if defined(V8_WASM_NATIVE_CONTEXT)
+#if defined(V8_CUSTOM_WEE8)
 namespace v8::internal {
 
 // Native function templates and the unchanged API adapter share these entries.
@@ -85,9 +85,9 @@ constexpr auto WasmContextCppEntry() {
 }
 
 } // namespace v8::internal
-#endif // V8_WASM_NATIVE_CONTEXT
+#endif // V8_CUSTOM_WEE8
 
-#if defined(V8_WASM_NATIVE_CONTEXT)
+#if defined(V8_CUSTOM_WEE8)
 #define WASM_CONTEXT_CPP_ENTRY(Name)                                           \
   FUNCTION_ADDR((WasmContextCppEntry<Builtin::k##Name, &Builtin_##Name>()))
 #else

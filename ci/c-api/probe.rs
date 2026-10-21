@@ -29,12 +29,12 @@ fn main() {
     // by the GN probes, without requiring another tool in the native matrix.
     for (source, binary) in [
         (
-            include_str!("../wasm-profile/runtime-boundaries.wat"),
-            include_bytes!("../wasm-profile/runtime-boundaries.wasm").as_slice(),
+            include_str!("../../custom_wee8/tests/runtime-boundaries.wat"),
+            include_bytes!("../../custom_wee8/tests/runtime-boundaries.wasm").as_slice(),
         ),
         (
-            include_str!("../wasm-profile/runtime-shared-memory.wat"),
-            include_bytes!("../wasm-profile/runtime-shared-memory.wasm").as_slice(),
+            include_str!("../../custom_wee8/tests/runtime-shared-memory.wat"),
+            include_bytes!("../../custom_wee8/tests/runtime-shared-memory.wasm").as_slice(),
         ),
     ] {
         assert_eq!(wat::parse_str(source).unwrap(), binary);

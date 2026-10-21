@@ -1,7 +1,7 @@
 Subject: Select a native Wasm context and its implementation entries
 
 The profile is optional; normal V8 retains its initialization and entries.
-Policy and allocation sources live in profiles/wasm, copied before GN runs.
+Policy and allocation sources live in custom_wee8/src, copied before GN runs.
 
 --- a/v8/src/init/bootstrapper.cc
 +++ b/v8/src/init/bootstrapper.cc
@@ -18,7 +18,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
    }
  
  #if V8_ENABLE_WEBASSEMBLY
-+#ifdef V8_WASM_NATIVE_CONTEXT
++#ifdef V8_CUSTOM_WEE8
 +  WasmJs::Install(isolate, false);
 +#else
    WasmJs::Install(isolate, v8_flags.expose_wasm);
@@ -30,8 +30,8 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
    return initial_map;
  }
  
-+#ifdef V8_WASM_NATIVE_CONTEXT
-+#include "src/wasm-profile/wasm-context-bootstrap.inc"
++#ifdef V8_CUSTOM_WEE8
++#include "custom_wee8/src/wasm-context-bootstrap.inc"
 +#endif
 +
  Genesis::Genesis(Isolate* isolate,
@@ -41,7 +41,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
      DCHECK_EQ(0u, context_snapshot_index);
      // We get here if there was no context snapshot.
      CreateRoots();
-+#ifdef V8_WASM_NATIVE_CONTEXT
++#ifdef V8_CUSTOM_WEE8
 +    Handle<JSFunction> empty_function = CreateEmptyFunction();
 +    CreateSloppyModeFunctionMaps(empty_function);
 +    CreateStrictModeFunctionMaps(empty_function);
@@ -59,7 +59,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
      if (!InstallExtrasBindings()) return;
      if (!ConfigureGlobalObject(global_proxy_template)) return;
  
-+#endif  // V8_WASM_NATIVE_CONTEXT
++#endif  // V8_CUSTOM_WEE8
  #ifdef V8_ENABLE_WEBASSEMBLY
      WasmJs::PrepareForSnapshot(isolate);
  #endif  // V8_ENABLE_WEBASSEMBLY
@@ -67,7 +67,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
    // snapshot as we should be able to turn them off at runtime. Re-installing
    // them after they have already been deserialized would also fail.
    if (!isolate->serializer_enabled()) {
-+#ifndef V8_WASM_NATIVE_CONTEXT
++#ifndef V8_CUSTOM_WEE8
      InitializeExperimentalGlobal();
  
      // Store String.prototype's map again in case it has been changed by
@@ -75,7 +75,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
      DCHECK(string_function_prototype->HasFastProperties());
      native_context()->set_string_function_prototype_map(
          string_function_prototype->map());
-+#endif  // V8_WASM_NATIVE_CONTEXT
++#endif  // V8_CUSTOM_WEE8
    }
  
    if (v8_flags.disallow_code_generation_from_strings) {
@@ -85,7 +85,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
  // found in the LICENSE file.
  
  #include "src/builtins/builtins.h"
-+#include "src/wasm-profile/cpp-builtin-selection.h"
++#include "custom_wee8/src/cpp-builtin-selection.h"
  
  #include "src/api/api-inl.h"
  #include "src/builtins/builtins-descriptors.h"
@@ -104,7 +104,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
  // found in the LICENSE file.
  
  #include "src/codegen/external-reference-table.h"
-+#include "src/wasm-profile/cpp-builtin-selection.h"
++#include "custom_wee8/src/cpp-builtin-selection.h"
  
  #include "src/builtins/accessors.h"
  #include "src/codegen/external-reference.h"
@@ -124,8 +124,8 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
  #include "src/builtins/builtins-inl.h"
  #include "src/builtins/profile-data-reader.h"
 +
-+#include "src/wasm-profile/cpp-builtin-selection.h"
-+#include "src/wasm-profile/generated-js-builtin-selection.h"
++#include "custom_wee8/src/cpp-builtin-selection.h"
++#include "custom_wee8/src/generated-js-builtin-selection.h"
  #include "src/codegen/assembler-inl.h"
  #include "src/codegen/interface-descriptors.h"
  #include "src/codegen/macro-assembler-inl.h"
@@ -164,7 +164,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
 +  // descriptors and Code identities for both retained and unsupported entries.
 +  const auto select_js_body = [](Builtin builtin,
 +                                 CodeAssemblerGenerator original) {
-+#if defined(V8_WASM_NATIVE_CONTEXT)
++#if defined(V8_CUSTOM_WEE8)
 +    if (!WasmContextKeepsJsBuiltin(builtin)) {
 +      return +[](compiler::CodeAssemblerState* state) {
 +        compiler::CodeAssembler(state).Unreachable();
@@ -174,7 +174,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
 +    return original;
 +  };
 +  const auto omit_cpp_body = [](Builtin builtin) {
-+#if defined(V8_WASM_NATIVE_CONTEXT)
++#if defined(V8_CUSTOM_WEE8)
 +    return !WasmContextKeepsCppBuiltin(builtin);
 +#else
 +    return false;
@@ -208,7 +208,7 @@ Policy and allocation sources live in profiles/wasm, copied before GN runs.
  // found in the LICENSE file.
  
  #include "src/runtime/runtime.h"
-+#include "src/wasm-profile/runtime-selection.h"
++#include "custom_wee8/src/runtime-selection.h"
  
  #include "src/base/hashmap.h"
  #include "src/execution/isolate.h"

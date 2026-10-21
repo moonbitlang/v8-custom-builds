@@ -3,7 +3,7 @@
 #include "src/codegen/external-reference-table.h"
 #include "src/execution/isolate.h"
 #include "src/runtime/runtime-utils.h"
-#include "src/wasm-profile/runtime-selection.h"
+#include "custom_wee8/src/runtime-selection.h"
 #include <cstdio>
 #include <cstring>
 #include <memory>

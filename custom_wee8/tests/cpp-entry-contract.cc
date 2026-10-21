@@ -5,7 +5,7 @@
 #include "src/codegen/external-reference-table.h"
 #include "src/execution/isolate.h"
 #include "src/objects/code-inl.h"
-#include "src/wasm-profile/cpp-builtin-selection.h"
+#include "custom_wee8/src/cpp-builtin-selection.h"
 #include <cstdio>
 #include <cstring>
 #include <memory>

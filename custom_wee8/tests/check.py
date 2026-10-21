@@ -80,11 +80,13 @@ for program, prefix, names in [
 
 # Checked-in binary fixtures are paired with readable WAT sources. No JS-global
 # constructor is involved: compile, serialize, instantiate and call through C API.
-executable = (args.probes / ("runtime-boundaries" + suffix)).resolve()
 for mode in ["--liftoff-only --no-wasm-lazy-compilation",
              "--no-liftoff --no-wasm-lazy-compilation",
              "--wasm-lazy-compilation",
              "--wasm-sync-tier-up --wasm-tiering-budget=1"]:
+    executable = (args.probes / ("wee8-runtime-check" + suffix)).resolve()
+    subprocess.run([str(executable), mode], check=True, timeout=60)
+    executable = (args.probes / ("runtime-boundaries" + suffix)).resolve()
     subprocess.run([str(executable), mode, str(assets / "runtime-boundaries.wasm"),
                     str(assets / "runtime-shared-memory.wasm")], check=True, timeout=120)
-print("Native runtime boundaries passed in four Wasm compilation modes")
+print("Custom wee8 context and runtime boundaries passed in four Wasm compilation modes")

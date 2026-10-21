@@ -19,8 +19,8 @@ Retain shared Wasm metadata and runtime IDs for generated code and snapshots.
    # Disable JavaScript source parsing for native Wasm embedders.
    v8_enable_javascript_parser = true
 @@ -1089,6 +1092,12 @@
- 
-   if (v8_custom_wee8) {
+                !v8_enable_maglev && !v8_enable_sparkplug,
+            "custom_wee8 requires its native Wasm capability settings")
      defines += [ "V8_CUSTOM_WEE8" ]
 +  }
 +

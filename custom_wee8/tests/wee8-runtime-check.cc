@@ -11,7 +11,7 @@
 #include <utility>
 
 static_assert(!V8_ENABLE_ASMJS, "The custom runtime must exclude asm.js");
-#ifndef V8_WASM_NATIVE_CONTEXT
+#ifndef V8_CUSTOM_WEE8
 #error The runtime probe requires the native Wasm context profile
 #endif
 

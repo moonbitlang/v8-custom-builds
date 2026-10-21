@@ -1,6 +1,6 @@
 // Expand the target's complete builtin catalog, including descriptor arguments.
-#include "src/wasm-profile/cpp-builtin-selection.h"
-#include "src/wasm-profile/generated-js-builtin-selection.h"
+#include "custom_wee8/src/cpp-builtin-selection.h"
+#include "custom_wee8/src/generated-js-builtin-selection.h"
 #include <cstdio>
 
 int main() {

@@ -1,4 +1,4 @@
-#include "src/wasm-profile/runtime-selection.h"
+#include "custom_wee8/src/runtime-selection.h"
 #include <cstdio>
 
 int main() {

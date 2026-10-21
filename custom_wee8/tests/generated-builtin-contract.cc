@@ -9,8 +9,8 @@
 #include "src/objects/code-inl.h"
 #include "src/objects/js-function-inl.h"
 #include "src/objects/shared-function-info-inl.h"
-#include "src/wasm-profile/cpp-builtin-selection.h"
-#include "src/wasm-profile/generated-js-builtin-selection.h"
+#include "custom_wee8/src/cpp-builtin-selection.h"
+#include "custom_wee8/src/generated-js-builtin-selection.h"
 #include <cstdio>
 #include <cstring>
 #include <memory>
