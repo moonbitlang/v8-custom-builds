@@ -27,7 +27,7 @@ jobs:
           for patch in patches/*.patch; do
             git -C rusty_v8 apply "../$patch"
           done
-          echo '41b2f5c30337d47fa86dde7c6ed4cd49dbab29a14e9288c0b3e0204bf1201611  rusty_v8/v8/third_party/wasm-api/wasm.h' | sha256sum -c -
+          echo '279c5f9bcc0714ee6ea5066556a15ff1a5d53c6d68def17f213edcf1b1404eac  rusty_v8/v8/third_party/wasm-api/wasm.h' | sha256sum -c -
       - name: Check workflows
         env:
           GH_TOKEN: ${{ github.token }}
