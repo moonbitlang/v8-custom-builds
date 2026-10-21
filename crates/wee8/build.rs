@@ -34,14 +34,8 @@ use std::{
     time::Duration,
 };
 
-const RELEASE: &str = "v0.106.0-moonbit.3";
-const HEADER_SHA256: &str = "f6714cdea3bfbbfcafc09d5f61358a1aaebe43464644909864c50585c60630ab";
-
-// Additive native extensions preserve the existing sized-vector and exception
-// ABI. Accept the candidate header for packaged-archive regression tests while
-// ordinary consumers keep downloading the published release.
-const CANDIDATE_HEADER_SHA256: &str =
-    "41b2f5c30337d47fa86dde7c6ed4cd49dbab29a14e9288c0b3e0204bf1201611";
+const RELEASE: &str = "v0.106.0-moonbit.4";
+const HEADER_SHA256: &str = "41b2f5c30337d47fa86dde7c6ed4cd49dbab29a14e9288c0b3e0204bf1201611";
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-env-changed=WEE8_ARCHIVE");
@@ -61,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     // This interface depends on the sized-vector ABI from this exact header.
     // V8's older header has the same symbol names but incompatible signatures.
-    if ![HEADER_SHA256, CANDIDATE_HEADER_SHA256].contains(&sha256(&header)?.as_str()) {
+    if sha256(&header)? != HEADER_SHA256 {
         return Err("WEE8_HEADER does not match the supported Wasm C API revision".into());
     }
     println!("cargo:rerun-if-changed={}", archive.display());
@@ -96,7 +90,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .rust_edition(bindgen::RustEdition::Edition2024)
         .header(header.to_string_lossy())
         .clang_args(["-xc++", "-std=c++17", "-DLIBWASM_STATIC"])
-        .allowlist_type("wasm_.*")
+        .allowlist_type("(wasm|wee8)_.*")
         .allowlist_function("(wasm|wee8)_.*")
         .allowlist_var("WASM_.*")
         .layout_tests(false)

@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and header
-from `v0.106.0-moonbit.3`. It verifies the release SHA-256 manifest and a separately
+from `v0.106.0-moonbit.4`. It verifies the release SHA-256 manifest and a separately
 pinned header hash, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
@@ -56,13 +56,16 @@ the non-generic store state for lifetime and cross-store checks. Root creation,
 copying and deletion use V8's C API; there is no additional Rust root registry.
 
 `extern.convert_any` remains rejected in function bodies and constant
-expressions. This pinned V8 C API represents reference values with `JSReceiver`
-handles, while externalizing an `i31ref` can produce a native immediate. The
-wrapper cannot safely expose every result of that operation yet. Thus this is
+expressions. Native roots support strings, but arbitrary externalized GC
+values and native immediates have not been validated across every C API path.
+That broader interface remains separate from native string support. Thus this is
 internal GC support, not support for every GC module or GC values at the host
 boundary. Relaxed SIMD, shared memory and other unlisted proposals remain
 excluded. Standardized exception handling and tags are supported by default;
-legacy EH instructions remain excluded. Imports are supplied in declaration order.
+legacy EH instructions remain excluded. Host imports are supplied in declaration
+order, excluding native builtins enabled by compile options. Repeated
+module/name imports share a native binding; different bindings under one name
+remain unsupported by this adapter.
 
 A store owns its native objects; native-root handles borrow the store and stay on
 its creating thread. `Compiled` may move between threads and create modules in
@@ -157,3 +160,40 @@ Wasm-defined start functions may throw or call throwing host callbacks. Using a
 host import directly as the start function remains unsupported by the pinned
 V8 C API: that entry goes through a JS call and aborts. This patch does not change
 that separate entry-path limitation.
+
+## Native strings
+
+`Store::compile_with_options` explicitly enables V8's `wasm:js-string` builtins
+and an optional imported-string-constant namespace. `Store::compile` keeps the
+default behavior: every import comes from the host. V8 validates builtin
+signatures and classifies them; the wrapper does not maintain a second builtin
+catalog. Only those validated imports bypass host-boundary type checks. Their
+GC array parameters remain internal to the engine. Host imports and exports
+retain the scalar/nullable-reference restrictions described above.
+
+`CompileOptions { js_string_builtins: true, imported_string_constants:
+Some("_".into()) }` selects MoonBit's native string convention. `None` disables
+constants; `Some(String::new())` selects the empty namespace. The pinned V8
+supports ASCII namespace names, including embedded NUL. Literal values can
+contain Unicode. Options are owned by the module and its `Compiled` result,
+including reuse in another store; they never change process-wide defaults.
+
+`StringRef::from_utf8(context, text)` copies a Rust `&str` into V8;
+`StringRef::from_utf16(context, units)` preserves every UTF-16 code unit, including
+lone surrogates. Use `into_extern_ref()` for guest arguments or callback results,
+and `StringRef::try_from(reference)` to check a returned reference. `len()` counts
+UTF-16 code units. `to_utf16()` copies them losslessly; `to_utf8()` rejects lone
+surrogates, while `to_string_lossy()` explicitly replaces them with U+FFFD.
+
+A string reference owns a native root, borrows its store, and stays on its creating
+thread. Guest code uses V8's existing string implementation without a Rust callback
+for each builtin. Conversion happens at host-service boundaries; no V8 heap slice
+is borrowed across GC. Strings have no Rust `Any` payload (`data()` returns `None`),
+and ordinary host payloads do not become strings merely by containing a Rust
+`String`. The C API's host-info attachment functions require receiver objects and
+must not be used on primitive strings.
+
+The string tests cover all 13 builtins, imported literals, host callbacks,
+serialization, mixed host/native imports, guest traps, exception payloads and
+store ownership. The packaged C consumer additionally forces collection while
+a callback retains its string argument and exercises global/table transport.
