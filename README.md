@@ -105,6 +105,12 @@ enable legacy stringref. See the [feature policy](custom_wee8/README.md#wasm-fea
 for the distinction between obsolete proposals and features not enabled in this
 pinned runtime.
 
+`wee8-externref.patch` completes `extern.convert_any` transport, including
+immediate i31 values and guest GC objects. These remain opaque store-owned roots
+through calls, callbacks, globals, tables and exception payloads. The existing
+Object-root representation needs no extra boxing; host-info attachment still
+requires receiver objects.
+
 `wee8-exception-traces.patch` captures Wasm call sites when a host-created
 catchable exception is constructed. Existing `wasm_trap_origin` and
 `wasm_trap_trace` expose those frames; rethrow preserves the original trace.
@@ -116,8 +122,8 @@ not resize the OS thread stack. The caller must supply a valid address on the
 store's owning thread, reserve space for host/V8 frames, and avoid changing the
 boundary during Wasm execution. Zero is rejected without changing the limit.
 
-Not every header declaration is implemented. WasmGC values and SIMD vectors
-crossing the host interface remain unsupported; some modern types reach
+Not every header declaration is implemented. Direct GC-typed host signatures
+and SIMD vectors crossing the host interface remain unsupported; some modern types reach
 unimplemented V8 conversions. Legacy `ANYREF` means `externref`. The runtime does
 not promise a stable cross-engine ABI or full Wasm conformance.
 
