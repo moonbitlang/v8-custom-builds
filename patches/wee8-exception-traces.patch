@@ -22,14 +22,3 @@ Subject: Capture original Wasm frames for native catchable exceptions
    return implement<Trap>::type::make(store, exception);
  }
  
---- a/v8/third_party/wasm-api/wasm.h
-+++ b/v8/third_party/wasm-api/wasm.h
-@@ -548,6 +555,8 @@
- // uncatchable host failure. Copies, deletion and message inspection use trap APIs.
- // Construction validates store identity, argument count and types, returning
- // NULL on mismatch. All input handles and values are borrowed.
-+// Captures the current Wasm stack at construction. wasm_trap_origin/trace expose
-+// those frames; rethrow preserves them. Outside a Wasm call the trace is empty.
- WASM_API_EXTERN own wasm_trap_t* wee8_exception_new(
-   wasm_store_t*, const wasm_tag_t*, const wasm_val_vec_t*);
- WASM_API_EXTERN bool wee8_trap_is_exception(const wasm_trap_t*);

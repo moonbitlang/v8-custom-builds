@@ -172,3 +172,14 @@ Moonrun validation uses the wee8 backend in `moonbitlang/moon/crates/moonrun`.
 5. Validate all supported platforms before publication. Never mix generated blobs,
    snapshots or headers from different recipes. Further cuts must demonstrate an
    additional size or build-cost benefit.
+
+## Public C headers
+
+`include/wee8.h` owns all wee8 extension declarations and includes the unmodified
+upstream `wasm.h` at 9d6b93764ac96cdd9db51081c363e09d2d488b4d. Native capability
+patches contain implementation changes; they do not add declarations to that C
+header. The build copies the extension header beside it for the native adapter.
+Both headers ship together, while the recipe check pins the upstream bytes and
+compiles both include modes as C and C++. The packaged probes include `wee8.h`.
+Runtime `wasm_tag_*` functions remain extensions despite their existing prefix;
+keeping the names preserves the released native ABI.

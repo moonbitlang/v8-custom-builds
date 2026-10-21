@@ -21,7 +21,11 @@ is not rebuilt by this crate. `WEE8_MIRROR` replaces the release-download base U
 the build script appends the pinned release tag. Set both `WEE8_ARCHIVE` and
 `WEE8_HEADER` to use a matching decompressed source-build or offline archive and
 header. Providing only one override is an error. The matching header is mandatory
-because older V8 C APIs used identical symbols with incompatible signatures.
+because older V8 C APIs used identical symbols with incompatible signatures. Native
+candidates now use `WEE8_HEADER=/path/to/wee8.h` with the matching upstream
+`wasm.h` in the same directory; both hashes are checked before binding generation.
+The published .3 release continues to use its exact combined header.
+
 
 ## Supported interface
 

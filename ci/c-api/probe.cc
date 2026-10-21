@@ -1,7 +1,7 @@
 // Compile against the packaged header, then link only the packaged wee8 archive.
 // Keep assertions active in release builds: this executable is a smoke test.
 #undef NDEBUG
-#include "wasm.h"
+#include "wee8.h"
 
 extern "C" void test_strings(wasm_engine_t*, wasm_store_t*);
 extern "C" void test_proposals(wasm_store_t*);

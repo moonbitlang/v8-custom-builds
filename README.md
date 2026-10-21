@@ -37,17 +37,22 @@ last; failed packaging may leave incomplete output.
 Each `dist/<target>/` contains:
 
 - `libwee8_release_<target>.a.gz`, or `wee8_release_<target>.lib.gz` on Windows.
-- `wasm_c_api_<target>.h`, the matching Wasm C API header.
+- `wasm_c_api_<target>.h`, the unmodified upstream header, installed as `wasm.h`.
+- `wee8_c_api_<target>.h`, the wee8 extension header, installed alongside it as `wee8.h`.
 - API license, complete source notices, and a SHA-256 manifest.
 
-Decompress the archive and include the matching header as `wasm.h`. Define
+Decompress the archive and install both matching headers under those names.
+Include `wasm.h` for the upstream API, or `wee8.h` for both APIs. Define
 `LIBWASM_STATIC` for Windows consumers. The complete archive includes V8, its C
 adapter and the configured C++ runtime dependencies. It must not be supplied as
 `RUSTY_V8_ARCHIVE`.
 
 The Rust wrapper downloads and verifies its configured release, generates C
 bindings and links wee8. To test a new archive, provide both `WEE8_ARCHIVE`
-(decompressed) and `WEE8_HEADER`. Changing the native recipe does not silently
+(decompressed) and `WEE8_HEADER` pointing to `wee8.h`, with its matching `wasm.h`
+in the same directory. The current published .3 release keeps its original
+combined header; the wrapper accepts that exact release header as well.
+Changing the native recipe does not silently
 change the wrapper's release pin. Host services such as WASI belong to the embedder.
 
 ## Runtime contract
@@ -78,6 +83,13 @@ patch responsibilities, validation and upgrade procedure.
 It validates sized argument/import vectors, retains callback arities and
 finalizers, fixes value copying, returns start-function exceptions as traps
 without unsolicited output, and records native link dependencies.
+
+Our declarations live in [`custom_wee8/include/wee8.h`](custom_wee8/include/wee8.h),
+which includes the unchanged upstream `wasm.h`. Capability patches implement the
+extensions without editing that upstream C header. The build stages `wee8.h`
+beside it for the native adapter and packages both. Existing function symbols and
+ownership contracts are unchanged; runtime `wasm_tag_*` names remain explicitly
+marked as extensions for compatibility.
 
 `wasm-exceptions.patch` adds tag types, store-owned runtime tag handles and
 catchable exception construction, matching and payload access. Runtime tag and
