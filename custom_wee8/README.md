@@ -105,6 +105,7 @@ none is an additional runtime selection layer.
 | `wasm-exceptions.patch` | Implement native tags and catchable exception extensions |
 | `wasm-feature-policy.patch` | Apply the optional-feature list at engine startup and feature-set construction |
 | `wasm-native-context.patch` | Connect the context and three implementation selections to V8 |
+| `wee8-externref.patch` | Complete opaque transport of externalized Wasm values |
 | `wee8-exception-traces.patch` | Capture original Wasm frames for native catchable exceptions |
 | `wee8-stack-limit.patch` | Expose per-store native stack boundaries and restoration |
 | `wee8-profile.patch` | Declare the single custom switch, common define and owned headers |
@@ -151,6 +152,9 @@ The packaged stack-limit guest checks independent store limits, deeper recursion
 with a larger budget, zero rejection, and recovery after restoring the boundary.
 The packaged exception-trace guest checks construction without guest frames,
 original call sites, copied exception roots, and frame preservation across rethrow.
+The packaged externref guest checks i31 zero and signed boundaries, GC structs and
+arrays, callbacks and exception payloads across proven collection, globals/tables,
+null handling, and module serialization.
 Moonrun validation uses the wee8 backend in `moonbitlang/moon/crates/moonrun`.
 
 ## V8 upgrades
