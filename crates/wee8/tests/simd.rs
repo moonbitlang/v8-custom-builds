@@ -78,20 +78,3 @@ fn vector_imports_and_exports_are_rejected_before_native_introspection() {
         );
     }
 }
-
-#[test]
-fn simd_does_not_enable_other_proposals() {
-    let store = Store::new(()).unwrap();
-    for source in [
-        "(module (memory 1 1 shared))",
-        "(module (func (param v128) (result v128) local.get 0 local.get 0 i8x16.relaxed_swizzle))",
-    ] {
-        assert!(
-            matches!(
-                store.compile(&wat::parse_str(source).unwrap()),
-                Err(Error::Interface(_))
-            ),
-            "{source}"
-        );
-    }
-}

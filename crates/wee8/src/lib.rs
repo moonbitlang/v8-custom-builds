@@ -413,7 +413,7 @@ impl<'a, T> Caller<'a, T> {
         if memory.is_null() {
             return Err("wee8 host memory requires an exported `memory` and is unavailable during module start".into());
         }
-        // The mutable state borrow also rejects nested memory views. Wasm1
+        // The mutable state borrow also rejects nested memory views. Boundary
         // validation excludes shared memory, and callbacks cannot re-enter Wasm.
         let data = self
             .0
@@ -536,16 +536,16 @@ impl<T: 'static> Store<T> {
                 "imported string constant namespace must be ASCII in this V8 version".into(),
             );
         }
-        // V8 can execute internal SIMD and GC, but its C API cannot describe
-        // vectors or GC references in an import/export type. Keep the proposal
-        // allowlist and check that boundary before native introspection.
-        // Shared memory remains excluded because memory access is not atomic.
-        let features = wasmparser::WasmFeatures::WASM1
-            | wasmparser::WasmFeatures::BULK_MEMORY
-            | wasmparser::WasmFeatures::MULTI_VALUE
-            | wasmparser::WasmFeatures::SATURATING_FLOAT_TO_INT
-            | wasmparser::WasmFeatures::SIMD
-            | wasmparser::WasmFeatures::REFERENCE_TYPES
+        // Match V8's always-enabled proposals plus the custom release's
+        // optional-feature policy. Keep this explicit: wasmparser defaults
+        // include proposals this engine does not implement. C API representation
+        // and memory-borrow restrictions are checked separately below.
+        let features = wasmparser::WasmFeatures::WASM2
+            | wasmparser::WasmFeatures::TAIL_CALL
+            | wasmparser::WasmFeatures::EXTENDED_CONST
+            | wasmparser::WasmFeatures::RELAXED_SIMD
+            | wasmparser::WasmFeatures::MULTI_MEMORY
+            | wasmparser::WasmFeatures::THREADS
             | wasmparser::WasmFeatures::GC
             | wasmparser::WasmFeatures::FUNCTION_REFERENCES
             | wasmparser::WasmFeatures::EXCEPTIONS;
@@ -636,6 +636,11 @@ impl<T: 'static> Store<T> {
                         .iter()
                         .copied()
                         .find(|ty| !scalar_or_externref(*ty))
+                }
+                wasmparser::types::EntityType::Memory(memory) if memory.shared => {
+                    // Caller exposes an exclusive, non-atomic slice. Shared
+                    // memories may execute internally but cannot cross this API.
+                    return Err(format!("shared memory is unsupported in C API {name}").into());
                 }
                 wasmparser::types::EntityType::Global(global) => {
                     (!supported(global.content_type)).then_some(global.content_type)
