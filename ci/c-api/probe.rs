@@ -1,4 +1,5 @@
 unsafe extern "C" {
+    fn wee8_exception_trace_probe(store: *mut std::ffi::c_void, bytes: *const u8, len: usize);
     fn wee8_stack_limit_probe(
         engine: *mut std::ffi::c_void,
         store: *mut std::ffi::c_void,
@@ -54,7 +55,7 @@ fn main() {
             "unexpected native stderr: {output:?}"
         );
         println!(
-            "Packaged C API compatibility, calls, callbacks, ownership, strings, stack limits, proposal policy, traps and memory passed"
+            "Packaged C API compatibility, calls, callbacks, ownership, strings, stack limits, exception traces, proposal policy, traps and memory passed"
         );
         return;
     }
@@ -113,4 +114,10 @@ unsafe extern "C" fn test_strings(engine: *mut std::ffi::c_void, store: *mut std
 unsafe extern "C" fn test_stack_limit(engine: *mut std::ffi::c_void, store: *mut std::ffi::c_void) {
     let bytes = wat::parse_str(include_str!("stack-limit.wat")).unwrap();
     unsafe { wee8_stack_limit_probe(engine, store, bytes.as_ptr(), bytes.len()) };
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn test_exception_traces(store: *mut std::ffi::c_void) {
+    let bytes = wat::parse_str(include_str!("exception-traces.wat")).unwrap();
+    unsafe { wee8_exception_trace_probe(store, bytes.as_ptr(), bytes.len()) };
 }

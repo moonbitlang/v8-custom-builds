@@ -105,6 +105,11 @@ enable legacy stringref. See the [feature policy](custom_wee8/README.md#wasm-fea
 for the distinction between obsolete proposals and features not enabled in this
 pinned runtime.
 
+`wee8-exception-traces.patch` captures Wasm call sites when a host-created
+catchable exception is constructed. Existing `wasm_trap_origin` and
+`wasm_trap_trace` expose those frames; rethrow preserves the original trace.
+Construction outside guest execution yields an empty trace.
+
 `wee8-stack-limit.patch` exposes `wee8_store_set_stack_limit`, setting a per-store
 native stack boundary and returning its previous address for restoration. It does
 not resize the OS thread stack. The caller must supply a valid address on the

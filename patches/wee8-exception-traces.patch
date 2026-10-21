@@ -1,0 +1,35 @@
+Subject: Capture original Wasm frames for native catchable exceptions
+
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -2421,6 +2419,7 @@
+   i::Isolate* isolate = store->i_isolate();
+   v8::Isolate::Scope isolate_scope(reinterpret_cast<v8::Isolate*>(isolate));
+   i::HandleScope handle_scope(isolate);
++  v8::TryCatch catcher(store->isolate());
+   CheckAndHandleInterrupts(isolate);
+   auto object = impl(tag)->v8_object();
+   i::Handle<i::PodArray<i::wasm::ValueType>> signature(
+@@ -2470,6 +2469,11 @@
+         UNREACHABLE();
+     }
+   }
++  // Capture at construction, as V8's Exception({traceStack: true}) does.
++  // Rethrowing this identity must preserve its original Wasm call sites.
++  if (isolate->CaptureAndSetErrorStack(exception, i::SKIP_NONE, {}).is_null()) {
++    return nullptr;
++  }
+   return implement<Trap>::type::make(store, exception);
+ }
+ 
+--- a/v8/third_party/wasm-api/wasm.h
++++ b/v8/third_party/wasm-api/wasm.h
+@@ -548,6 +555,8 @@
+ // uncatchable host failure. Copies, deletion and message inspection use trap APIs.
+ // Construction validates store identity, argument count and types, returning
+ // NULL on mismatch. All input handles and values are borrowed.
++// Captures the current Wasm stack at construction. wasm_trap_origin/trace expose
++// those frames; rethrow preserves them. Outside a Wasm call the trace is empty.
+ WASM_API_EXTERN own wasm_trap_t* wee8_exception_new(
+   wasm_store_t*, const wasm_tag_t*, const wasm_val_vec_t*);
+ WASM_API_EXTERN bool wee8_trap_is_exception(const wasm_trap_t*);

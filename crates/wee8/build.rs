@@ -41,7 +41,7 @@ const HEADER_SHA256: &str = "f6714cdea3bfbbfcafc09d5f61358a1aaebe43464644909864c
 // ABI. Accept the candidate header for packaged-archive regression tests while
 // ordinary consumers keep downloading the published release.
 const CANDIDATE_HEADER_SHA256: &str =
-    "279c5f9bcc0714ee6ea5066556a15ff1a5d53c6d68def17f213edcf1b1404eac";
+    "24d5b04dc03f96d9c1242d69a9f3d78927d623d68b3f6f17d29952abd2c85dcc";
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-env-changed=WEE8_ARCHIVE");
