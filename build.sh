@@ -16,12 +16,10 @@ for patch in "$root"/patches/*.patch; do
     git -C rusty_v8 apply "$patch"
 done
 
-cp ci/runtime/probe.cc rusty_v8/wee8-runtime-check.cc
-cp ci/library-builtins/probe.cc rusty_v8/wee8-library-check.cc
-cp ci/runtime/gc-bytes.h rusty_v8/gc-bytes.h
+# Keep the owned build settings, implementation and checks together. Upstream
+# insertion patches include these sources directly; no second overlay is needed.
+cp -R custom_wee8 rusty_v8/
 unset DOCS_RS DENO_TRYBUILD V8_FORCE_DEBUG EXTRA_GN_ARGS
-mkdir -p rusty_v8/custom_wee8
-cp gn/custom_wee8/BUILD.gn rusty_v8/custom_wee8/BUILD.gn
 unset GN_ARGS
 cargo build -vv --release --locked --manifest-path tools/native/Cargo.toml \
   --target "$target" --target-dir "$root/build"
@@ -34,8 +32,10 @@ gn_out="$root/build/$target/release/gn_out"
 mkdir -p "$out"
 gzip -9nc "$gn_out/custom_wee8/obj/v8/$c_api.$ext" > "$out/${c_api}_release_$target.$ext.gz"
 mkdir -p "$root/target/native-checks/$target"
-cp "$gn_out/custom_wee8/wee8-runtime-check$exe" "$root/target/native-checks/$target/"
-cp "$gn_out/custom_wee8/wee8-library-check$exe" "$root/target/native-checks/$target/"
+for probe in wee8-runtime-check cpp-entry-contract runtime-entry-contract generated-builtin-contract \
+             generated-builtin-catalog runtime-catalog runtime-boundaries; do
+  cp "$gn_out/custom_wee8/$probe$exe" "$root/target/native-checks/$target/"
+done
 cp rusty_v8/v8/third_party/wasm-api/wasm.h "$out/wasm_c_api_$target.h"
 cp "$root/licenses/wasm-c-api.txt" "$out/WASM_API_LICENSE_$target.txt"
 

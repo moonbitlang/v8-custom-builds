@@ -1,0 +1,920 @@
+CPP	HandleApiConstruct	retain	-
+CPP	HandleApiCallAsFunctionDelegate	retain	-
+CPP	HandleApiCallAsConstructorDelegate	retain	-
+TFJ	DebugBreakTrampoline	retain	kDontAdaptArgumentsSentinel
+CPP	EmptyFunction	retain	-
+CPP	Illegal	retain	-
+CPP	IllegalInvocationThrower	retain	-
+CPP	StrictPoisonPillThrower	retain	-
+CPP	UnsupportedThrower	retain	-
+TFJ	ReturnReceiver	retain	kJSArgcReceiverSlots, kReceiver
+CPP	AbstractModuleSourceToStringTag	omit	-
+CPP	ArrayConcat	omit	-
+CPP	ArrayPrototypeFill	omit	-
+TFJ	ArrayIncludes	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayIndexOf	omit	kDontAdaptArgumentsSentinel
+CPP	ArrayPop	omit	-
+TFJ	ArrayPrototypePop	omit	kDontAdaptArgumentsSentinel
+CPP	ArrayPush	omit	-
+TFJ	ArrayPrototypePush	omit	kDontAdaptArgumentsSentinel
+CPP	ArrayShift	omit	-
+CPP	ArrayUnshift	omit	-
+TFJ	ArrayPrototypeEntries	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	ArrayPrototypeKeys	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	ArrayPrototypeValues	retain	kJSArgcReceiverSlots, kReceiver
+TFJ	ArrayIteratorPrototypeNext	retain	kJSArgcReceiverSlots, kReceiver
+CPP	ArrayBufferConstructor	omit	-
+CPP	ArrayBufferConstructor_DoNotInitialize	omit	-
+CPP	ArrayBufferPrototypeSlice	omit	-
+CPP	ArrayBufferPrototypeResize	omit	-
+CPP	ArrayBufferPrototypeTransfer	omit	-
+CPP	ArrayBufferPrototypeTransferToFixedLength	omit	-
+TFJ	AsyncFunctionAwaitRejectClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kSentError
+TFJ	AsyncFunctionAwaitResolveClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kSentValue
+CPP	BigIntConstructor	omit	-
+CPP	BigIntAsUintN	omit	-
+CPP	BigIntAsIntN	omit	-
+CPP	BigIntPrototypeToLocaleString	omit	-
+CPP	BigIntPrototypeToString	omit	-
+CPP	BigIntPrototypeValueOf	omit	-
+CPP	CallSitePrototypeGetColumnNumber	retain	-
+CPP	CallSitePrototypeGetEnclosingColumnNumber	retain	-
+CPP	CallSitePrototypeGetEnclosingLineNumber	retain	-
+CPP	CallSitePrototypeGetEvalOrigin	retain	-
+CPP	CallSitePrototypeGetFileName	retain	-
+CPP	CallSitePrototypeGetFunction	retain	-
+CPP	CallSitePrototypeGetFunctionName	retain	-
+CPP	CallSitePrototypeGetLineNumber	retain	-
+CPP	CallSitePrototypeGetMethodName	retain	-
+CPP	CallSitePrototypeGetPosition	retain	-
+CPP	CallSitePrototypeGetPromiseIndex	retain	-
+CPP	CallSitePrototypeGetScriptHash	retain	-
+CPP	CallSitePrototypeGetScriptNameOrSourceURL	retain	-
+CPP	CallSitePrototypeGetThis	retain	-
+CPP	CallSitePrototypeGetTypeName	retain	-
+CPP	CallSitePrototypeIsAsync	retain	-
+CPP	CallSitePrototypeIsConstructor	retain	-
+CPP	CallSitePrototypeIsEval	retain	-
+CPP	CallSitePrototypeIsNative	retain	-
+CPP	CallSitePrototypeIsPromiseAll	retain	-
+CPP	CallSitePrototypeIsToplevel	retain	-
+CPP	CallSitePrototypeToString	retain	-
+CPP	ConsoleDebug	omit	-
+CPP	ConsoleError	omit	-
+CPP	ConsoleInfo	omit	-
+CPP	ConsoleLog	omit	-
+CPP	ConsoleWarn	omit	-
+CPP	ConsoleDir	omit	-
+CPP	ConsoleDirXml	omit	-
+CPP	ConsoleTable	omit	-
+CPP	ConsoleTrace	omit	-
+CPP	ConsoleGroup	omit	-
+CPP	ConsoleGroupCollapsed	omit	-
+CPP	ConsoleGroupEnd	omit	-
+CPP	ConsoleClear	omit	-
+CPP	ConsoleCount	omit	-
+CPP	ConsoleCountReset	omit	-
+CPP	ConsoleAssert	omit	-
+CPP	ConsoleProfile	omit	-
+CPP	ConsoleProfileEnd	omit	-
+CPP	ConsoleTime	omit	-
+CPP	ConsoleTimeLog	omit	-
+CPP	ConsoleTimeEnd	omit	-
+CPP	ConsoleTimeStamp	omit	-
+CPP	ConsoleContext	omit	-
+CPP	DataViewConstructor	omit	-
+CPP	DateConstructor	omit	-
+TFJ	DatePrototypeGetDate	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetDay	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetFullYear	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetHours	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetMilliseconds	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetMinutes	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetMonth	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetSeconds	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetTime	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetTimezoneOffset	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCDate	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCDay	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCFullYear	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCHours	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCMilliseconds	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCMinutes	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCMonth	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeGetUTCSeconds	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeValueOf	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	DatePrototypeToPrimitive	omit	kJSArgcReceiverSlots + 1, kReceiver, kHint
+CPP	DatePrototypeGetYear	omit	-
+CPP	DatePrototypeSetYear	omit	-
+CPP	DateNow	omit	-
+CPP	DateParse	omit	-
+CPP	DatePrototypeSetDate	omit	-
+CPP	DatePrototypeSetFullYear	omit	-
+CPP	DatePrototypeSetHours	omit	-
+CPP	DatePrototypeSetMilliseconds	omit	-
+CPP	DatePrototypeSetMinutes	omit	-
+CPP	DatePrototypeSetMonth	omit	-
+CPP	DatePrototypeSetSeconds	omit	-
+CPP	DatePrototypeSetTime	omit	-
+CPP	DatePrototypeSetUTCDate	omit	-
+CPP	DatePrototypeSetUTCFullYear	omit	-
+CPP	DatePrototypeSetUTCHours	omit	-
+CPP	DatePrototypeSetUTCMilliseconds	omit	-
+CPP	DatePrototypeSetUTCMinutes	omit	-
+CPP	DatePrototypeSetUTCMonth	omit	-
+CPP	DatePrototypeSetUTCSeconds	omit	-
+CPP	DatePrototypeToDateString	omit	-
+CPP	DatePrototypeToISOString	omit	-
+CPP	DatePrototypeToUTCString	omit	-
+CPP	DatePrototypeToString	omit	-
+CPP	DatePrototypeToTimeString	omit	-
+CPP	DatePrototypeToJson	omit	-
+CPP	DateUTC	omit	-
+CPP	DisposableStackConstructor	omit	-
+CPP	DisposableStackPrototypeUse	omit	-
+CPP	DisposableStackPrototypeDispose	omit	-
+CPP	DisposableStackPrototypeGetDisposed	omit	-
+CPP	DisposableStackPrototypeAdopt	omit	-
+CPP	DisposableStackPrototypeDefer	omit	-
+CPP	DisposableStackPrototypeMove	omit	-
+CPP	AsyncDisposeFromSyncDispose	omit	-
+CPP	ErrorConstructor	retain	-
+CPP	ErrorCaptureStackTrace	retain	-
+CPP	ErrorPrototypeToString	retain	-
+CPP	FunctionConstructor	omit	-
+CPP	FunctionPrototypeBind	omit	-
+CPP	WebAssemblyFunctionPrototypeBind	omit	-
+CPP	FunctionPrototypeToString	omit	-
+CPP	GeneratorFunctionConstructor	omit	-
+TFJ	GeneratorPrototypeNext	omit	kDontAdaptArgumentsSentinel
+TFJ	GeneratorPrototypeReturn	omit	kDontAdaptArgumentsSentinel
+TFJ	GeneratorPrototypeThrow	omit	kDontAdaptArgumentsSentinel
+CPP	AsyncFunctionConstructor	omit	-
+CPP	GlobalDecodeURI	omit	-
+CPP	GlobalDecodeURIComponent	omit	-
+CPP	GlobalEncodeURI	omit	-
+CPP	GlobalEncodeURIComponent	omit	-
+CPP	GlobalEscape	omit	-
+CPP	GlobalUnescape	omit	-
+CPP	GlobalEval	omit	-
+TFJ	GlobalIsFinite	retain	kJSArgcReceiverSlots + 1, kReceiver, kNumber
+TFJ	GlobalIsNaN	retain	kJSArgcReceiverSlots + 1, kReceiver, kNumber
+CPP	JsonParse	omit	-
+CPP	JsonStringify	omit	-
+CPP	JsonRawJson	omit	-
+CPP	JsonIsRawJson	omit	-
+TFJ	MapConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	MapPrototypeSet	omit	kJSArgcReceiverSlots + 2, kReceiver, kKey, kValue
+TFJ	MapPrototypeDelete	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	MapPrototypeGet	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	MapPrototypeHas	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+CPP	MapPrototypeClear	omit	-
+TFJ	MapPrototypeEntries	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapPrototypeGetSize	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapPrototypeForEach	omit	kDontAdaptArgumentsSentinel
+TFJ	MapPrototypeKeys	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapPrototypeValues	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	MapIteratorPrototypeNext	omit	kJSArgcReceiverSlots, kReceiver
+CPP	NumberPrototypeToExponential	omit	-
+CPP	NumberPrototypeToFixed	omit	-
+CPP	NumberPrototypeToLocaleString	omit	-
+CPP	NumberPrototypeToPrecision	omit	-
+TFJ	ObjectAssign	omit	kDontAdaptArgumentsSentinel
+TFJ	ObjectCreate	omit	kDontAdaptArgumentsSentinel
+CPP	ObjectDefineGetter	omit	-
+CPP	ObjectDefineProperties	omit	-
+CPP	ObjectDefineProperty	omit	-
+CPP	ObjectDefineSetter	omit	-
+TFJ	ObjectEntries	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+CPP	ObjectFreeze	omit	-
+TFJ	ObjectGetOwnPropertyDescriptor	omit	kDontAdaptArgumentsSentinel
+CPP	ObjectGetOwnPropertyDescriptors	omit	-
+TFJ	ObjectGetOwnPropertyNames	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+CPP	ObjectGetOwnPropertySymbols	omit	-
+TFJ	ObjectHasOwn	omit	kJSArgcReceiverSlots + 2, kReceiver, kObject, kKey
+TFJ	ObjectIs	omit	kJSArgcReceiverSlots + 2, kReceiver, kLeft, kRight
+CPP	ObjectIsFrozen	omit	-
+CPP	ObjectIsSealed	omit	-
+TFJ	ObjectKeys	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+CPP	ObjectLookupGetter	omit	-
+CPP	ObjectLookupSetter	omit	-
+TFJ	ObjectPrototypeHasOwnProperty	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	ObjectPrototypeIsPrototypeOf	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+CPP	ObjectPrototypePropertyIsEnumerable	omit	-
+CPP	ObjectPrototypeGetProto	omit	-
+CPP	ObjectPrototypeSetProto	omit	-
+CPP	ObjectSeal	omit	-
+TFJ	ObjectValues	omit	kJSArgcReceiverSlots + 1, kReceiver, kObject
+CPP	ReflectDefineProperty	omit	-
+CPP	ReflectOwnKeys	omit	-
+CPP	ReflectSet	omit	-
+TFJ	SetConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	SetPrototypeHas	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	SetPrototypeAdd	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	SetPrototypeDelete	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+CPP	SetPrototypeClear	omit	-
+TFJ	SetPrototypeEntries	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	SetPrototypeGetSize	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	SetPrototypeForEach	omit	kDontAdaptArgumentsSentinel
+TFJ	SetPrototypeValues	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	SetIteratorPrototypeNext	omit	kJSArgcReceiverSlots, kReceiver
+CPP	ShadowRealmConstructor	omit	-
+CPP	ShadowRealmPrototypeEvaluate	omit	-
+TFJ	ShadowRealmPrototypeImportValue	omit	kJSArgcReceiverSlots + 2, kReceiver, kSpecifier, kExportName
+TFJ	ShadowRealmImportValueFulfilled	omit	kJSArgcReceiverSlots + 1, kReceiver, kExports
+TFJ	ShadowRealmImportValueRejected	omit	kJSArgcReceiverSlots + 1, kReceiver, kException
+CPP	SharedArrayBufferPrototypeGetByteLength	omit	-
+CPP	SharedArrayBufferPrototypeSlice	omit	-
+CPP	SharedArrayBufferPrototypeGrow	omit	-
+TFJ	AtomicsLoad	omit	kJSArgcReceiverSlots + 2, kReceiver, kArrayOrSharedObject, kIndexOrFieldName
+TFJ	AtomicsStore	omit	kJSArgcReceiverSlots + 3, kReceiver, kArrayOrSharedObject, kIndexOrFieldName, kValue
+TFJ	AtomicsExchange	omit	kJSArgcReceiverSlots + 3, kReceiver, kArrayOrSharedObject, kIndexOrFieldName, kValue
+TFJ	AtomicsCompareExchange	omit	kJSArgcReceiverSlots + 4, kReceiver, kArrayOrSharedObject, kIndexOrFieldName, kOldValue, kNewValue
+TFJ	AtomicsAdd	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsSub	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsAnd	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsOr	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+TFJ	AtomicsXor	omit	kJSArgcReceiverSlots + 3, kReceiver, kArray, kIndex, kValue
+CPP	AtomicsNotify	omit	-
+CPP	AtomicsIsLockFree	omit	-
+CPP	AtomicsWait	omit	-
+CPP	AtomicsWaitAsync	omit	-
+CPP	AtomicsPause	omit	-
+CPP	StringFromCodePoint	omit	-
+TFJ	StringFromCharCode	retain	kDontAdaptArgumentsSentinel
+CPP	StringPrototypeLastIndexOf	omit	-
+CPP	StringPrototypeLocaleCompare	omit	-
+CPP	StringRaw	omit	-
+CPP	SymbolConstructor	omit	-
+CPP	SymbolFor	omit	-
+CPP	SymbolKeyFor	omit	-
+TFJ	TypedArrayBaseConstructor	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayConstructor	omit	kDontAdaptArgumentsSentinel
+CPP	TypedArrayPrototypeBuffer	omit	-
+TFJ	TypedArrayPrototypeByteLength	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayPrototypeByteOffset	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayPrototypeLength	omit	kJSArgcReceiverSlots, kReceiver
+CPP	TypedArrayPrototypeCopyWithin	omit	-
+CPP	TypedArrayPrototypeFill	omit	-
+CPP	TypedArrayPrototypeIncludes	omit	-
+CPP	TypedArrayPrototypeIndexOf	omit	-
+CPP	TypedArrayPrototypeLastIndexOf	omit	-
+CPP	TypedArrayPrototypeReverse	omit	-
+TFJ	TypedArrayPrototypeToStringTag	omit	kJSArgcReceiverSlots, kReceiver
+TFJ	TypedArrayPrototypeMap	omit	kDontAdaptArgumentsSentinel
+TFJ	WeakMapConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	WeakMapGet	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakMapPrototypeHas	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakMapPrototypeSet	omit	kJSArgcReceiverSlots + 2, kReceiver, kKey, kValue
+TFJ	WeakMapPrototypeDelete	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakSetConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	WeakSetPrototypeHas	omit	kJSArgcReceiverSlots + 1, kReceiver, kKey
+TFJ	WeakSetPrototypeAdd	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	WeakSetPrototypeDelete	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+CPP	SharedSpaceJSObjectHasInstance	omit	-
+CPP	SharedStructTypeConstructor	omit	-
+CPP	SharedStructTypeIsSharedStruct	omit	-
+CPP	SharedStructConstructor	omit	-
+CPP	SharedArrayConstructor	omit	-
+CPP	SharedArrayIsSharedArray	omit	-
+CPP	AtomicsMutexConstructor	omit	-
+CPP	AtomicsMutexIsMutex	omit	-
+CPP	AtomicsMutexLock	omit	-
+CPP	AtomicsMutexLockAsync	omit	-
+CPP	AtomicsMutexLockWithTimeout	omit	-
+CPP	AtomicsMutexTryLock	omit	-
+CPP	AtomicsMutexAsyncUnlockResolveHandler	omit	-
+CPP	AtomicsMutexAsyncUnlockRejectHandler	omit	-
+CPP	AtomicsConditionConstructor	omit	-
+CPP	AtomicsConditionAcquireLock	omit	-
+CPP	AtomicsConditionIsCondition	omit	-
+CPP	AtomicsConditionWait	omit	-
+CPP	AtomicsConditionNotify	omit	-
+CPP	AtomicsConditionWaitAsync	omit	-
+CPP	AsyncGeneratorFunctionConstructor	omit	-
+TFJ	AsyncGeneratorPrototypeNext	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncGeneratorPrototypeReturn	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncGeneratorPrototypeThrow	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncGeneratorAwaitResolveClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorAwaitRejectClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorYieldWithAwaitResolveClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorReturnClosedResolveClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorReturnClosedRejectClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncGeneratorReturnResolveClosure	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+TFJ	AsyncFromSyncIteratorPrototypeNext	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncFromSyncIteratorPrototypeThrow	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncFromSyncIteratorPrototypeReturn	omit	kDontAdaptArgumentsSentinel
+TFJ	AsyncFromSyncIteratorCloseSyncAndRethrow	omit	kJSArgcReceiverSlots + 1, kReceiver, kError
+TFJ	AsyncIteratorValueUnwrap	omit	kJSArgcReceiverSlots + 1, kReceiver, kValue
+CPP	IsTraceCategoryEnabled	omit	-
+CPP	Trace	omit	-
+CPP	FinalizationRegistryUnregister	omit	-
+TFJ	AsyncModuleEvaluate	omit	kDontAdaptArgumentsSentinel
+CPP	CallAsyncModuleFulfilled	omit	-
+CPP	CallAsyncModuleRejected	omit	-
+CPP	TemporalNowTimeZone	omit	-
+CPP	TemporalNowInstant	omit	-
+CPP	TemporalNowPlainDateTime	omit	-
+CPP	TemporalNowPlainDateTimeISO	omit	-
+CPP	TemporalNowZonedDateTime	omit	-
+CPP	TemporalNowZonedDateTimeISO	omit	-
+CPP	TemporalNowPlainDate	omit	-
+CPP	TemporalNowPlainDateISO	omit	-
+CPP	TemporalNowPlainTimeISO	omit	-
+CPP	TemporalPlainDateConstructor	omit	-
+CPP	TemporalPlainDateFrom	omit	-
+CPP	TemporalPlainDateCompare	omit	-
+CPP	TemporalPlainDatePrototypeCalendar	omit	-
+CPP	TemporalPlainDatePrototypeYear	omit	-
+CPP	TemporalPlainDatePrototypeMonth	omit	-
+CPP	TemporalPlainDatePrototypeMonthCode	omit	-
+CPP	TemporalPlainDatePrototypeDay	omit	-
+CPP	TemporalPlainDatePrototypeDayOfWeek	omit	-
+CPP	TemporalPlainDatePrototypeDayOfYear	omit	-
+CPP	TemporalPlainDatePrototypeWeekOfYear	omit	-
+CPP	TemporalPlainDatePrototypeDaysInWeek	omit	-
+CPP	TemporalPlainDatePrototypeDaysInMonth	omit	-
+CPP	TemporalPlainDatePrototypeDaysInYear	omit	-
+CPP	TemporalPlainDatePrototypeMonthsInYear	omit	-
+CPP	TemporalPlainDatePrototypeInLeapYear	omit	-
+CPP	TemporalPlainDatePrototypeToPlainYearMonth	omit	-
+CPP	TemporalPlainDatePrototypeToPlainMonthDay	omit	-
+CPP	TemporalPlainDatePrototypeGetISOFields	omit	-
+CPP	TemporalPlainDatePrototypeAdd	omit	-
+CPP	TemporalPlainDatePrototypeSubtract	omit	-
+CPP	TemporalPlainDatePrototypeWith	omit	-
+CPP	TemporalPlainDatePrototypeWithCalendar	omit	-
+CPP	TemporalPlainDatePrototypeUntil	omit	-
+CPP	TemporalPlainDatePrototypeSince	omit	-
+CPP	TemporalPlainDatePrototypeEquals	omit	-
+CPP	TemporalPlainDatePrototypeToPlainDateTime	omit	-
+CPP	TemporalPlainDatePrototypeToZonedDateTime	omit	-
+CPP	TemporalPlainDatePrototypeToString	omit	-
+CPP	TemporalPlainDatePrototypeToJSON	omit	-
+CPP	TemporalPlainDatePrototypeToLocaleString	omit	-
+CPP	TemporalPlainDatePrototypeValueOf	omit	-
+CPP	TemporalPlainTimeConstructor	omit	-
+CPP	TemporalPlainTimeFrom	omit	-
+CPP	TemporalPlainTimeCompare	omit	-
+CPP	TemporalPlainTimePrototypeCalendar	omit	-
+CPP	TemporalPlainTimePrototypeHour	omit	-
+CPP	TemporalPlainTimePrototypeMinute	omit	-
+CPP	TemporalPlainTimePrototypeSecond	omit	-
+CPP	TemporalPlainTimePrototypeMillisecond	omit	-
+CPP	TemporalPlainTimePrototypeMicrosecond	omit	-
+CPP	TemporalPlainTimePrototypeNanosecond	omit	-
+CPP	TemporalPlainTimePrototypeAdd	omit	-
+CPP	TemporalPlainTimePrototypeSubtract	omit	-
+CPP	TemporalPlainTimePrototypeWith	omit	-
+CPP	TemporalPlainTimePrototypeUntil	omit	-
+CPP	TemporalPlainTimePrototypeSince	omit	-
+CPP	TemporalPlainTimePrototypeRound	omit	-
+CPP	TemporalPlainTimePrototypeEquals	omit	-
+CPP	TemporalPlainTimePrototypeToPlainDateTime	omit	-
+CPP	TemporalPlainTimePrototypeToZonedDateTime	omit	-
+CPP	TemporalPlainTimePrototypeGetISOFields	omit	-
+CPP	TemporalPlainTimePrototypeToString	omit	-
+CPP	TemporalPlainTimePrototypeToJSON	omit	-
+CPP	TemporalPlainTimePrototypeToLocaleString	omit	-
+CPP	TemporalPlainTimePrototypeValueOf	omit	-
+CPP	TemporalPlainDateTimeConstructor	omit	-
+CPP	TemporalPlainDateTimeFrom	omit	-
+CPP	TemporalPlainDateTimeCompare	omit	-
+CPP	TemporalPlainDateTimePrototypeCalendar	omit	-
+CPP	TemporalPlainDateTimePrototypeYear	omit	-
+CPP	TemporalPlainDateTimePrototypeMonth	omit	-
+CPP	TemporalPlainDateTimePrototypeMonthCode	omit	-
+CPP	TemporalPlainDateTimePrototypeDay	omit	-
+CPP	TemporalPlainDateTimePrototypeHour	omit	-
+CPP	TemporalPlainDateTimePrototypeMinute	omit	-
+CPP	TemporalPlainDateTimePrototypeSecond	omit	-
+CPP	TemporalPlainDateTimePrototypeMillisecond	omit	-
+CPP	TemporalPlainDateTimePrototypeMicrosecond	omit	-
+CPP	TemporalPlainDateTimePrototypeNanosecond	omit	-
+CPP	TemporalPlainDateTimePrototypeDayOfWeek	omit	-
+CPP	TemporalPlainDateTimePrototypeDayOfYear	omit	-
+CPP	TemporalPlainDateTimePrototypeWeekOfYear	omit	-
+CPP	TemporalPlainDateTimePrototypeDaysInWeek	omit	-
+CPP	TemporalPlainDateTimePrototypeDaysInMonth	omit	-
+CPP	TemporalPlainDateTimePrototypeDaysInYear	omit	-
+CPP	TemporalPlainDateTimePrototypeMonthsInYear	omit	-
+CPP	TemporalPlainDateTimePrototypeInLeapYear	omit	-
+CPP	TemporalPlainDateTimePrototypeWith	omit	-
+CPP	TemporalPlainDateTimePrototypeWithPlainTime	omit	-
+CPP	TemporalPlainDateTimePrototypeWithPlainDate	omit	-
+CPP	TemporalPlainDateTimePrototypeWithCalendar	omit	-
+CPP	TemporalPlainDateTimePrototypeAdd	omit	-
+CPP	TemporalPlainDateTimePrototypeSubtract	omit	-
+CPP	TemporalPlainDateTimePrototypeUntil	omit	-
+CPP	TemporalPlainDateTimePrototypeSince	omit	-
+CPP	TemporalPlainDateTimePrototypeRound	omit	-
+CPP	TemporalPlainDateTimePrototypeEquals	omit	-
+CPP	TemporalPlainDateTimePrototypeToString	omit	-
+CPP	TemporalPlainDateTimePrototypeToJSON	omit	-
+CPP	TemporalPlainDateTimePrototypeToLocaleString	omit	-
+CPP	TemporalPlainDateTimePrototypeValueOf	omit	-
+CPP	TemporalPlainDateTimePrototypeToZonedDateTime	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainDate	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainYearMonth	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainMonthDay	omit	-
+CPP	TemporalPlainDateTimePrototypeToPlainTime	omit	-
+CPP	TemporalPlainDateTimePrototypeGetISOFields	omit	-
+CPP	TemporalZonedDateTimeConstructor	omit	-
+CPP	TemporalZonedDateTimeFrom	omit	-
+CPP	TemporalZonedDateTimeCompare	omit	-
+CPP	TemporalZonedDateTimePrototypeCalendar	omit	-
+CPP	TemporalZonedDateTimePrototypeTimeZone	omit	-
+CPP	TemporalZonedDateTimePrototypeYear	omit	-
+CPP	TemporalZonedDateTimePrototypeMonth	omit	-
+CPP	TemporalZonedDateTimePrototypeMonthCode	omit	-
+CPP	TemporalZonedDateTimePrototypeDay	omit	-
+CPP	TemporalZonedDateTimePrototypeHour	omit	-
+CPP	TemporalZonedDateTimePrototypeMinute	omit	-
+CPP	TemporalZonedDateTimePrototypeSecond	omit	-
+CPP	TemporalZonedDateTimePrototypeMillisecond	omit	-
+CPP	TemporalZonedDateTimePrototypeMicrosecond	omit	-
+CPP	TemporalZonedDateTimePrototypeNanosecond	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochSeconds	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochMilliseconds	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochMicroseconds	omit	-
+CPP	TemporalZonedDateTimePrototypeEpochNanoseconds	omit	-
+CPP	TemporalZonedDateTimePrototypeDayOfWeek	omit	-
+CPP	TemporalZonedDateTimePrototypeDayOfYear	omit	-
+CPP	TemporalZonedDateTimePrototypeWeekOfYear	omit	-
+CPP	TemporalZonedDateTimePrototypeHoursInDay	omit	-
+CPP	TemporalZonedDateTimePrototypeDaysInWeek	omit	-
+CPP	TemporalZonedDateTimePrototypeDaysInMonth	omit	-
+CPP	TemporalZonedDateTimePrototypeDaysInYear	omit	-
+CPP	TemporalZonedDateTimePrototypeMonthsInYear	omit	-
+CPP	TemporalZonedDateTimePrototypeInLeapYear	omit	-
+CPP	TemporalZonedDateTimePrototypeOffsetNanoseconds	omit	-
+CPP	TemporalZonedDateTimePrototypeOffset	omit	-
+CPP	TemporalZonedDateTimePrototypeWith	omit	-
+CPP	TemporalZonedDateTimePrototypeWithPlainTime	omit	-
+CPP	TemporalZonedDateTimePrototypeWithPlainDate	omit	-
+CPP	TemporalZonedDateTimePrototypeWithTimeZone	omit	-
+CPP	TemporalZonedDateTimePrototypeWithCalendar	omit	-
+CPP	TemporalZonedDateTimePrototypeAdd	omit	-
+CPP	TemporalZonedDateTimePrototypeSubtract	omit	-
+CPP	TemporalZonedDateTimePrototypeUntil	omit	-
+CPP	TemporalZonedDateTimePrototypeSince	omit	-
+CPP	TemporalZonedDateTimePrototypeRound	omit	-
+CPP	TemporalZonedDateTimePrototypeEquals	omit	-
+CPP	TemporalZonedDateTimePrototypeToString	omit	-
+CPP	TemporalZonedDateTimePrototypeToJSON	omit	-
+CPP	TemporalZonedDateTimePrototypeToLocaleString	omit	-
+CPP	TemporalZonedDateTimePrototypeValueOf	omit	-
+CPP	TemporalZonedDateTimePrototypeStartOfDay	omit	-
+CPP	TemporalZonedDateTimePrototypeToInstant	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainDate	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainTime	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainDateTime	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainYearMonth	omit	-
+CPP	TemporalZonedDateTimePrototypeToPlainMonthDay	omit	-
+CPP	TemporalZonedDateTimePrototypeGetISOFields	omit	-
+CPP	TemporalDurationConstructor	omit	-
+CPP	TemporalDurationFrom	omit	-
+CPP	TemporalDurationCompare	omit	-
+CPP	TemporalDurationPrototypeYears	omit	-
+CPP	TemporalDurationPrototypeMonths	omit	-
+CPP	TemporalDurationPrototypeWeeks	omit	-
+CPP	TemporalDurationPrototypeDays	omit	-
+CPP	TemporalDurationPrototypeHours	omit	-
+CPP	TemporalDurationPrototypeMinutes	omit	-
+CPP	TemporalDurationPrototypeSeconds	omit	-
+CPP	TemporalDurationPrototypeMilliseconds	omit	-
+CPP	TemporalDurationPrototypeMicroseconds	omit	-
+CPP	TemporalDurationPrototypeNanoseconds	omit	-
+CPP	TemporalDurationPrototypeSign	omit	-
+CPP	TemporalDurationPrototypeBlank	omit	-
+CPP	TemporalDurationPrototypeWith	omit	-
+CPP	TemporalDurationPrototypeNegated	omit	-
+CPP	TemporalDurationPrototypeAbs	omit	-
+CPP	TemporalDurationPrototypeAdd	omit	-
+CPP	TemporalDurationPrototypeSubtract	omit	-
+CPP	TemporalDurationPrototypeRound	omit	-
+CPP	TemporalDurationPrototypeTotal	omit	-
+CPP	TemporalDurationPrototypeToString	omit	-
+CPP	TemporalDurationPrototypeToJSON	omit	-
+CPP	TemporalDurationPrototypeToLocaleString	omit	-
+CPP	TemporalDurationPrototypeValueOf	omit	-
+CPP	TemporalInstantConstructor	omit	-
+CPP	TemporalInstantFrom	omit	-
+CPP	TemporalInstantFromEpochSeconds	omit	-
+CPP	TemporalInstantFromEpochMilliseconds	omit	-
+CPP	TemporalInstantFromEpochMicroseconds	omit	-
+CPP	TemporalInstantFromEpochNanoseconds	omit	-
+CPP	TemporalInstantCompare	omit	-
+CPP	TemporalInstantPrototypeEpochSeconds	omit	-
+CPP	TemporalInstantPrototypeEpochMilliseconds	omit	-
+CPP	TemporalInstantPrototypeEpochMicroseconds	omit	-
+CPP	TemporalInstantPrototypeEpochNanoseconds	omit	-
+CPP	TemporalInstantPrototypeAdd	omit	-
+CPP	TemporalInstantPrototypeSubtract	omit	-
+CPP	TemporalInstantPrototypeUntil	omit	-
+CPP	TemporalInstantPrototypeSince	omit	-
+CPP	TemporalInstantPrototypeRound	omit	-
+CPP	TemporalInstantPrototypeEquals	omit	-
+CPP	TemporalInstantPrototypeToString	omit	-
+CPP	TemporalInstantPrototypeToJSON	omit	-
+CPP	TemporalInstantPrototypeToLocaleString	omit	-
+CPP	TemporalInstantPrototypeValueOf	omit	-
+CPP	TemporalInstantPrototypeToZonedDateTime	omit	-
+CPP	TemporalInstantPrototypeToZonedDateTimeISO	omit	-
+CPP	TemporalPlainYearMonthConstructor	omit	-
+CPP	TemporalPlainYearMonthFrom	omit	-
+CPP	TemporalPlainYearMonthCompare	omit	-
+CPP	TemporalPlainYearMonthPrototypeCalendar	omit	-
+CPP	TemporalPlainYearMonthPrototypeYear	omit	-
+CPP	TemporalPlainYearMonthPrototypeMonth	omit	-
+CPP	TemporalPlainYearMonthPrototypeMonthCode	omit	-
+CPP	TemporalPlainYearMonthPrototypeDaysInYear	omit	-
+CPP	TemporalPlainYearMonthPrototypeDaysInMonth	omit	-
+CPP	TemporalPlainYearMonthPrototypeMonthsInYear	omit	-
+CPP	TemporalPlainYearMonthPrototypeInLeapYear	omit	-
+CPP	TemporalPlainYearMonthPrototypeWith	omit	-
+CPP	TemporalPlainYearMonthPrototypeAdd	omit	-
+CPP	TemporalPlainYearMonthPrototypeSubtract	omit	-
+CPP	TemporalPlainYearMonthPrototypeUntil	omit	-
+CPP	TemporalPlainYearMonthPrototypeSince	omit	-
+CPP	TemporalPlainYearMonthPrototypeEquals	omit	-
+CPP	TemporalPlainYearMonthPrototypeToString	omit	-
+CPP	TemporalPlainYearMonthPrototypeToJSON	omit	-
+CPP	TemporalPlainYearMonthPrototypeToLocaleString	omit	-
+CPP	TemporalPlainYearMonthPrototypeValueOf	omit	-
+CPP	TemporalPlainYearMonthPrototypeToPlainDate	omit	-
+CPP	TemporalPlainYearMonthPrototypeGetISOFields	omit	-
+CPP	TemporalPlainMonthDayConstructor	omit	-
+CPP	TemporalPlainMonthDayFrom	omit	-
+CPP	TemporalPlainMonthDayPrototypeCalendar	omit	-
+CPP	TemporalPlainMonthDayPrototypeMonthCode	omit	-
+CPP	TemporalPlainMonthDayPrototypeDay	omit	-
+CPP	TemporalPlainMonthDayPrototypeWith	omit	-
+CPP	TemporalPlainMonthDayPrototypeEquals	omit	-
+CPP	TemporalPlainMonthDayPrototypeToString	omit	-
+CPP	TemporalPlainMonthDayPrototypeToJSON	omit	-
+CPP	TemporalPlainMonthDayPrototypeToLocaleString	omit	-
+CPP	TemporalPlainMonthDayPrototypeValueOf	omit	-
+CPP	TemporalPlainMonthDayPrototypeToPlainDate	omit	-
+CPP	TemporalPlainMonthDayPrototypeGetISOFields	omit	-
+CPP	TemporalTimeZoneConstructor	omit	-
+CPP	TemporalTimeZoneFrom	omit	-
+CPP	TemporalTimeZonePrototypeId	omit	-
+CPP	TemporalTimeZonePrototypeGetOffsetNanosecondsFor	omit	-
+CPP	TemporalTimeZonePrototypeGetOffsetStringFor	omit	-
+CPP	TemporalTimeZonePrototypeGetPlainDateTimeFor	omit	-
+CPP	TemporalTimeZonePrototypeGetInstantFor	omit	-
+CPP	TemporalTimeZonePrototypeGetPossibleInstantsFor	omit	-
+CPP	TemporalTimeZonePrototypeGetNextTransition	omit	-
+CPP	TemporalTimeZonePrototypeGetPreviousTransition	omit	-
+CPP	TemporalTimeZonePrototypeToString	omit	-
+CPP	TemporalTimeZonePrototypeToJSON	omit	-
+CPP	TemporalCalendarConstructor	omit	-
+CPP	TemporalCalendarFrom	omit	-
+CPP	TemporalCalendarPrototypeId	omit	-
+CPP	TemporalCalendarPrototypeDateFromFields	omit	-
+CPP	TemporalCalendarPrototypeYearMonthFromFields	omit	-
+CPP	TemporalCalendarPrototypeMonthDayFromFields	omit	-
+CPP	TemporalCalendarPrototypeDateAdd	omit	-
+CPP	TemporalCalendarPrototypeDateUntil	omit	-
+CPP	TemporalCalendarPrototypeYear	omit	-
+CPP	TemporalCalendarPrototypeMonth	omit	-
+CPP	TemporalCalendarPrototypeMonthCode	omit	-
+CPP	TemporalCalendarPrototypeDay	omit	-
+CPP	TemporalCalendarPrototypeDayOfWeek	omit	-
+CPP	TemporalCalendarPrototypeDayOfYear	omit	-
+CPP	TemporalCalendarPrototypeWeekOfYear	omit	-
+CPP	TemporalCalendarPrototypeDaysInWeek	omit	-
+CPP	TemporalCalendarPrototypeDaysInMonth	omit	-
+CPP	TemporalCalendarPrototypeDaysInYear	omit	-
+CPP	TemporalCalendarPrototypeMonthsInYear	omit	-
+CPP	TemporalCalendarPrototypeInLeapYear	omit	-
+TFJ	TemporalCalendarPrototypeFields	omit	kJSArgcReceiverSlots, kIterable
+CPP	TemporalCalendarPrototypeMergeFields	omit	-
+CPP	TemporalCalendarPrototypeToString	omit	-
+CPP	TemporalCalendarPrototypeToJSON	omit	-
+CPP	DatePrototypeToTemporalInstant	omit	-
+TFJ	StringFixedArrayFromIterable	omit	kJSArgcReceiverSlots, kIterable
+TFJ	TemporalInstantFixedArrayFromIterable	omit	kJSArgcReceiverSlots, kIterable
+TFJ	AggregateErrorConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeAt	omit	JSParameterCount(1), kReceiver, kIndex
+TFJ	ArrayPrototypeConcat	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeCopyWithin	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayEveryLoopEagerDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayEveryLoopLazyDeoptContinuation	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFJ	ArrayEvery	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFilterLoopEagerDeoptContinuation	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength, kInitialTo
+TFJ	ArrayFilterLoopLazyDeoptContinuation	omit	JSParameterCount(8), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength, kValueK, kInitialTo, kResult
+TFJ	ArrayFilter	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFindLoopEagerDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayFindLoopLazyDeoptContinuation	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFJ	ArrayFindLoopAfterCallbackLazyDeoptContinuation	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kInitialK, kLength, kFoundValue, kIsFound
+TFJ	ArrayPrototypeFind	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFindIndexLoopEagerDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayFindIndexLoopLazyDeoptContinuation	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFJ	ArrayFindIndexLoopAfterCallbackLazyDeoptContinuation	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kInitialK, kLength, kFoundValue, kIsFound
+TFJ	ArrayPrototypeFindIndex	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeFindLast	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeFindLastIndex	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeFlat	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeFlatMap	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayForEachLoopEagerDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArrayForEachLoopLazyDeoptContinuation	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFJ	ArrayForEach	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFromAsyncIterableOnFulfilled	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsyncIterableOnRejected	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsyncArrayLikeOnFulfilled	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsyncArrayLikeOnRejected	omit	JSParameterCount(1), kReceiver, kResult
+TFJ	ArrayFromAsync	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayFrom	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayIsArray	omit	JSParameterCount(1), kReceiver, kArg
+TFJ	ArrayPrototypeJoin	retain	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToLocaleString	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToString	retain	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeJoin	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeToLocaleString	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeLastIndexOf	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayMapPreLoopLazyDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kLength, kResult
+TFJ	ArrayMapLoopEagerDeoptContinuation	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength
+TFJ	ArrayMapLoopLazyDeoptContinuation	omit	JSParameterCount(6), kReceiver, kCallback, kThisArg, kArray, kInitialK, kLength, kResult
+TFJ	ArrayMap	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayOf	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayReduceRightPreLoopEagerDeoptContinuation	omit	JSParameterCount(2), kReceiver, kCallback, kLength
+TFJ	ArrayReduceRightLoopEagerDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kAccumulator
+TFJ	ArrayReduceRightLoopLazyDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kResult
+TFJ	ArrayReduceRight	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayReducePreLoopEagerDeoptContinuation	omit	JSParameterCount(2), kReceiver, kCallback, kLength
+TFJ	ArrayReduceLoopEagerDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kAccumulator
+TFJ	ArrayReduceLoopLazyDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kInitialK, kLength, kResult
+TFJ	ArrayReduce	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeReverse	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeShift	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeSlice	omit	kDontAdaptArgumentsSentinel
+TFJ	ArraySomeLoopEagerDeoptContinuation	omit	JSParameterCount(4), kReceiver, kCallback, kThisArg, kInitialK, kLength
+TFJ	ArraySomeLoopLazyDeoptContinuation	omit	JSParameterCount(5), kReceiver, kCallback, kThisArg, kInitialK, kLength, kResult
+TFJ	ArraySome	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeSplice	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToReversed	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToSorted	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeToSpliced	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeUnshift	omit	kDontAdaptArgumentsSentinel
+TFJ	ArrayPrototypeWith	omit	JSParameterCount(2), kReceiver, kIndex, kValue
+TFJ	ArrayBufferPrototypeGetByteLength	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferPrototypeGetMaxByteLength	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferPrototypeGetResizable	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferPrototypeGetDetached	omit	JSParameterCount(0), kReceiver
+TFJ	SharedArrayBufferPrototypeGetMaxByteLength	omit	JSParameterCount(0), kReceiver
+TFJ	SharedArrayBufferPrototypeGetGrowable	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayBufferIsView	omit	JSParameterCount(1), kReceiver, kArg
+TFJ	BooleanConstructor	retain	kDontAdaptArgumentsSentinel
+TFJ	BooleanPrototypeToString	retain	JSParameterCount(0), kReceiver
+TFJ	BooleanPrototypeValueOf	retain	JSParameterCount(0), kReceiver
+TFJ	StringPrototypeToString	retain	JSParameterCount(0), kReceiver
+TFJ	StringPrototypeValueOf	retain	JSParameterCount(0), kReceiver
+TFJ	StringPrototypeCharAt	retain	JSParameterCount(1), kReceiver, kPosition
+TFJ	StringPrototypeCharCodeAt	retain	JSParameterCount(1), kReceiver, kPosition
+TFJ	StringPrototypeCodePointAt	retain	JSParameterCount(1), kReceiver, kPosition
+TFJ	StringPrototypeConcat	retain	kDontAdaptArgumentsSentinel
+TFJ	StringConstructor	retain	kDontAdaptArgumentsSentinel
+TFJ	StringCreateLazyDeoptContinuation	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	ObjectConstructor	retain	kDontAdaptArgumentsSentinel
+TFJ	NumberConstructor	retain	kDontAdaptArgumentsSentinel
+TFJ	GenericLazyDeoptContinuation	retain	JSParameterCount(1), kReceiver, kResult
+TFJ	FastConsoleAssert	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBuffer	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetByteLength	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetByteOffset	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint8	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt8	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint16	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt16	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat16	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat64	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBigUint64	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBigInt64	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint8	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt8	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint16	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt16	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat16	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat64	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetBigUint64	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetBigInt64	retain	kDontAdaptArgumentsSentinel
+TFJ	FinalizationRegistryConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	FinalizationRegistryRegister	omit	kDontAdaptArgumentsSentinel
+TFJ	FinalizationRegistryPrototypeCleanupSome	omit	kDontAdaptArgumentsSentinel
+TFJ	FunctionPrototypeHasInstance	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	FastFunctionPrototypeBind	omit	kDontAdaptArgumentsSentinel
+TFJ	IteratorConstructor	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeGetToStringTag	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeSetToStringTag	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	IteratorPrototypeGetConstructor	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeSetConstructor	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	IteratorFrom	omit	JSParameterCount(1), kReceiver, kObjArg
+TFJ	WrapForValidIteratorPrototypeNext	omit	JSParameterCount(0), kReceiver
+TFJ	WrapForValidIteratorPrototypeReturn	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorHelperPrototypeNext	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorHelperPrototypeReturn	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeMap	omit	JSParameterCount(1), kReceiver, kMapper
+TFJ	IteratorPrototypeFilter	omit	JSParameterCount(1), kReceiver, kPredicate
+TFJ	IteratorPrototypeTake	omit	JSParameterCount(1), kReceiver, kLimit
+TFJ	IteratorPrototypeDrop	omit	JSParameterCount(1), kReceiver, kLimit
+TFJ	IteratorPrototypeFlatMap	omit	JSParameterCount(1), kReceiver, kMapper
+TFJ	IteratorPrototypeReduce	omit	kDontAdaptArgumentsSentinel
+TFJ	IteratorPrototypeToArray	omit	JSParameterCount(0), kReceiver
+TFJ	IteratorPrototypeForEach	omit	JSParameterCount(1), kReceiver, kFn
+TFJ	IteratorPrototypeSome	omit	JSParameterCount(1), kReceiver, kPredicate
+TFJ	IteratorPrototypeEvery	omit	JSParameterCount(1), kReceiver, kPredicate
+TFJ	IteratorPrototypeFind	omit	JSParameterCount(1), kReceiver, kPredicate
+TFJ	MapGroupBy	omit	JSParameterCount(2), kReceiver, kItems, kCallback
+TFJ	MathAbs	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCeil	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathFloor	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathRound	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathTrunc	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathPow	retain	JSParameterCount(2), kReceiver, kBase, kExponent
+TFJ	MathMax	retain	kDontAdaptArgumentsSentinel
+TFJ	MathMin	retain	kDontAdaptArgumentsSentinel
+TFJ	MathAcos	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAcosh	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAsin	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAsinh	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAtan	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathAtan2	retain	JSParameterCount(2), kReceiver, kY, kX
+TFJ	MathAtanh	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCbrt	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathClz32	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCos	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathCosh	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathExp	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathExpm1	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathFround	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathF16round	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathImul	retain	JSParameterCount(2), kReceiver, kX, kY
+TFJ	MathLog	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog1p	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog10	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog2	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSin	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSign	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSinh	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathSqrt	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathTan	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathTanh	retain	JSParameterCount(1), kReceiver, kX
+TFJ	MathHypot	retain	kDontAdaptArgumentsSentinel
+TFJ	MathRandom	retain	JSParameterCount(0), kReceiver
+TFJ	NumberPrototypeToString	retain	kDontAdaptArgumentsSentinel
+TFJ	NumberIsFinite	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberIsInteger	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberIsNaN	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberIsSafeInteger	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberPrototypeValueOf	retain	JSParameterCount(0), kReceiver
+TFJ	NumberParseFloat	retain	JSParameterCount(1), kReceiver, kValue
+TFJ	NumberParseInt	retain	JSParameterCount(2), kReceiver, kValue, kRadix
+TFJ	ObjectFromEntries	omit	kDontAdaptArgumentsSentinel
+TFJ	ObjectGroupBy	omit	JSParameterCount(2), kReceiver, kItems, kCallback
+TFJ	ObjectIsExtensible	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ObjectPreventExtensions	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ObjectGetPrototypeOf	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ObjectSetPrototypeOf	omit	JSParameterCount(2), kReceiver, kObject, kProto
+TFJ	ObjectPrototypeToString	retain	JSParameterCount(0), kReceiver
+TFJ	ObjectPrototypeValueOf	retain	JSParameterCount(0), kReceiver
+TFJ	ObjectPrototypeToLocaleString	omit	JSParameterCount(0), kReceiver
+TFJ	PromiseCapabilityDefaultReject	omit	JSParameterCount(1), kReceiver, kReason
+TFJ	PromiseCapabilityDefaultResolve	omit	JSParameterCount(1), kReceiver, kResolution
+TFJ	PromiseReject	omit	JSParameterCount(1), kReceiver, kReason
+TFJ	PromiseGetCapabilitiesExecutor	omit	JSParameterCount(2), kReceiver, kResolve, kReject
+TFJ	PromiseConstructorLazyDeoptContinuation	omit	JSParameterCount(4), kReceiver, kPromise, kReject, kException, kResult
+TFJ	PromiseAll	omit	JSParameterCount(1), kReceiver, kIterable
+TFJ	PromiseAllSettled	omit	JSParameterCount(1), kReceiver, kIterable
+TFJ	PromiseAllResolveElementClosure	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAllSettledResolveElementClosure	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAllSettledRejectElementClosure	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAnyRejectElementClosure	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromiseAny	omit	JSParameterCount(1), kReceiver, kIterable
+TFJ	PromiseConstructor	omit	JSParameterCount(1), kReceiver, kExecutor
+TFJ	PromisePrototypeCatch	omit	JSParameterCount(1), kReceiver, kOnRejected
+TFJ	PromiseValueThunkFinally	omit	JSParameterCount(0), kReceiver
+TFJ	PromiseThrowerFinally	omit	JSParameterCount(0), kReceiver
+TFJ	PromiseCatchFinally	omit	JSParameterCount(1), kReceiver, kReason
+TFJ	PromiseThenFinally	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromisePrototypeFinally	omit	JSParameterCount(1), kReceiver, kOnFinally
+TFJ	GetContinuationPreservedEmbedderData	omit	JSParameterCount(0), kReceiver
+TFJ	SetContinuationPreservedEmbedderData	omit	JSParameterCount(1), kReceiver, kData
+TFJ	PromiseRace	omit	JSParameterCount(1), kReceiver, kIterable
+TFJ	PromiseResolveTrampoline	omit	JSParameterCount(1), kReceiver, kValue
+TFJ	PromisePrototypeThen	omit	JSParameterCount(2), kReceiver, kOnFulfilled, kOnRejected
+TFJ	PromiseTry	omit	kDontAdaptArgumentsSentinel
+TFJ	PromiseWithResolvers	omit	JSParameterCount(0), kReceiver
+TFJ	ProxyConstructor	omit	JSParameterCount(2), kReceiver, kTarget, kHandler
+TFJ	ProxyRevocable	omit	JSParameterCount(2), kReceiver, kTarget, kHandler
+TFJ	ProxyRevoke	omit	JSParameterCount(0), kReceiver
+TFJ	ReflectIsExtensible	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ReflectPreventExtensions	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ReflectGetPrototypeOf	omit	JSParameterCount(1), kReceiver, kObject
+TFJ	ReflectSetPrototypeOf	omit	JSParameterCount(2), kReceiver, kObject, kProto
+TFJ	ReflectGet	omit	kDontAdaptArgumentsSentinel
+TFJ	ReflectDeleteProperty	omit	JSParameterCount(2), kReceiver, kObject, kKey
+TFJ	ReflectHas	omit	JSParameterCount(2), kReceiver, kObject, kKey
+TFJ	ReflectGetOwnPropertyDescriptor	omit	JSParameterCount(2), kReceiver, kTarget, kPropertyKey
+TFJ	SetPrototypeDifference	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIntersection	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIsDisjointFrom	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIsSubsetOf	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeIsSupersetOf	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeSymmetricDifference	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	SetPrototypeUnion	omit	JSParameterCount(1), kReceiver, kOther
+TFJ	StringPrototypeAt	omit	JSParameterCount(1), kReceiver, kIndex
+TFJ	StringPrototypeEndsWith	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeAnchor	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeBig	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeBlink	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeBold	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeFontcolor	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeFontsize	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeFixed	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeItalics	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeLink	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSmall	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeStrike	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSub	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSup	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIncludes	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIndexOf	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIsWellFormed	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeIterator	retain	JSParameterCount(0), kReceiver
+TFJ	StringIteratorPrototypeNext	retain	JSParameterCount(0), kReceiver
+TFJ	StringPrototypePadStart	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypePadEnd	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeRepeat	omit	JSParameterCount(1), kReceiver, kCount
+TFJ	StringPrototypeSlice	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeStartsWith	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSubstr	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeSubstring	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeToWellFormed	retain	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeTrim	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeTrimStart	omit	kDontAdaptArgumentsSentinel
+TFJ	StringPrototypeTrimEnd	omit	kDontAdaptArgumentsSentinel
+TFJ	SuppressedErrorConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	SymbolPrototypeDescriptionGetter	omit	JSParameterCount(0), kReceiver
+TFJ	SymbolPrototypeToPrimitive	retain	JSParameterCount(1), kReceiver, kHint
+TFJ	SymbolPrototypeToString	retain	JSParameterCount(0), kReceiver
+TFJ	SymbolPrototypeValueOf	retain	JSParameterCount(0), kReceiver
+TFJ	TypedArrayPrototypeAt	omit	JSParameterCount(1), kReceiver, kIndex
+TFJ	TypedArrayPrototypeEvery	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeEntries	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFilter	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFind	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFindIndex	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFindLast	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeFindLastIndex	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeForEach	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayFrom	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeKeys	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayOf	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeReduce	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeReduceRight	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSet	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSlice	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSome	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSort	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeSubArray	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeToReversed	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeToSorted	omit	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeValues	retain	kDontAdaptArgumentsSentinel
+TFJ	TypedArrayPrototypeWith	omit	JSParameterCount(2), kReceiver, kIndex, kValueArg
+TFJ	WeakRefConstructor	omit	kDontAdaptArgumentsSentinel
+TFJ	WeakRefDeref	omit	JSParameterCount(0), kReceiver
+TFJ	ArrayPrototypeSort	omit	kDontAdaptArgumentsSentinel
+TFJ	JSToJSWrapperInvalidSig	retain	JSParameterCount(0), kReceiver
+TFJ	JSToJSWrapper	retain	kDontAdaptArgumentsSentinel
+TFJ	JSToWasmWrapper	retain	kDontAdaptArgumentsSentinel
+TFJ	WasmPromising	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringCast	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringTest	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromWtf16Array	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromUtf8Array	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringIntoUtf8Array	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringToUtf8Array	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringToWtf16Array	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromCharCode	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringFromCodePoint	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringCodePointAt	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringCharCodeAt	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringLength	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringMeasureUtf8	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringConcat	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringSubstring	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringEquals	retain	kDontAdaptArgumentsSentinel
+TFJ	WebAssemblyStringCompare	retain	kDontAdaptArgumentsSentinel
+CPP	StringPrototypeNormalize	omit	-
+CPP	StringPrototypeToLocaleLowerCase	omit	-
+CPP	StringPrototypeToLocaleUpperCase	omit	-
+CPP	StringPrototypeToLowerCase	omit	-
+CPP	StringPrototypeToUpperCase	omit	-

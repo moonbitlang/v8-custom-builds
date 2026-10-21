@@ -1,0 +1,44 @@
+# Compile probes in the same scope as wee8 and mksnapshot. This group never
+# pulls the ordinary V8 toolchain's archive into the build.
+check_targets = [
+  "wee8-runtime-check",
+  "cpp-entry-contract",
+  "runtime-entry-contract",
+  "generated-builtin-contract",
+  "generated-builtin-catalog",
+  "runtime-catalog",
+  "runtime-boundaries",
+]
+
+group("checks") {
+  deps = []
+  foreach(name, check_targets) {
+    deps += [ ":${name}" ]
+  }
+}
+
+foreach(name, check_targets) {
+  executable(name) {
+    sources = [ "${name}.cc" ]
+    deps = [
+      "//v8:v8_abseil",
+      "//v8:v8_internal_headers",
+      "//v8:v8_libplatform",
+      "//v8:wee8",
+    ]
+    configs += [ ":probe_config" ]
+    include_dirs = [ "//v8/third_party/wasm-api" ]
+  }
+}
+
+# Follow the upstream config wrapper for V8's private toolchain config, but
+# keep normal executable CRT linkage instead of the Rust adapter's /Zl flag.
+config("probe_config") {
+  configs = [
+    "//v8:internal_config",
+    "//v8:external_config",
+    "//v8:toolchain",
+    "//v8:features",
+  ]
+  include_dirs = [ "//v8" ]
+}

@@ -89,7 +89,7 @@ jobs:
       - name: Native cache key
         id: native-key
         env:
-          RECIPE: ${{ hashFiles('build.sh', 'tools/native/**', 'gn/**', 'patches/*.patch', 'licenses/*', 'ci/runtime/**', 'ci/library-builtins/probe.cc') }}
+          RECIPE: ${{ hashFiles('build.sh', 'tools/native/**', 'custom_wee8/BUILD.gn', 'custom_wee8/src/**', 'custom_wee8/tests/*.cc', 'custom_wee8/tests/BUILD.gn', 'patches/*.patch', 'licenses/*') }}
         run: echo "key=native-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$(git rev-parse HEAD:rusty_v8)-$RECIPE" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: native
@@ -123,13 +123,8 @@ jobs:
           # Relink consumers against the archive selected by this native run.
           cache-targets: false
           shared-key: smoke-registry-${{ steps.native-key.outputs.key }}
-      - name: Check runtime boundaries and Wasm compilation modes
-        run: bash ci/test-runtime.sh
-      - name: Check unsupported library bodies and retained protocols
-        run: |
-          probe="target/native-checks/$TARGET/wee8-library-check"
-          if [[ "$TARGET" == *-windows-msvc ]]; then probe+=.exe; fi
-          python3 ci/library-builtins/check.py --after "$probe"
+      - name: Check custom wee8 context and implementation selections
+        run: python3 custom_wee8/tests/check.py "target/native-checks/$TARGET"
       - name: Test packaged Wasm C API archive
         run: bash ci/test-c-api.sh
       - name: Install Zig for Linux compatibility check

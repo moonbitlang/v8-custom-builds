@@ -25,6 +25,21 @@ fn main() {
         return;
     }
 
+    // Keep the readable native-boundary fixtures paired with the bytes used
+    // by the GN probes, without requiring another tool in the native matrix.
+    for (source, binary) in [
+        (
+            include_str!("../../custom_wee8/tests/runtime-boundaries.wat"),
+            include_bytes!("../../custom_wee8/tests/runtime-boundaries.wasm").as_slice(),
+        ),
+        (
+            include_str!("../../custom_wee8/tests/runtime-shared-memory.wat"),
+            include_bytes!("../../custom_wee8/tests/runtime-shared-memory.wasm").as_slice(),
+        ),
+    ] {
+        assert_eq!(wat::parse_str(source).unwrap(), binary);
+    }
+
     let bytes = wat::parse_str(
         r#"(module
             (import "host" "sum" (func $sum (param i32 i32) (result i32)))
