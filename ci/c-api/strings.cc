@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <vector>
 
-#include "wasm.h"
+#include "wee8.h"
 
 struct StringState {
   wasm_store_t* store;

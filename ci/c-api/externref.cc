@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "wasm.h"
+#include "wee8.h"
 
 struct ReferenceState {
   wasm_store_t *store;

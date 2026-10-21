@@ -37,11 +37,10 @@ use std::{
 const RELEASE: &str = "v0.106.0-moonbit.3";
 const HEADER_SHA256: &str = "f6714cdea3bfbbfcafc09d5f61358a1aaebe43464644909864c50585c60630ab";
 
-// Additive native extensions preserve the existing sized-vector and exception
-// ABI. Accept the candidate header for packaged-archive regression tests while
-// ordinary consumers keep downloading the published release.
-const CANDIDATE_HEADER_SHA256: &str =
-    "24d5b04dc03f96d9c1242d69a9f3d78927d623d68b3f6f17d29952abd2c85dcc";
+// New native candidates provide an unmodified upstream header plus extensions.
+// Ordinary consumers still use the published release's single combined header.
+const WASM_HEADER_SHA256: &str = "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301";
+const WEE8_HEADER_SHA256: &str = "985638e18622d37c87787ae8693177a110e7fbb0617b9f131c96564e77c1d746";
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-env-changed=WEE8_ARCHIVE");
@@ -61,8 +60,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
     // This interface depends on the sized-vector ABI from this exact header.
     // V8's older header has the same symbol names but incompatible signatures.
-    if ![HEADER_SHA256, CANDIDATE_HEADER_SHA256].contains(&sha256(&header)?.as_str()) {
-        return Err("WEE8_HEADER does not match the supported Wasm C API revision".into());
+    match sha256(&header)?.as_str() {
+        HEADER_SHA256 => {} // Published .3 combined header.
+        WEE8_HEADER_SHA256 => {
+            let upstream = header.with_file_name("wasm.h");
+            if sha256(&upstream)? != WASM_HEADER_SHA256 {
+                return Err("wee8.h requires its matching upstream wasm.h alongside it".into());
+            }
+            println!("cargo:rerun-if-changed={}", upstream.display());
+        }
+        _ => return Err("WEE8_HEADER does not match the supported Wasm C API revision".into()),
     }
     println!("cargo:rerun-if-changed={}", archive.display());
     println!("cargo:rerun-if-changed={}", header.display());

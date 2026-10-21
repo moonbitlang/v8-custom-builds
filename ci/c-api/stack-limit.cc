@@ -2,7 +2,7 @@
 #undef NDEBUG
 #include <cstdint>
 
-#include "wasm.h"
+#include "wee8.h"
 
 static wasm_trap_t* tick(void* data, const wasm_val_vec_t*, wasm_val_vec_t*) {
   ++*static_cast<size_t*>(data);

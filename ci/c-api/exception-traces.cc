@@ -1,6 +1,6 @@
 // Trace capture and rethrow must work through the packaged C ABI alone.
 #undef NDEBUG
-#include "wasm.h"
+#include "wee8.h"
 
 struct TraceState {
   wasm_store_t* store;
