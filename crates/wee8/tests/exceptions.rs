@@ -1,5 +1,3 @@
-#![cfg(feature = "exceptions")]
-
 //! Exception behavior is tested through the public Rust API and real Wasm:
 //! - Tags match by identity; guest catches and rethrows preserve the payload.
 //! - Payload roots stay alive while owned and are released during store teardown.

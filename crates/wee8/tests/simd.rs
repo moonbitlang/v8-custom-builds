@@ -84,8 +84,6 @@ fn simd_does_not_enable_other_proposals() {
     let store = Store::new(()).unwrap();
     for source in [
         "(module (memory 1 1 shared))",
-        #[cfg(not(feature = "exceptions"))]
-        "(module (tag (param i32)))",
         "(module (func (param v128) (result v128) local.get 0 local.get 0 i8x16.relaxed_swizzle))",
     ] {
         assert!(
