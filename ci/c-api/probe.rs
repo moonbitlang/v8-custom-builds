@@ -1,4 +1,12 @@
 unsafe extern "C" {
+    fn wee8_string_probe(
+        engine: *mut std::ffi::c_void,
+        store: *mut std::ffi::c_void,
+        bytes: *const u8,
+        len: usize,
+        echo: *const u8,
+        echo_len: usize,
+    );
     fn wee8_probe(bytes: *const u8, len: usize, start_bytes: *const u8, start_len: usize);
 }
 
@@ -20,7 +28,7 @@ fn main() {
             "unexpected native stderr: {output:?}"
         );
         println!(
-            "Packaged C API compatibility, calls, callbacks, ownership, traps and memory passed"
+            "Packaged C API compatibility, calls, callbacks, ownership, strings, traps and memory passed"
         );
         return;
     }
@@ -52,4 +60,25 @@ fn main() {
     .unwrap();
     let start = wat::parse_str("(module (func $start unreachable) (start $start))").unwrap();
     unsafe { wee8_probe(bytes.as_ptr(), bytes.len(), start.as_ptr(), start.len()) };
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn test_strings(engine: *mut std::ffi::c_void, store: *mut std::ffi::c_void) {
+    let bytes = wat::parse_str(include_str!("strings.wat")).unwrap();
+    let echo = wat::parse_str(
+        r#"(module
+        (import "host" "echo" (func $echo (param externref) (result externref)))
+        (func (export "echo") (param externref) (result externref) local.get 0 call $echo))"#,
+    )
+    .unwrap();
+    unsafe {
+        wee8_string_probe(
+            engine,
+            store,
+            bytes.as_ptr(),
+            bytes.len(),
+            echo.as_ptr(),
+            echo.len(),
+        );
+    }
 }

@@ -29,10 +29,11 @@ context, implementation lists and JavaScript tier settings together.
  
    if (v8_enable_javascript_parser) {
      defines += [ "V8_ENABLE_JAVASCRIPT_PARSER=1" ]
-@@ -3316,6 +3327,10 @@
+@@ -3316,6 +3327,11 @@
    public_configs = [ "src/inspector:inspector_config" ]
  
    sources = [
++    "//custom_wee8/src/c-api-strings.inc",
 +    "//custom_wee8/src/cpp-builtin-selection.h",
 +    "//custom_wee8/src/generated-js-builtin-selection.h",
 +    "//custom_wee8/src/runtime-selection.h",
