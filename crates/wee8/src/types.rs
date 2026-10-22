@@ -107,7 +107,7 @@ impl ValType {
 
     pub(crate) unsafe fn from_type(ty: *const ffi::wasm_valtype_t) -> Result<Self> {
         unsafe {
-            match u32::from(ffi::wasm_valtype_kind(ty)) {
+            match ffi::wasm_valkind_enum::from(ffi::wasm_valtype_kind(ty)) {
                 ffi::wasm_valkind_enum_WASM_I32 => Ok(Self::I32),
                 ffi::wasm_valkind_enum_WASM_I64 => Ok(Self::I64),
                 ffi::wasm_valkind_enum_WASM_F32 => Ok(Self::F32),

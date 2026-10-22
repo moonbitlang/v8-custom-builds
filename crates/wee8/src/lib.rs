@@ -190,7 +190,7 @@ impl<'store> Value<'store> {
     // their own root before becoming an independently owned Rust value.
     unsafe fn from_raw(value: &ffi::wasm_val_t, store: &'store StoreOpaque) -> Result<Self> {
         unsafe {
-            match u32::from(value.kind) {
+            match ffi::wasm_valkind_enum::from(value.kind) {
                 ffi::wasm_valkind_enum_WASM_I32 => Ok(Self::I32(value.of.i32_)),
                 ffi::wasm_valkind_enum_WASM_I64 => Ok(Self::I64(value.of.i64_)),
                 ffi::wasm_valkind_enum_WASM_F32 => Ok(Self::F32(value.of.f32_)),
