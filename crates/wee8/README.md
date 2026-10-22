@@ -27,13 +27,28 @@ older V8 C APIs used identical symbols with incompatible signatures.
 
 ## Supported interface
 
-The validated guest subset is Wasm 1.0 plus bulk-memory, multi-value, saturating
-float-to-integer conversions, SIMD, reference types, typed function references,
-GC and standardized exception handling. Structs, arrays and typed
-function references may stay inside the guest. The C API boundary is checked
-separately: only scalar numbers and nullable `externref`/`funcref` can appear in
-import/export metadata. GC references, non-null references and `v128` at that
-boundary are rejected before native introspection, which would otherwise abort.
+Guest validation follows the core Wasm proposals enabled by the pinned V8
+revision, rather than the instructions currently emitted by MoonBit. This covers
+Wasm 2.0 (including sign extension), tail calls, extended constants, relaxed SIMD,
+multiple memories, threads/atomics, GC, typed function references, and
+standardized exception handling. The feature set is explicit because newer
+wasmparser defaults include proposals this engine does not implement.
+
+The source of this policy is V8's
+[always-enabled features](https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/src/wasm/wasm-features.h)
+and this repository's [optional-feature policy](../../custom_wee8/src/wasm-feature-policy.h).
+The `.4` release disables legacy exception opcodes, legacy stringref, Memory64
+and other staged or experimental proposals. Component-model and newer proposals
+are not enabled merely because wasmparser can validate them.
+
+The C API boundary is checked separately: only scalar numbers and nullable
+`externref`/`funcref` can appear in function/global/table metadata. GC references,
+non-null references and `v128` at that boundary are rejected before native
+introspection, which would otherwise abort. Shared memories and atomic operations
+may stay inside the guest, but importing or exporting a shared memory is rejected:
+the host memory API lends an exclusive, non-atomic slice. This does not add a host
+thread-spawning or shared-memory interface. Multiple guest memories are allowed;
+`Caller::with_memory` still selects the export named `memory`.
 The Rust call interface supports scalar numbers and nullable `externref`, with
 at most one result; callable `funcref` handles are not exposed yet.
 
@@ -61,12 +76,10 @@ copying and deletion use V8's C API; there is no additional Rust root registry.
 immediate i31 values and GC structs/arrays. Externalized values are opaque native
 roots and can cross the host boundary as nullable `externref`; directly GC-typed
 host signatures remain unsupported. Native values have no Rust host payload.
-Relaxed SIMD, shared memory and other unlisted proposals remain
-excluded. Standardized exception handling and tags are supported by default;
-legacy EH instructions remain excluded. Host imports are supplied in declaration
-order, excluding native builtins enabled by compile options. Repeated
-module/name imports share a native binding; different bindings under one name
-remain unsupported by this adapter.
+These representation restrictions are independent of proposal support.
+Host imports are supplied in declaration order, excluding native builtins enabled
+by compile options. Repeated module/name imports share a native binding; different
+bindings under one name remain unsupported by this adapter.
 
 A store owns its native objects; native-root handles borrow the store and stay on
 its creating thread. `Compiled` may move between threads and create modules in
@@ -100,8 +113,8 @@ build workflow.
 Tags and exceptions are part of the normal interface. The pinned release supplies
 the matching native symbols and header; no Cargo feature or source-build override
 is needed. Remove `features = ["exceptions"]` from older dependency declarations.
-Standardized `try_table`/`throw_ref` handling is enabled, while legacy EH
-instructions remain outside the Rust validator's allowlist.
+Standardized `try_table`/`throw_ref` handling is enabled. Legacy EH instructions
+remain disabled by the `.4` native release's optional-feature policy.
 
 Integration tests exercise real Wasm through this crate's public API in both the
 native build and published-release consumer workflows. Their goals are:
