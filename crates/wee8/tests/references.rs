@@ -198,7 +198,6 @@ fn unsupported_reference_boundary_types_are_rejected() {
         r#"(module (type $s (struct)) (func (export "f") (result (ref $s)) struct.new $s))"#,
         r#"(module (type $a (array i32)) (global (export "g") (ref null $a) (ref.null $a)))"#,
         r#"(module (type $s (struct)) (table (export "t") 0 (ref null $s)))"#,
-        r#"(module (func (export "f") (param (ref extern))))"#,
     ] {
         let error = match store.compile(&wat::parse_str(source).unwrap()) {
             Ok(_) => panic!("accepted {source}"),
@@ -272,4 +271,82 @@ fn references_remain_usable_after_traps_and_callback_errors() {
         panic!("missing reference")
     };
     assert_eq!(reference.data::<String>().unwrap(), "still rooted");
+}
+
+#[test]
+fn nonnull_function_signatures_survive_introspection_and_serialization() {
+    use wee8::{Error, Kind, StringRef, Value};
+    let store = Store::new(()).unwrap();
+    let bytes = wat::parse_str(
+        r#"(module
+      (import "h" "echo" (func $echo (param (ref extern)) (result (ref extern))))
+      (func (export "run") (param (ref extern)) (result (ref extern))
+        local.get 0 call $echo))"#,
+    )
+    .unwrap();
+    let compiled = store.compile(&bytes).unwrap().serialize();
+    let module = store.module(&compiled).unwrap();
+    let imports = module.imports().unwrap();
+    assert_eq!(imports[0].params, [Kind::NonNullExternRef]);
+    assert_eq!(imports[0].results, [Kind::NonNullExternRef]);
+    let nullable = store
+        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, args| {
+            Ok(args.to_vec())
+        })
+        .unwrap();
+    assert!(matches!(
+        module.instantiate(&[&nullable]),
+        Err(Error::Trap(_))
+    ));
+    let echo = store
+        .host_func(&imports[0].params, &imports[0].results, |_, args| {
+            Ok(args.to_vec())
+        })
+        .unwrap();
+    let mut instance = module.instantiate(&[&echo]).unwrap();
+    let string = StringRef::from_utf8(store.as_context(), "native")
+        .unwrap()
+        .into_extern_ref();
+    let value = Value::ExternRef(Some(string));
+    assert_eq!(value.kind(), Kind::ExternRef);
+    assert_eq!(
+        instance.call("run", std::slice::from_ref(&value)).unwrap(),
+        [value]
+    );
+    assert!(matches!(
+        instance.call("run", &[Value::ExternRef(None)]),
+        Err(Error::Interface(_))
+    ));
+    let null = store
+        .host_func(&imports[0].params, &imports[0].results, |_, _| {
+            Ok(vec![Value::ExternRef(None)])
+        })
+        .unwrap();
+    let mut instance = module.instantiate(&[&null]).unwrap();
+    let value = Value::ExternRef(Some(store.extern_ref(42).unwrap()));
+    assert!(matches!(
+        instance.call("run", &[value]),
+        Err(Error::Host(_))
+    ));
+}
+
+#[test]
+fn nonnull_reference_extension_does_not_widen_other_external_types() {
+    use wee8::{Kind, Tag};
+    let store = Store::new(()).unwrap();
+    assert!(Tag::new(store.as_context(), &[Kind::NonNullExternRef]).is_err());
+    for source in [
+        r#"(module (import "h" "tag" (tag (param (ref extern)))))"#,
+        r#"(module (import "h" "global" (global (ref extern))))"#,
+        r#"(module (import "h" "table" (table 1 (ref extern))))"#,
+    ] {
+        let error = store
+            .compile(&wat::parse_str(source).unwrap())
+            .err()
+            .unwrap();
+        assert!(
+            error.to_string().contains("unsupported in C API"),
+            "{error}"
+        );
+    }
 }

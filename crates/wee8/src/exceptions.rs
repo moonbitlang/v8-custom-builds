@@ -21,25 +21,16 @@
 //! store slot. Payload references remain rooted by V8, not by a Rust registry.
 
 use crate::{Error, Kind, RawValues, Result, StoreContext, StoreOpaque, Value, ffi};
-use std::{
-    ptr::{self, NonNull},
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::ptr::{self, NonNull};
 
 pub(crate) struct Exceptions {
-    id: u64,
     tags: std::cell::RefCell<Vec<NonNull<ffi::wasm_tag_t>>>,
     pub(crate) pending: std::cell::RefCell<Option<ExceptionRoot>>,
 }
 
 impl Exceptions {
     pub(crate) fn new() -> Self {
-        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
-        let id = NEXT_ID
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
-            .expect("exhausted wee8 store identities");
         Self {
-            id,
             tags: Default::default(),
             pending: Default::default(),
         }
@@ -54,7 +45,7 @@ impl Exceptions {
         }
     }
 
-    pub(crate) fn insert(&self, raw: NonNull<ffi::wasm_tag_t>) -> Tag {
+    pub(crate) fn insert(&self, store_id: u64, raw: NonNull<ffi::wasm_tag_t>) -> Tag {
         let mut tags = self.tags.borrow_mut();
         // Export lookup may return another wrapper for an existing identity.
         // Reuse its slot instead of retaining one extra root on every lookup.
@@ -63,17 +54,11 @@ impl Exceptions {
             .position(|tag| unsafe { ffi::wasm_tag_same(tag.as_ptr(), raw.as_ptr()) })
         {
             unsafe { ffi::wasm_tag_delete(raw.as_ptr()) };
-            return Tag {
-                store_id: self.id,
-                index,
-            };
+            return Tag { store_id, index };
         }
         let index = tags.len();
         tags.push(raw);
-        Tag {
-            store_id: self.id,
-            index,
-        }
+        Tag { store_id, index }
     }
 }
 
@@ -90,6 +75,9 @@ pub struct Tag {
 impl Tag {
     /// Create a tag with scalar/externref payload parameters and no results.
     pub fn new<T>(context: StoreContext<'_, T>, params: &[Kind]) -> Result<Self> {
+        if params.contains(&Kind::NonNullExternRef) {
+            return Err("non-null tag payloads are unsupported".into());
+        }
         unsafe {
             let raw: Vec<_> = params
                 .iter()
@@ -116,12 +104,12 @@ impl Tag {
             let tag = ffi::wasm_tag_new(context.0.inner.raw.as_ptr(), ty);
             ffi::wasm_tagtype_delete(ty);
             let tag = NonNull::new(tag).ok_or("failed to create tag")?;
-            Ok(context.0.inner.exceptions.insert(tag))
+            Ok(context.0.inner.exceptions.insert(context.0.inner.id, tag))
         }
     }
 
     pub(crate) fn raw(self, store: &StoreOpaque) -> Result<NonNull<ffi::wasm_tag_t>> {
-        if self.store_id != store.exceptions.id {
+        if self.store_id != store.id {
             return Err("tag belongs to a different store".into());
         }
         Ok(store.exceptions.tags.borrow()[self.index])
@@ -203,25 +191,7 @@ impl<'store> Exception<'store> {
     /// Rethrowing preserves those frames. Construction outside guest execution
     /// yields an empty trace; guest-created exceptions may also lack a trace.
     pub fn trace(&self) -> Vec<StackFrame> {
-        unsafe {
-            let mut frames = ffi::wasm_frame_vec_t {
-                size: 0,
-                data: ptr::null_mut(),
-            };
-            ffi::wasm_trap_trace(self.root.0.as_ptr(), &mut frames);
-            let result = (0..frames.size)
-                .map(|index| {
-                    let frame = *frames.data.add(index);
-                    StackFrame {
-                        function_index: ffi::wasm_frame_func_index(frame),
-                        function_offset: ffi::wasm_frame_func_offset(frame),
-                        module_offset: ffi::wasm_frame_module_offset(frame),
-                    }
-                })
-                .collect();
-            ffi::wasm_frame_vec_delete(&mut frames);
-            result
-        }
+        unsafe { trace(self.root.0.as_ptr()) }
     }
 
     /// Read a payload only with the matching tag. Returned references own roots.
@@ -291,7 +261,51 @@ impl<T> crate::Instance<'_, T> {
                 return Err("export is not a tag".into());
             }
             let raw = NonNull::new(ffi::wasm_tag_copy(tag)).ok_or("failed to copy tag root")?;
-            Ok(self.store.state.inner.exceptions.insert(raw))
+            Ok(self
+                .store
+                .state
+                .inner
+                .exceptions
+                .insert(self.store.state.inner.id, raw))
         }
+    }
+}
+
+// Snapshot frames before releasing their native trap or exception root.
+pub(crate) unsafe fn trace(trap: *mut ffi::wasm_trap_t) -> Vec<StackFrame> {
+    unsafe {
+        let mut frames = ffi::wasm_frame_vec_t {
+            size: 0,
+            data: ptr::null_mut(),
+        };
+        ffi::wasm_trap_trace(trap, &mut frames);
+        let result = (0..frames.size)
+            .map(|index| {
+                let frame = *frames.data.add(index);
+                StackFrame {
+                    function_index: ffi::wasm_frame_func_index(frame),
+                    function_offset: ffi::wasm_frame_func_offset(frame),
+                    module_offset: ffi::wasm_frame_module_offset(frame),
+                }
+            })
+            .collect();
+        ffi::wasm_frame_vec_delete(&mut frames);
+        result
+    }
+}
+
+impl<T> crate::Caller<'_, T> {
+    /// Capture this host call's Wasm stack without throwing. The standard C API
+    /// captures frames when it creates a trap; the temporary root is discarded
+    /// after copying the frame metadata, without touching pending exceptions.
+    pub fn capture_stack(&self) -> crate::Result<Vec<StackFrame>> {
+        let message = ffi::wasm_byte_vec_t {
+            size: 0,
+            data: ptr::null_mut(),
+        };
+        let trap = NonNull::new(unsafe { ffi::wasm_trap_new(self.0.inner.raw.as_ptr(), &message) })
+            .ok_or("failed to capture Wasm stack")?;
+        let root = ExceptionRoot(trap);
+        Ok(unsafe { trace(root.0.as_ptr()) })
     }
 }

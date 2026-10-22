@@ -174,3 +174,59 @@ fn custom_stack_limit_traps_and_can_be_restored() {
         [Value::I32(5)]
     );
 }
+
+#[test]
+fn ordinary_traps_and_callback_capture_retain_wasm_frames() {
+    let store = Store::new(()).unwrap();
+    let callback = store
+        .host_func(&[], &[], |caller, _| {
+            let frames = caller.capture_stack()?;
+            assert_eq!(frames[0].function_index, 1);
+            assert!(frames.iter().all(|frame| frame.module_offset > 0));
+            Ok(vec![])
+        })
+        .unwrap();
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+        (import "h" "capture" (func $capture))
+        (func $inner call $capture unreachable)
+        (func (export "run") call $inner))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let mut instance = module.instantiate(&[&callback]).unwrap();
+    let Err(Error::Trap(trap)) = instance.call("run", &[]) else {
+        panic!("expected trap")
+    };
+    assert!(trap.message.contains("unreachable"));
+    assert_eq!(trap.frames[0].function_index, 1);
+    assert!(trap.frames.iter().all(|frame| frame.module_offset > 0));
+}
+
+#[test]
+fn host_errors_keep_frames_without_becoming_guest_traps() {
+    let store = Store::new(()).unwrap();
+    let host = store
+        .host_func(&[], &[], |_, _| Err(Error::Host("host failure".into())))
+        .unwrap();
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+        (import "h" "fail" (func $fail))
+        (func (export "run") call $fail))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let mut instance = module.instantiate(&[&host]).unwrap();
+    let Err(Error::Host(error)) = instance.call("run", &[]) else {
+        panic!("expected host error")
+    };
+    assert_eq!(error.message, "host failure");
+    assert_eq!(error.frames[0].function_index, 1);
+    assert!(error.frames[0].module_offset > 0);
+}
