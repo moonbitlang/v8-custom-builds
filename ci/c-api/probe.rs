@@ -95,8 +95,9 @@ unsafe extern "C" fn test_strings(engine: *mut std::ffi::c_void, store: *mut std
     let bytes = wat::parse_str(include_str!("strings.wat")).unwrap();
     let echo = wat::parse_str(
         r#"(module
-        (import "host" "echo" (func $echo (param externref) (result externref)))
-        (func (export "echo") (param externref) (result externref) local.get 0 call $echo))"#,
+        (import "host" "echo" (func $echo (param (ref extern)) (result (ref extern))))
+        (func (export "echo") (param (ref extern)) (result (ref extern)) local.get 0 call $echo)
+        (export "direct" (func $echo)))"#,
     )
     .unwrap();
     unsafe {

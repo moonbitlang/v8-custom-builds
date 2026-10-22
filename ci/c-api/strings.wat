@@ -140,4 +140,6 @@
   local.get 0 call $length array.new_default $chars local.set $a
   local.get 0 local.get $a i32.const 0 call $into_chars drop
   local.get $a i32.const 0 local.get $a array.len call $from_chars)
+(func (export "bad_cast") (param externref) local.get 0 call $cast drop)
+(func (export "bad_bounds") global.get $hello i32.const 5 call $char_code_at drop)
 )

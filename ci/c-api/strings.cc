@@ -8,6 +8,8 @@
 struct StringState {
   wasm_store_t* store;
   unsigned finalized = 0;
+  unsigned calls = 0;
+  bool return_null = false;
 };
 
 static void collected(void* env) {
@@ -18,6 +20,11 @@ static wasm_trap_t* echo_with_gc(void* env, const wasm_val_vec_t* args,
                                  wasm_val_vec_t* results) {
   auto* state = static_cast<StringState*>(env);
   assert(args->size == 1 && results->size == 1);
+  ++state->calls;
+  if (state->return_null) {
+    results->data[0] = WASM_REF_VAL(nullptr);
+    return nullptr;
+  }
   assert(wee8_ref_is_string(args->data[0].of.ref));
   // Prove a collection occurred while the native primitive argument is rooted.
   auto* foreign = wasm_foreign_new(state->store);
@@ -83,7 +90,7 @@ extern "C" void wee8_string_probe(wasm_engine_t* engine, wasm_store_t* store,
   assert(instance && !trap);
   wasm_extern_vec_t exports;
   wasm_instance_exports(instance, &exports);
-  assert(exports.size == 3);
+  assert(exports.size == 5);
   wasm_val_vec_t none = {0, nullptr};
   assert(!wasm_func_call(wasm_extern_as_func(exports.data[0]), &none, &none));
   wasm_val_t literal = WASM_REF_VAL(nullptr);
@@ -91,6 +98,38 @@ extern "C" void wee8_string_probe(wasm_engine_t* engine, wasm_store_t* store,
   assert(!wasm_func_call(wasm_extern_as_func(exports.data[1]), &none, &result));
   assert(wee8_string_length(literal.of.ref) == 5);
   wasm_val_delete(&literal);
+
+  // Builtin failures may capture JS frames; the public trace contains only
+  // Wasm frames and its origin is the first such frame.
+  wasm_foreign_t* non_string = wasm_foreign_new(store);
+  wasm_val_t invalid_values[] = {WASM_REF_VAL(nullptr),
+                                WASM_REF_VAL(wasm_foreign_as_ref(non_string))};
+  struct {
+    size_t exported;
+    wasm_val_vec_t args;
+  } failures[] = {{3, {1, &invalid_values[0]}},
+                  {3, {1, &invalid_values[1]}},
+                  {4, {0, nullptr}}};
+  for (auto& failure : failures) {
+    trap = wasm_func_call(wasm_extern_as_func(exports.data[failure.exported]),
+                          &failure.args, &none);
+    assert(trap);
+    wasm_frame_vec_t frames;
+    wasm_trap_trace(trap, &frames);
+    assert(frames.size > 0);
+    auto* origin = wasm_trap_origin(trap);
+    assert(origin && wasm_frame_func_index(origin) ==
+                         wasm_frame_func_index(frames.data[0]));
+    for (size_t f = 0; f < frames.size; ++f) {
+      assert(wasm_frame_instance(frames.data[f]));
+      assert(wasm_frame_module_offset(frames.data[f]) > 0);
+    }
+    wasm_frame_delete(origin);
+    wasm_frame_vec_delete(&frames);
+    wasm_trap_delete(trap);
+  }
+  trap = nullptr;
+  wasm_foreign_delete(non_string);
 
   const uint16_t units[] = {0x61, 0xd800, 0x62, 0xdc00, 0xd83d, 0xde04};
   wasm_ref_t* string = wee8_string_new_utf16(store, units, 6);
@@ -171,9 +210,38 @@ extern "C" void wee8_string_probe(wasm_engine_t* engine, wasm_store_t* store,
       echo_length, reinterpret_cast<char*>(const_cast<uint8_t*>(echo_bytes))};
   module = wasm_module_new(store, &echo_binary);
   assert(module);
+  // Preserve nullability through native import introspection and type copies.
+  wasm_module_imports(module, &import_types);
+  assert(import_types.size == 1);
+  const auto* imported = wasm_externtype_as_functype_const(
+      wasm_importtype_type(import_types.data[0]));
+  assert(imported);
+  wasm_functype_t* type = wasm_functype_copy(imported);
+  wasm_importtype_vec_delete(&import_types);
+  assert(!wee8_valtype_is_nullable(wasm_functype_params(type)->data[0]));
+  assert(!wee8_valtype_is_nullable(wasm_functype_results(type)->data[0]));
+  assert(wasm_valtype_kind(wasm_functype_params(type)->data[0]) == WASM_EXTERNREF);
+  wasm_functype_delete(type);
+  type = wasm_functype_new_1_1(wee8_valtype_new_externref(false),
+                              wee8_valtype_new_externref(false));
+  auto* nullable = wee8_valtype_new_externref(true);
+  assert(wee8_valtype_is_nullable(nullable));
+  wasm_valtype_delete(nullable);
+  auto* numeric = wasm_valtype_new(WASM_I32);
+  assert(!wee8_valtype_is_nullable(numeric));
+  wasm_valtype_delete(numeric);
+  // The new descriptor is function-only. Other constructors reject it rather
+  // than silently widening their types to nullable externref.
+  global_type = wasm_globaltype_new(wee8_valtype_new_externref(false), WASM_VAR);
+  assert(!wasm_global_new(store, global_type, &argument));
+  wasm_globaltype_delete(global_type);
+  table_type = wasm_tabletype_new(wee8_valtype_new_externref(false), &limits);
+  assert(!wasm_table_new(store, table_type, string));
+  wasm_tabletype_delete(table_type);
+  tag_type = wasm_tagtype_new(wasm_functype_new_1_0(wee8_valtype_new_externref(false)));
+  assert(!wasm_tag_new(store, tag_type));
+  wasm_tagtype_delete(tag_type);
   StringState state{store};
-  wasm_functype_t* type = wasm_functype_new_1_1(
-      wasm_valtype_new(WASM_EXTERNREF), wasm_valtype_new(WASM_EXTERNREF));
   wasm_func_t* echo =
       wasm_func_new_with_env(store, type, echo_with_gc, &state, nullptr);
   wasm_functype_delete(type);
@@ -189,6 +257,29 @@ extern "C" void wee8_string_probe(wasm_engine_t* engine, wasm_store_t* store,
   assert(std::equal(std::begin(roundtrip), std::end(roundtrip),
                     std::begin(units)));
   wasm_val_delete(&returned);
+  assert(exports.size == 2);
+  wasm_func_t* paths[] = {echo, wasm_extern_as_func(exports.data[0]),
+                         wasm_extern_as_func(exports.data[1])};
+  for (auto* function : paths) {
+    type = wasm_func_type(function);
+    assert(!wee8_valtype_is_nullable(wasm_functype_params(type)->data[0]));
+    assert(!wee8_valtype_is_nullable(wasm_functype_results(type)->data[0]));
+    wasm_functype_delete(type);
+    // Null arguments never reach the callback, even on the direct C API path.
+    wasm_val_t null = WASM_REF_VAL(nullptr);
+    wasm_val_vec_t null_args = {1, &null};
+    unsigned calls = state.calls;
+    trap = wasm_func_call(function, &null_args, &result);
+    assert(trap && state.calls == calls);
+    wasm_trap_delete(trap);
+    // A callback's null result must trap before entering statically non-null
+    // guest code, or before returning it to a direct C API caller.
+    state.return_null = true;
+    trap = wasm_func_call(function, &arguments, &result);
+    assert(trap && state.calls == calls + 1);
+    wasm_trap_delete(trap);
+    state.return_null = false;
+  }
   wasm_val_delete(&argument);
   wasm_extern_vec_delete(&exports);
   wasm_instance_delete(instance);
