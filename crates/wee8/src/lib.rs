@@ -25,13 +25,13 @@
 //! instantiates, and calls Wasm with numeric values and store-bound host references.
 //!
 //! ```
-//! use wee8::{Kind, Store, Value};
+//! use wee8::{Store, ValType, Value};
 //!
 //! let store = Store::new(41)?;
 //! let module = store.compile(&wat::parse_str(r#"(module
 //!     (import "host" "answer" (func $answer (result i32)))
 //!     (func (export "run") (result i32) call $answer))"#)?)?;
-//! let answer = store.host_func(&[], &[Kind::I32], |caller, _| {
+//! let answer = store.host_func(&[], &[ValType::I32], |caller, _| {
 //!     Ok(vec![Value::I32(caller.with_data(|value| *value + 1))])
 //! })?;
 //! let mut instance = module.instantiate(&[&answer])?;
@@ -57,6 +57,7 @@ mod ffi;
 mod references;
 pub use references::ExternRef;
 mod strings;
+mod types;
 use std::{
     cell::{Cell, RefCell},
     ffi::c_void,
@@ -66,6 +67,7 @@ use std::{
     sync::OnceLock,
 };
 pub use strings::StringRef;
+pub use types::{HeapType, RefType, ValType};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -132,77 +134,19 @@ pub enum Value<'store> {
     ExternRef(Option<ExternRef<'store>>),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Kind {
-    I32,
-    I64,
-    F32,
-    F64,
-    /// Nullable `(ref null extern)`, also the runtime kind of all externref values.
-    ExternRef,
-    /// Non-null `(ref extern)` in a function signature. Values still use ExternRef.
-    NonNullExternRef,
-}
-
-impl Kind {
-    fn raw(self) -> u8 {
-        match self {
-            Self::I32 => 0,
-            Self::I64 => 1,
-            Self::F32 => 2,
-            Self::F64 => 3,
-            Self::ExternRef | Self::NonNullExternRef => ffi::wasm_valkind_enum_WASM_EXTERNREF as u8,
-        }
-    }
-
-    fn new_type(self) -> *mut ffi::wasm_valtype_t {
-        unsafe {
-            if self == Self::NonNullExternRef {
-                ffi::wee8_valtype_new_externref(false)
-            } else {
-                ffi::wasm_valtype_new(self.raw())
-            }
-        }
-    }
-
-    unsafe fn from_type(ty: *const ffi::wasm_valtype_t) -> Result<Self> {
-        unsafe {
-            let kind = Self::from_raw(ffi::wasm_valtype_kind(ty))?;
-            Ok(
-                if kind == Self::ExternRef && !ffi::wee8_valtype_is_nullable(ty) {
-                    Self::NonNullExternRef
-                } else {
-                    kind
-                },
-            )
-        }
-    }
-
-    fn accepts(self, value: &Value<'_>) -> bool {
-        self.raw() == value.kind().raw()
-            && (self != Self::NonNullExternRef || matches!(value, Value::ExternRef(Some(_))))
-    }
-
-    fn from_raw(kind: u8) -> Result<Self> {
-        match kind {
-            0 => Ok(Self::I32),
-            1 => Ok(Self::I64),
-            2 => Ok(Self::F32),
-            3 => Ok(Self::F64),
-            128 => Ok(Self::ExternRef),
-            _ => Err("unsupported host value type".into()),
-        }
-    }
-}
-
 impl<'store> Value<'store> {
-    pub fn kind(&self) -> Kind {
-        match self {
-            Self::I32(_) => Kind::I32,
-            Self::I64(_) => Kind::I64,
-            Self::F32(_) => Kind::F32,
-            Self::F64(_) => Kind::F64,
-            Self::ExternRef(_) => Kind::ExternRef,
+    /// Whether this value satisfies a signature type, including nullability.
+    /// This does not check store identity; calls check that separately.
+    pub fn matches_ty(&self, ty: &ValType) -> bool {
+        match (self, ty) {
+            (Self::I32(_), ValType::I32)
+            | (Self::I64(_), ValType::I64)
+            | (Self::F32(_), ValType::F32)
+            | (Self::F64(_), ValType::F64) => true,
+            (Self::ExternRef(value), ValType::Ref(reference)) => match reference.heap_type() {
+                HeapType::Extern => reference.is_nullable() || value.is_some(),
+            },
+            _ => false,
         }
     }
 
@@ -218,23 +162,26 @@ impl<'store> Value<'store> {
     // The returned C value owns a new root, consumed by the caller or RawValues.
     fn raw(&self) -> ffi::wasm_val_t {
         use ffi::wasm_val_t__bindgen_ty_1 as Payload;
-        let of = match self {
-            Self::I32(value) => Payload { i32_: *value },
-            Self::I64(value) => Payload { i64_: *value },
-            Self::F32(value) => Payload { f32_: *value },
-            Self::F64(value) => Payload { f64_: *value },
-            Self::ExternRef(reference) => Payload {
-                ref_: reference
-                    .as_ref()
-                    .map_or(ptr::null_mut(), |reference| unsafe {
-                        NonNull::new(ffi::wasm_ref_copy(reference.raw.as_ptr()))
-                            .expect("failed to copy externref root")
-                            .as_ptr()
-                    }),
-            },
+        let (kind, of) = match self {
+            Self::I32(value) => (ffi::wasm_valkind_enum_WASM_I32, Payload { i32_: *value }),
+            Self::I64(value) => (ffi::wasm_valkind_enum_WASM_I64, Payload { i64_: *value }),
+            Self::F32(value) => (ffi::wasm_valkind_enum_WASM_F32, Payload { f32_: *value }),
+            Self::F64(value) => (ffi::wasm_valkind_enum_WASM_F64, Payload { f64_: *value }),
+            Self::ExternRef(reference) => (
+                ffi::wasm_valkind_enum_WASM_EXTERNREF,
+                Payload {
+                    ref_: reference
+                        .as_ref()
+                        .map_or(ptr::null_mut(), |reference| unsafe {
+                            NonNull::new(ffi::wasm_ref_copy(reference.raw.as_ptr()))
+                                .expect("failed to copy externref root")
+                                .as_ptr()
+                        }),
+                },
+            ),
         };
         ffi::wasm_val_t {
-            kind: self.kind().raw(),
+            kind: kind as u8,
             of,
         }
     }
@@ -243,12 +190,12 @@ impl<'store> Value<'store> {
     // their own root before becoming an independently owned Rust value.
     unsafe fn from_raw(value: &ffi::wasm_val_t, store: &'store StoreOpaque) -> Result<Self> {
         unsafe {
-            match Kind::from_raw(value.kind)? {
-                Kind::I32 => Ok(Self::I32(value.of.i32_)),
-                Kind::I64 => Ok(Self::I64(value.of.i64_)),
-                Kind::F32 => Ok(Self::F32(value.of.f32_)),
-                Kind::F64 => Ok(Self::F64(value.of.f64_)),
-                Kind::ExternRef | Kind::NonNullExternRef => {
+            match u32::from(value.kind) {
+                ffi::wasm_valkind_enum_WASM_I32 => Ok(Self::I32(value.of.i32_)),
+                ffi::wasm_valkind_enum_WASM_I64 => Ok(Self::I64(value.of.i64_)),
+                ffi::wasm_valkind_enum_WASM_F32 => Ok(Self::F32(value.of.f32_)),
+                ffi::wasm_valkind_enum_WASM_F64 => Ok(Self::F64(value.of.f64_)),
+                ffi::wasm_valkind_enum_WASM_EXTERNREF => {
                     Ok(Self::ExternRef(NonNull::new(value.of.ref_).map(|raw| {
                         ExternRef {
                             raw: NonNull::new(ffi::wasm_ref_copy(raw.as_ptr()))
@@ -257,6 +204,7 @@ impl<'store> Value<'store> {
                         }
                     })))
                 }
+                _ => Err("unsupported host value type".into()),
             }
         }
     }
@@ -520,7 +468,7 @@ type Callback<T> = dyn for<'a> Fn(Caller<'a, T>, &[Value<'a>]) -> Result<Vec<Val
 
 struct CallbackEnvironment<T> {
     state: Rc<State<T>>,
-    results: Vec<Kind>,
+    results: Vec<ValType>,
     callback: Box<Callback<T>>,
 }
 
@@ -557,7 +505,10 @@ unsafe extern "C" fn call_host<T>(
                 .collect::<Result<Vec<_>>>()?;
             let values = (env.callback)(Caller(&env.state), &values)?;
             if values.len() != env.results.len()
-                || values.iter().zip(&env.results).any(|(v, k)| !k.accepts(v))
+                || values
+                    .iter()
+                    .zip(&env.results)
+                    .any(|(value, ty)| !value.matches_ty(ty))
             {
                 return Err("host callback returned the wrong result signature".into());
             }
@@ -753,8 +704,8 @@ impl<T: 'static> Store<T> {
     /// the function handle.
     pub fn host_func<'store>(
         &'store self,
-        params: &[Kind],
-        results: &[Kind],
+        params: &[ValType],
+        results: &[ValType],
         callback: impl for<'a> Fn(Caller<'a, T>, &[Value<'a>]) -> Result<Vec<Value<'a>>> + 'static,
     ) -> Result<HostFunc<'store, T>> {
         if results.len() > 1 {
@@ -769,8 +720,8 @@ impl<T: 'static> Store<T> {
                 size: 0,
                 data: ptr::null_mut(),
             };
-            let params_raw: Vec<_> = params.iter().map(|k| k.new_type()).collect();
-            let results_raw: Vec<_> = results.iter().map(|k| k.new_type()).collect();
+            let params_raw: Vec<_> = params.iter().map(|ty| ty.new_type()).collect();
+            let results_raw: Vec<_> = results.iter().map(|ty| ty.new_type()).collect();
             ffi::wasm_valtype_vec_new(&mut params_vec, params_raw.len(), params_raw.as_ptr());
             ffi::wasm_valtype_vec_new(&mut results_vec, results_raw.len(), results_raw.as_ptr());
             // The constructors consume elements, then vectors. Do not delete
@@ -866,19 +817,19 @@ impl<T> Store<T> {
 pub struct Import {
     pub module: String,
     pub name: String,
-    pub params: Vec<Kind>,
-    pub results: Vec<Kind>,
+    pub params: Vec<ValType>,
+    pub results: Vec<ValType>,
 }
 
 /// Import type information, preserving declaration order and native kind.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ExternType {
     Func {
-        params: Vec<Kind>,
-        results: Vec<Kind>,
+        params: Vec<ValType>,
+        results: Vec<ValType>,
     },
     Tag {
-        params: Vec<Kind>,
+        params: Vec<ValType>,
     },
     Memory(MemoryType),
 }
@@ -971,13 +922,13 @@ impl<T> Module<'_, T> {
                             "unsupported import {module}::{name}"
                         )));
                     }
-                    let read_kinds = |types: *const ffi::wasm_valtype_vec_t| {
+                    let read_types = |types: *const ffi::wasm_valtype_vec_t| {
                         (0..(*types).size)
-                            .map(|i| Kind::from_type(*(*types).data.add(i)))
+                            .map(|i| ValType::from_type(*(*types).data.add(i)))
                             .collect::<Result<Vec<_>>>()
                     };
-                    let params = read_kinds(ffi::wasm_functype_params(function))?;
-                    let results = read_kinds(ffi::wasm_functype_results(function))?;
+                    let params = read_types(ffi::wasm_functype_params(function))?;
+                    let results = read_types(ffi::wasm_functype_results(function))?;
                     let kind = if ffi::wasm_externtype_kind(ty)
                         == ffi::wasm_externkind_enum_WASM_EXTERN_TAG as u8
                     {
@@ -1183,22 +1134,22 @@ impl<'store, T> Instance<'store, T> {
             }
             let signature_valid = params.size == args.len()
                 && args.iter().enumerate().all(|(i, v)| {
-                    Kind::from_type(*params.data.add(i)).is_ok_and(|kind| kind.accepts(v))
+                    ValType::from_type(*params.data.add(i)).is_ok_and(|ty| v.matches_ty(&ty))
                 });
-            let kinds = (0..returns.size)
-                .map(|i| Kind::from_type(*returns.data.add(i)))
+            let result_types = (0..returns.size)
+                .map(|i| ValType::from_type(*returns.data.add(i)))
                 .collect::<Result<Vec<_>>>();
             ffi::wasm_functype_delete(ty);
             if !signature_valid {
                 return Err("argument signature mismatch".into());
             }
-            let kinds = kinds?;
+            let result_types = result_types?;
             let mut args_raw = RawValues(args.iter().map(|v| v.raw()).collect());
             let mut result_raw = RawValues(
-                kinds
+                result_types
                     .iter()
-                    .map(|k| ffi::wasm_val_t {
-                        kind: k.raw(),
+                    .map(|ty| ffi::wasm_val_t {
+                        kind: ty.raw_kind(),
                         of: ffi::wasm_val_t__bindgen_ty_1 { i64_: 0 },
                     })
                     .collect(),
@@ -1289,7 +1240,7 @@ mod tests {
         ));
         assert_eq!(instance.call("run", &[]).unwrap(), [Value::I32(42)]);
         assert!(matches!(
-            store.host_func(&[], &[Kind::I32, Kind::I32], |_, _| unreachable!()),
+            store.host_func(&[], &[ValType::I32, ValType::I32], |_, _| unreachable!()),
             Err(Error::Interface(message)) if message.contains("at most one value")
         ));
     }
@@ -1316,7 +1267,7 @@ mod tests {
                 )
                 .unwrap();
             let host = store
-                .host_func(&[Kind::I32], &[Kind::I32], |caller, args| {
+                .host_func(&[ValType::I32], &[ValType::I32], |caller, args| {
                     caller.with_data(|data| assert_eq!(data.0.get(), 0));
                     match args {
                         [Value::I32(0)] => panic!("host panic to contain"),

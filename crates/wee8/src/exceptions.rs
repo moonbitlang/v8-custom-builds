@@ -20,7 +20,7 @@
 //! is a copyable store handle and a thrown exception travels through a pending
 //! store slot. Payload references remain rooted by V8, not by a Rust registry.
 
-use crate::{Error, Kind, RawValues, Result, StoreContext, StoreOpaque, Value, ffi};
+use crate::{Error, RawValues, Result, StoreContext, StoreOpaque, ValType, Value, ffi};
 use std::ptr::{self, NonNull};
 
 pub(crate) struct Exceptions {
@@ -74,15 +74,15 @@ pub struct Tag {
 
 impl Tag {
     /// Create a tag with scalar/externref payload parameters and no results.
-    pub fn new<T>(context: StoreContext<'_, T>, params: &[Kind]) -> Result<Self> {
-        if params.contains(&Kind::NonNullExternRef) {
+    pub fn new<T>(context: StoreContext<'_, T>, params: &[ValType]) -> Result<Self> {
+        if params
+            .iter()
+            .any(|ty| matches!(ty, ValType::Ref(reference) if !reference.is_nullable()))
+        {
             return Err("non-null tag payloads are unsupported".into());
         }
         unsafe {
-            let raw: Vec<_> = params
-                .iter()
-                .map(|kind| ffi::wasm_valtype_new(kind.raw()))
-                .collect();
+            let raw: Vec<_> = params.iter().map(|ty| ty.new_type()).collect();
             let mut params = ffi::wasm_valtype_vec_t {
                 size: 0,
                 data: ptr::null_mut(),

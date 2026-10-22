@@ -16,7 +16,7 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-use wee8::{CompileOptions, Error, Kind, Store, StringRef, Value};
+use wee8::{CompileOptions, Error, Store, StringRef, ValType, Value};
 
 fn strings() -> CompileOptions {
     CompileOptions {
@@ -79,15 +79,19 @@ fn native_string_callbacks_preserve_roots_and_utf16() {
         )
         .unwrap();
     let echo = store
-        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |caller, args| {
-            let Value::ExternRef(Some(reference)) = &args[0] else {
-                panic!("missing string")
-            };
-            assert!(reference.is_string());
-            let string = StringRef::try_from(reference.clone())?;
-            let result = StringRef::from_utf16(caller.as_context(), &string.to_utf16())?;
-            Ok(vec![Value::ExternRef(Some(result.into_extern_ref()))])
-        })
+        .host_func(
+            &[ValType::EXTERNREF],
+            &[ValType::EXTERNREF],
+            |caller, args| {
+                let Value::ExternRef(Some(reference)) = &args[0] else {
+                    panic!("missing string")
+                };
+                assert!(reference.is_string());
+                let string = StringRef::try_from(reference.clone())?;
+                let result = StringRef::from_utf16(caller.as_context(), &string.to_utf16())?;
+                Ok(vec![Value::ExternRef(Some(result.into_extern_ref()))])
+            },
+        )
         .unwrap();
     let mut instance = module.instantiate(&[&echo]).unwrap();
     for text in ["", "hello", "a\0b", "中文😄"] {
@@ -123,7 +127,7 @@ fn compilation_options_do_not_leak_between_modules_or_stores() {
     let ordinary = store.compile(&bytes).unwrap();
     assert_eq!(ordinary.imports().unwrap().len(), 1);
     let host = store
-        .host_func(&[Kind::ExternRef], &[Kind::I32], |_, _| {
+        .host_func(&[ValType::EXTERNREF], &[ValType::I32], |_, _| {
             Ok(vec![Value::I32(42)])
         })
         .unwrap();
@@ -255,13 +259,13 @@ fn filtered_imports_preserve_declaration_order_with_duplicate_host_names() {
     let module = store.compile_with_options(&bytes, &strings()).unwrap();
     let imports = module.imports().unwrap();
     assert_eq!(imports.len(), 3);
-    assert_eq!(imports[0].results, [Kind::I32]);
-    assert_eq!(imports[1].params, [Kind::ExternRef]);
+    assert_eq!(imports[0].results, [ValType::I32]);
+    assert_eq!(imports[1].params, [ValType::EXTERNREF]);
     let integer = store
-        .host_func(&[], &[Kind::I32], |_, _| Ok(vec![Value::I32(37)]))
+        .host_func(&[], &[ValType::I32], |_, _| Ok(vec![Value::I32(37)]))
         .unwrap();
     let echo = store
-        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, args| {
+        .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, args| {
             Ok(args.to_vec())
         })
         .unwrap();
@@ -279,7 +283,7 @@ fn filtered_imports_preserve_declaration_order_with_duplicate_host_names() {
 fn native_strings_survive_exception_payload_transport() {
     use wee8::{Exception, Extern, Tag};
     let store = Store::new(()).unwrap();
-    let tag = Tag::new(store.as_context(), &[Kind::ExternRef]).unwrap();
+    let tag = Tag::new(store.as_context(), &[ValType::EXTERNREF]).unwrap();
     let throw = store
         .host_func(&[], &[], move |caller, _| {
             let string = StringRef::from_utf16(caller.as_context(), &[0xd800, 0, 65])?;

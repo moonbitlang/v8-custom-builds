@@ -1,5 +1,5 @@
 use std::{cell::RefCell, rc::Rc};
-use wee8::{Error, Exception, Kind, Store, StringRef, Tag, Value};
+use wee8::{Error, Exception, Store, StringRef, Tag, ValType, Value};
 
 #[test]
 fn externalized_i31_and_gc_values_keep_store_owned_roots() {
@@ -30,7 +30,7 @@ fn externalized_i31_and_gc_values_keep_store_owned_roots() {
     let compiled = store.compile(&bytes).unwrap().serialize();
     let module = store.module(&compiled).unwrap();
     let echo = store
-        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, values| {
+        .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, values| {
             let Value::ExternRef(Some(reference)) = &values[0] else {
                 panic!("missing root")
             };
@@ -40,7 +40,7 @@ fn externalized_i31_and_gc_values_keep_store_owned_roots() {
         })
         .unwrap();
     let mut instance = module.instantiate(&[&echo]).unwrap();
-    let tag = Tag::new(store.as_context(), &[Kind::ExternRef]).unwrap();
+    let tag = Tag::new(store.as_context(), &[ValType::EXTERNREF]).unwrap();
     for (make, read) in [
         ("i31", "read_i31"),
         ("cell", "read_cell"),
@@ -84,7 +84,7 @@ fn externalized_i31_and_gc_values_keep_store_owned_roots() {
     let other_store = Store::new(()).unwrap();
     let other_module = other_store.module(&compiled).unwrap();
     let other_echo = other_store
-        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, values| {
+        .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, values| {
             Ok(vec![values[0].clone()])
         })
         .unwrap();

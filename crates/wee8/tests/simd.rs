@@ -16,7 +16,7 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-use wee8::{Error, Kind, Store, Value};
+use wee8::{Error, Store, ValType, Value};
 
 #[test]
 fn internal_simd_survives_serialization_and_scalar_host_calls() {
@@ -42,7 +42,7 @@ fn internal_simd_survives_serialization_and_scalar_host_calls() {
     let module = second.module(&compiled).unwrap();
     assert_eq!(module.imports().unwrap().len(), 1);
     let check = second
-        .host_func(&[Kind::I32], &[Kind::I32], |caller, values| {
+        .host_func(&[ValType::I32], &[ValType::I32], |caller, values| {
             caller.with_memory(|_, bytes| {
                 assert_eq!(i32::from_le_bytes(bytes[0..4].try_into().unwrap()), 40);
             })?;

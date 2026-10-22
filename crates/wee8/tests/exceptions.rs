@@ -8,13 +8,13 @@
 //! repeat these exception scenarios.
 
 use std::{cell::Cell, rc::Rc};
-use wee8::{Error, Exception, Extern, ExternRef, ExternType, Kind, Store, Tag, Value};
+use wee8::{Error, Exception, Extern, ExternRef, ExternType, Store, Tag, ValType, Value};
 
 #[test]
 fn catches_by_identity_and_preserves_uncaught_and_rethrown_payloads() {
     let store = Store::new(()).unwrap();
-    let tag = Tag::new(store.as_context(), &[Kind::I32]).unwrap();
-    let other = Tag::new(store.as_context(), &[Kind::I32]).unwrap();
+    let tag = Tag::new(store.as_context(), &[ValType::I32]).unwrap();
+    let other = Tag::new(store.as_context(), &[ValType::I32]).unwrap();
     assert!(!tag.same(store.as_context(), other).unwrap());
     let host = store
         .host_func(&[], &[], move |caller, _| {
@@ -29,7 +29,7 @@ fn catches_by_identity_and_preserves_uncaught_and_rethrown_payloads() {
     assert_eq!(
         imports[0].ty,
         ExternType::Tag {
-            params: vec![Kind::I32]
+            params: vec![ValType::I32]
         }
     );
     assert!(module.imports().is_err()); // Function-only compatibility interface.
@@ -76,7 +76,13 @@ fn payloads_preserve_bits_and_native_reference_roots() {
         let store = Store::new(()).unwrap();
         let tag = Tag::new(
             store.as_context(),
-            &[Kind::I32, Kind::I64, Kind::F32, Kind::F64, Kind::ExternRef],
+            &[
+                ValType::I32,
+                ValType::I64,
+                ValType::F32,
+                ValType::F64,
+                ValType::EXTERNREF,
+            ],
         )
         .unwrap();
         let reference = ExternRef::new(store.as_context(), Payload(drops.clone())).unwrap();
@@ -105,7 +111,7 @@ fn payloads_preserve_bits_and_native_reference_roots() {
 #[test]
 fn guest_payload_is_rooted_after_the_call_and_can_be_externalized() {
     let store = Store::new(()).unwrap();
-    let tag = Tag::new(store.as_context(), &[Kind::ExternRef]).unwrap();
+    let tag = Tag::new(store.as_context(), &[ValType::EXTERNREF]).unwrap();
     let module = store
         .compile(
             &wat::parse_str(
@@ -147,12 +153,12 @@ fn rejects_cross_store_handles_and_bad_signatures() {
     };
     let store = Store::new(()).unwrap();
     let other = Store::new(()).unwrap();
-    let tag = Tag::new(store.as_context(), &[Kind::I32]).unwrap();
+    let tag = Tag::new(store.as_context(), &[ValType::I32]).unwrap();
     assert!(Exception::new(store.as_context(), stale, &[]).is_err());
     assert!(Exception::new(other.as_context(), tag, &[Value::I32(1)]).is_err());
     assert!(Exception::new(store.as_context(), tag, &[]).is_err());
     assert!(Exception::new(store.as_context(), tag, &[Value::F64(1.0)]).is_err());
-    let ref_tag = Tag::new(store.as_context(), &[Kind::ExternRef]).unwrap();
+    let ref_tag = Tag::new(store.as_context(), &[ValType::EXTERNREF]).unwrap();
     let foreign = other.extern_ref(1).unwrap();
     assert!(
         Exception::new(

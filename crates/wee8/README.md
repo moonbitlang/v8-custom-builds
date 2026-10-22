@@ -43,12 +43,23 @@ are not enabled merely because wasmparser can validate them.
 
 The C API boundary is checked separately. Function metadata supports scalar
 numbers, nullable `funcref`, and both nullable and non-null `externref`.
-`Kind::ExternRef` describes `(ref null extern)`; `Kind::NonNullExternRef` describes
-`(ref extern)`. Construction, introspection and serialized module reuse preserve
-this distinction. `Value::ExternRef` is the runtime representation for both:
+Signature types follow Wasmtime's `ValType::Ref(RefType)` model: `RefType`
+combines nullability with a `HeapType`. `ValType::EXTERNREF` describes
+`(ref null extern)`; `ValType::Ref(RefType::new(false, HeapType::Extern))`
+describes `(ref extern)`. Only heap types supported by the Rust host interface
+are constructible; this currently means `HeapType::Extern`. Construction,
+introspection and serialized module reuse preserve this distinction. `Value::ExternRef` is the runtime representation for both:
 non-null parameters reject `None` before the native call, and a callback returning
 `None` for a non-null result produces a host error. Native import matching still
 requires the exact guest signature; this API does not erase or relax it.
+
+`Value::matches_ty` checks a concrete value against a signature type, including
+nullability. `ValType::matches` checks value-type subtyping, so non-null externref
+matches nullable externref, but not vice versa. `==` compares exact types. These
+checks are distinct from native function import matching and store identity.
+The C ABI value tags are private; both externref nullabilities use the same C
+value representation. There is no public `Kind` or `Value::kind()` that could
+confuse a representation tag with the full signature type.
 
 Global/table metadata still requires nullable references, and tag payloads permit
 only scalar numbers and nullable externref. Other GC reference types and `v128`
