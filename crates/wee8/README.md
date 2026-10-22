@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and two headers
-from `v0.106.0-moonbit.4`. It verifies the release SHA-256 manifest and separately
+from `v0.106.0-moonbit.5`. It verifies the release SHA-256 manifest and separately
 pinned header hashes, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
@@ -37,19 +37,39 @@ wasmparser defaults include proposals this engine does not implement.
 The source of this policy is V8's
 [always-enabled features](https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/src/wasm/wasm-features.h)
 and this repository's [optional-feature policy](../../custom_wee8/src/wasm-feature-policy.h).
-The `.4` release disables legacy exception opcodes, legacy stringref, Memory64
+The `.5` release disables legacy exception opcodes, legacy stringref, Memory64
 and other staged or experimental proposals. Component-model and newer proposals
 are not enabled merely because wasmparser can validate them.
 
-The C API boundary is checked separately: only scalar numbers and nullable
-`externref`/`funcref` can appear in function/global/table metadata. GC references,
-non-null references and `v128` at that boundary are rejected before native
-introspection, which would otherwise abort. Shared memories and atomic operations
+The C API boundary is checked separately. Function metadata supports scalar
+numbers, nullable `funcref`, and both nullable and non-null `externref`.
+Signature types follow Wasmtime's `ValType::Ref(RefType)` model: `RefType`
+combines nullability with a `HeapType`. `ValType::EXTERNREF` describes
+`(ref null extern)`; `ValType::Ref(RefType::new(false, HeapType::Extern))`
+describes `(ref extern)`. Only heap types supported by the Rust host interface
+are constructible; this currently means `HeapType::Extern`. Construction,
+introspection and serialized module reuse preserve this distinction. `Value::ExternRef` is the runtime representation for both:
+non-null parameters reject `None` before the native call, and a callback returning
+`None` for a non-null result produces a host error. Native import matching still
+requires the exact guest signature; this API does not erase or relax it.
+
+`Value::matches_ty` checks a concrete value against a signature type, including
+nullability. `ValType::matches` checks value-type subtyping, so non-null externref
+matches nullable externref, but not vice versa. `==` compares exact types. These
+checks are distinct from native function import matching and store identity.
+The C ABI value tags are private; both externref nullabilities use the same C
+value representation. There is no public `Kind` or `Value::kind()` that could
+confuse a representation tag with the full signature type.
+
+Global/table metadata still requires nullable references, and tag payloads permit
+only scalar numbers and nullable externref. Other GC reference types and `v128`
+at host boundaries are rejected before native introspection, which would
+otherwise abort. Shared memories and atomic operations
 may stay inside the guest, but importing or exporting a shared memory is rejected:
 the host memory API lends an exclusive, non-atomic slice. This does not add a host
 thread-spawning or shared-memory interface. Multiple guest memories are allowed;
 `Caller::with_memory` still selects the export named `memory`.
-The Rust call interface supports scalar numbers and nullable `externref`, with
+The Rust call interface supports scalar numbers and either externref nullability, with
 at most one result; callable `funcref` handles are not exposed yet.
 
 `Store::as_context` and `Caller::as_context` provide the same borrowed
@@ -137,8 +157,8 @@ is released before store teardown, regardless of callback finalization order.
 Export lookup reuses an existing tag slot for the same native identity. This
 tag table is separate from externrefs, whose roots and payloads remain in V8.
 
-`Module::import_types` describes function/tag imports, and
-`instantiate_with_imports` accepts `Extern::Func` and `Extern::Tag`.
+`Module::import_types` describes function/tag/memory imports, and
+`instantiate_with_imports` accepts `Extern::Func`, `Extern::Tag` and `Extern::Memory`.
 `Instance::tag` retrieves an exported tag. Existing function-only `imports` and
 `instantiate` remain available for existing consumers.
 
@@ -183,7 +203,7 @@ default behavior: every import comes from the host. V8 validates builtin
 signatures and classifies them; the wrapper does not maintain a second builtin
 catalog. Only those validated imports bypass host-boundary type checks. Their
 GC array parameters remain internal to the engine. Host imports and exports
-retain the scalar/nullable-reference restrictions described above.
+retain the boundary restrictions described above.
 
 `CompileOptions { js_string_builtins: true, imported_string_constants:
 Some("_".into()) }` selects MoonBit's native string convention. `None` disables
@@ -225,3 +245,24 @@ captured when a host creates a catchable exception. A rethrow retains the origin
 frames. Construction outside a Wasm call has no guest frames; guest-created
 exceptions may also have no captured trace. Frames are data snapshots; they do
 not keep native instances alive or provide source-map resolution.
+
+### Imported memory and diagnostics
+
+`Memory::new(context, MemoryType { minimum, maximum })` allocates an unshared
+wasm32 memory in 64 KiB pages. `ExternType::Memory` describes memory imports;
+`Extern::Memory` supplies the same store-owned memory to an instance. Copyable
+memory handles may be captured by host callbacks and reject other stores,
+including after the original store was destroyed.
+
+`Memory::with_data` lends the current bytes for one closure. All views, including
+`Caller::with_memory`, share a store-wide borrow check. Neither growth nor guest
+execution may overlap a view. `Memory::grow` returns the previous page count.
+An explicitly imported memory can be accessed by a start callback; the existing
+instance-export lookup still becomes available only after instantiation.
+
+`Error::Trap` and `Error::Host` contain a `Trap` with its message and owned Wasm `StackFrame`
+metadata, captured before the native trap is released. `Caller::capture_stack`
+uses the standard C API trap-construction trace without throwing or changing a
+pending exception. Exception tracing keeps its existing behavior. These APIs use
+the published `.5` archive, including its fix for traces containing native JS-string
+builtin frames. No additional native rebuild is required.

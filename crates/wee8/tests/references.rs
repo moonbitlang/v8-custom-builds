@@ -19,8 +19,49 @@
 use wee8::{Store, Value};
 
 #[test]
+fn values_match_signature_types_without_erasing_nullability() {
+    use wee8::{HeapType, RefType, ValType};
+
+    let nullable = ValType::Ref(RefType::new(true, HeapType::Extern));
+    let non_null = ValType::Ref(RefType::new(false, HeapType::Extern));
+    assert_eq!(nullable, ValType::EXTERNREF);
+    assert!(non_null.matches(&nullable));
+    assert!(!nullable.matches(&non_null));
+    assert_ne!(nullable, non_null);
+
+    let store = Store::new(()).unwrap();
+    let types = [
+        ValType::I32,
+        ValType::I64,
+        ValType::F32,
+        ValType::F64,
+        nullable,
+        non_null,
+    ];
+    let cases = [
+        (Value::I32(42), [true, false, false, false, false, false]),
+        (Value::I64(42), [false, true, false, false, false, false]),
+        (Value::F32(42.0), [false, false, true, false, false, false]),
+        (Value::F64(42.0), [false, false, false, true, false, false]),
+        (
+            Value::ExternRef(None),
+            [false, false, false, false, true, false],
+        ),
+        (
+            Value::ExternRef(Some(store.extern_ref(42).unwrap())),
+            [false, false, false, false, true, true],
+        ),
+    ];
+    for (value, expected) in cases {
+        for (ty, expected) in types.iter().zip(expected) {
+            assert_eq!(value.matches_ty(ty), expected, "{value:?} against {ty:?}");
+        }
+    }
+}
+
+#[test]
 fn store_and_caller_share_reference_creation_through_context() {
-    use wee8::{ExternRef, Kind, StoreContext};
+    use wee8::{ExternRef, StoreContext, ValType};
 
     fn make_reference(context: StoreContext<'_, u32>) -> wee8::Result<ExternRef<'_>> {
         let value = context.with_data(|value| *value);
@@ -42,7 +83,7 @@ fn store_and_caller_share_reference_creation_through_context() {
         )
         .unwrap();
     let create = store
-        .host_func(&[], &[Kind::ExternRef], |caller, _| {
+        .host_func(&[], &[ValType::EXTERNREF], |caller, _| {
             Ok(vec![Value::ExternRef(Some(make_reference(
                 caller.as_context(),
             )?))])
@@ -87,7 +128,7 @@ fn gc_values_stay_internal_across_calls_and_serialization() {
 #[test]
 fn externrefs_cross_callbacks_and_guest_roots_without_losing_host_data() {
     use std::{cell::Cell, rc::Rc};
-    use wee8::Kind;
+    use wee8::ValType;
     struct Payload(Rc<Cell<usize>>, String);
     impl Drop for Payload {
         fn drop(&mut self) {
@@ -122,7 +163,7 @@ fn externrefs_cross_callbacks_and_guest_roots_without_losing_host_data() {
             )
             .unwrap();
         let echo = store
-            .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, values| {
+            .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, values| {
                 if let Value::ExternRef(Some(reference)) = &values[0] {
                     assert_eq!(reference.data::<Payload>().unwrap().1, "hello 🦀");
                     assert!(reference.data::<i32>().is_none());
@@ -131,7 +172,7 @@ fn externrefs_cross_callbacks_and_guest_roots_without_losing_host_data() {
             })
             .unwrap();
         let create = store
-            .host_func(&[], &[Kind::ExternRef], |caller, _| {
+            .host_func(&[], &[ValType::EXTERNREF], |caller, _| {
                 Ok(vec![Value::ExternRef(Some(
                     caller.extern_ref(String::from("from callback"))?,
                 ))])
@@ -198,7 +239,6 @@ fn unsupported_reference_boundary_types_are_rejected() {
         r#"(module (type $s (struct)) (func (export "f") (result (ref $s)) struct.new $s))"#,
         r#"(module (type $a (array i32)) (global (export "g") (ref null $a) (ref.null $a)))"#,
         r#"(module (type $s (struct)) (table (export "t") 0 (ref null $s)))"#,
-        r#"(module (func (export "f") (param (ref extern))))"#,
     ] {
         let error = match store.compile(&wat::parse_str(source).unwrap()) {
             Ok(_) => panic!("accepted {source}"),
@@ -231,7 +271,7 @@ fn typed_function_references_stay_inside_the_guest() {
 
 #[test]
 fn references_remain_usable_after_traps_and_callback_errors() {
-    use wee8::{Error, Kind};
+    use wee8::{Error, ValType};
     let store = Store::new(()).unwrap();
     let module = store
         .compile(
@@ -246,7 +286,7 @@ fn references_remain_usable_after_traps_and_callback_errors() {
         )
         .unwrap();
     let fail = store
-        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, values| {
+        .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, values| {
             let Value::ExternRef(Some(reference)) = &values[0] else {
                 panic!("missing reference")
             };
@@ -272,4 +312,90 @@ fn references_remain_usable_after_traps_and_callback_errors() {
         panic!("missing reference")
     };
     assert_eq!(reference.data::<String>().unwrap(), "still rooted");
+}
+
+#[test]
+fn nonnull_function_signatures_survive_introspection_and_serialization() {
+    use wee8::{Error, HeapType, RefType, StringRef, ValType, Value};
+    let store = Store::new(()).unwrap();
+    let bytes = wat::parse_str(
+        r#"(module
+      (import "h" "echo" (func $echo (param (ref extern)) (result (ref extern))))
+      (func (export "run") (param (ref extern)) (result (ref extern))
+        local.get 0 call $echo))"#,
+    )
+    .unwrap();
+    let compiled = store.compile(&bytes).unwrap().serialize();
+    let module = store.module(&compiled).unwrap();
+    let imports = module.imports().unwrap();
+    let non_null = ValType::Ref(RefType::new(false, HeapType::Extern));
+    assert_eq!(imports[0].params, [non_null]);
+    assert_eq!(imports[0].results, [non_null]);
+    let nullable = store
+        .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, args| {
+            Ok(args.to_vec())
+        })
+        .unwrap();
+    assert!(matches!(
+        module.instantiate(&[&nullable]),
+        Err(Error::Trap(_))
+    ));
+    let echo = store
+        .host_func(&imports[0].params, &imports[0].results, |_, args| {
+            Ok(args.to_vec())
+        })
+        .unwrap();
+    let mut instance = module.instantiate(&[&echo]).unwrap();
+    let string = StringRef::from_utf8(store.as_context(), "native")
+        .unwrap()
+        .into_extern_ref();
+    let value = Value::ExternRef(Some(string));
+    assert!(value.matches_ty(&ValType::EXTERNREF));
+    assert!(value.matches_ty(&imports[0].params[0]));
+    assert_eq!(
+        instance.call("run", std::slice::from_ref(&value)).unwrap(),
+        [value]
+    );
+    assert!(matches!(
+        instance.call("run", &[Value::ExternRef(None)]),
+        Err(Error::Interface(_))
+    ));
+    let null = store
+        .host_func(&imports[0].params, &imports[0].results, |_, _| {
+            Ok(vec![Value::ExternRef(None)])
+        })
+        .unwrap();
+    let mut instance = module.instantiate(&[&null]).unwrap();
+    let value = Value::ExternRef(Some(store.extern_ref(42).unwrap()));
+    assert!(matches!(
+        instance.call("run", &[value]),
+        Err(Error::Host(_))
+    ));
+}
+
+#[test]
+fn nonnull_reference_extension_does_not_widen_other_external_types() {
+    use wee8::{HeapType, RefType, Tag, ValType};
+    let store = Store::new(()).unwrap();
+    assert!(
+        Tag::new(
+            store.as_context(),
+            &[ValType::Ref(RefType::new(false, HeapType::Extern))]
+        )
+        .is_err()
+    );
+    for source in [
+        r#"(module (import "h" "tag" (tag (param (ref extern)))))"#,
+        r#"(module (import "h" "global" (global (ref extern))))"#,
+        r#"(module (import "h" "table" (table 1 (ref extern))))"#,
+    ] {
+        let error = store
+            .compile(&wat::parse_str(source).unwrap())
+            .err()
+            .unwrap();
+        assert!(
+            error.to_string().contains("unsupported in C API"),
+            "{error}"
+        );
+    }
 }

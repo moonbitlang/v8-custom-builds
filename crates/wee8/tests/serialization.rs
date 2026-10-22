@@ -1,4 +1,4 @@
-use wee8::{Kind, Store, Value};
+use wee8::{Store, ValType, Value};
 
 #[test]
 fn numeric_calls_survive_serialization_and_fresh_stores() {
@@ -32,7 +32,7 @@ fn numeric_calls_survive_serialization_and_fresh_stores() {
     for _ in 0..3 {
         let store = Store::new(()).unwrap();
         let module = store.module(&compiled).unwrap();
-        let hosts = [Kind::I32, Kind::I64, Kind::F32, Kind::F64].map(|kind| {
+        let hosts = [ValType::I32, ValType::I64, ValType::F32, ValType::F64].map(|kind| {
             store
                 .host_func(&[kind], &[kind], |_, args| Ok(args.to_vec()))
                 .unwrap()

@@ -1,5 +1,5 @@
 use std::{cell::RefCell, rc::Rc};
-use wee8::{Error, Exception, Kind, Store, StringRef, Tag, Value};
+use wee8::{Error, Exception, Store, StringRef, Tag, ValType, Value};
 
 #[test]
 fn externalized_i31_and_gc_values_keep_store_owned_roots() {
@@ -30,7 +30,7 @@ fn externalized_i31_and_gc_values_keep_store_owned_roots() {
     let compiled = store.compile(&bytes).unwrap().serialize();
     let module = store.module(&compiled).unwrap();
     let echo = store
-        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, values| {
+        .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, values| {
             let Value::ExternRef(Some(reference)) = &values[0] else {
                 panic!("missing root")
             };
@@ -40,7 +40,7 @@ fn externalized_i31_and_gc_values_keep_store_owned_roots() {
         })
         .unwrap();
     let mut instance = module.instantiate(&[&echo]).unwrap();
-    let tag = Tag::new(store.as_context(), &[Kind::ExternRef]).unwrap();
+    let tag = Tag::new(store.as_context(), &[ValType::EXTERNREF]).unwrap();
     for (make, read) in [
         ("i31", "read_i31"),
         ("cell", "read_cell"),
@@ -84,7 +84,7 @@ fn externalized_i31_and_gc_values_keep_store_owned_roots() {
     let other_store = Store::new(()).unwrap();
     let other_module = other_store.module(&compiled).unwrap();
     let other_echo = other_store
-        .host_func(&[Kind::ExternRef], &[Kind::ExternRef], |_, values| {
+        .host_func(&[ValType::EXTERNREF], &[ValType::EXTERNREF], |_, values| {
             Ok(vec![values[0].clone()])
         })
         .unwrap();
@@ -173,4 +173,60 @@ fn custom_stack_limit_traps_and_can_be_restored() {
         instance.call("run", &[Value::I32(5)]).unwrap(),
         [Value::I32(5)]
     );
+}
+
+#[test]
+fn ordinary_traps_and_callback_capture_retain_wasm_frames() {
+    let store = Store::new(()).unwrap();
+    let callback = store
+        .host_func(&[], &[], |caller, _| {
+            let frames = caller.capture_stack()?;
+            assert_eq!(frames[0].function_index, 1);
+            assert!(frames.iter().all(|frame| frame.module_offset > 0));
+            Ok(vec![])
+        })
+        .unwrap();
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+        (import "h" "capture" (func $capture))
+        (func $inner call $capture unreachable)
+        (func (export "run") call $inner))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let mut instance = module.instantiate(&[&callback]).unwrap();
+    let Err(Error::Trap(trap)) = instance.call("run", &[]) else {
+        panic!("expected trap")
+    };
+    assert!(trap.message.contains("unreachable"));
+    assert_eq!(trap.frames[0].function_index, 1);
+    assert!(trap.frames.iter().all(|frame| frame.module_offset > 0));
+}
+
+#[test]
+fn host_errors_keep_frames_without_becoming_guest_traps() {
+    let store = Store::new(()).unwrap();
+    let host = store
+        .host_func(&[], &[], |_, _| Err(Error::Host("host failure".into())))
+        .unwrap();
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+        (import "h" "fail" (func $fail))
+        (func (export "run") call $fail))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let mut instance = module.instantiate(&[&host]).unwrap();
+    let Err(Error::Host(error)) = instance.call("run", &[]) else {
+        panic!("expected host error")
+    };
+    assert_eq!(error.message, "host failure");
+    assert_eq!(error.frames[0].function_index, 1);
+    assert!(error.frames[0].module_offset > 0);
 }
