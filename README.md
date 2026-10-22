@@ -128,6 +128,23 @@ catchable exception is constructed. Existing `wasm_trap_origin` and
 `wasm_trap_trace` expose those frames; rethrow preserves the original trace.
 Construction outside guest execution yields an empty trace.
 
+`wee8-host-signatures.patch` preserves externref nullability in function
+parameters and results. The additive `wee8_valtype_new_externref` constructor and
+`wee8_valtype_is_nullable` query complement the standard value kind; copies and
+function introspection retain the distinction. A null argument or callback result
+at a non-null function boundary traps. This does not extend global, table or tag
+construction to non-null references, or change `wasm.h` or `wasm_val_t`.
+
+`wee8-trap-frames.patch` filters non-Wasm frames captured by native JS-string
+builtin failures before reading Wasm instance metadata. Both trap origin and
+trace retain the remaining Wasm frames in order.
+
+These two native fixes require a new archive release. The Rust crate still
+uses `.4` by default; its existing API does not use the new nullability symbols.
+Explicit paired source overrides also accept this tree's additive header for
+producer validation. The ordinary published-archive checks do not validate these
+native changes; the native matrix's C consumer covers both regressions.
+
 `wee8-stack-limit.patch` exposes `wee8_store_set_stack_limit`, setting a per-store
 native stack boundary and returning its previous address for restoration. It does
 not resize the OS thread stack. The caller must supply a valid address on the

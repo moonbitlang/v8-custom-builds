@@ -1,0 +1,254 @@
+Preserve externref nullability in function signatures.
+
+The value kind alone cannot represent (ref extern). Keep nullability on the
+opaque type descriptor without changing wasm.h or wasm_val_t. Both direct host
+calls and guest callbacks reject null at non-null function boundaries.
+
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -95,6 +95,9 @@
+   return n;
+ }
+ 
++own<ValType> V8ValueTypeToWasmType(i::wasm::ValueType);
++i::wasm::ValueType WasmValTypeToV8(const ValType*);
++
+ ValKind V8ValueTypeToWasm(i::wasm::ValueType v8_valtype) {
+   switch (v8_valtype.kind()) {
+     case i::wasm::kI32:
+@@ -156,12 +159,12 @@
+   size_t param_count = sig->parameter_count();
+   ownvec<ValType> params = ownvec<ValType>::make_uninitialized(param_count);
+   for (size_t i = 0; i < param_count; i++) {
+-    params[i] = ValType::make(V8ValueTypeToWasm(sig->GetParam(i)));
++    params[i] = V8ValueTypeToWasmType(sig->GetParam(i));
+   }
+   size_t return_count = sig->return_count();
+   ownvec<ValType> results = ownvec<ValType>::make_uninitialized(return_count);
+   for (size_t i = 0; i < return_count; i++) {
+-    results[i] = ValType::make(V8ValueTypeToWasm(sig->GetReturn(i)));
++    results[i] = V8ValueTypeToWasmType(sig->GetReturn(i));
+   }
+   return FuncType::make(std::move(params), std::move(results));
+ }
+@@ -573,8 +576,10 @@
+ 
+ struct ValTypeImpl {
+   ValKind kind;
+-
+-  explicit ValTypeImpl(ValKind kind) : kind(kind) {}
++  bool nullable;
++
++  explicit ValTypeImpl(ValKind kind, bool nullable = true)
++      : kind(kind), nullable((kind == ANYREF || kind == FUNCREF) && nullable) {}
+ };
+ 
+ template <>
+@@ -588,6 +593,7 @@
+ ValTypeImpl* valtype_f64 = new ValTypeImpl(F64);
+ ValTypeImpl* valtype_externref = new ValTypeImpl(ANYREF);
+ ValTypeImpl* valtype_funcref = new ValTypeImpl(FUNCREF);
++ValTypeImpl* valtype_nonnull_externref = new ValTypeImpl(ANYREF, false);
+ 
+ ValType::~ValType() = default;
+ 
+@@ -621,9 +627,37 @@
+   return own<ValType>(seal<ValType>(valtype));
+ }
+ 
+-auto ValType::copy() const -> own<ValType> { return make(kind()); }
++own<ValType> MakeExternRefType(bool nullable) {
++  return own<ValType>(seal<ValType>(nullable ? valtype_externref
++                                          : valtype_nonnull_externref));
++}
++
++bool IsNullable(const ValType* type) { return impl(type)->nullable; }
++
++auto ValType::copy() const -> own<ValType> {
++  return kind() == ANYREF ? MakeExternRefType(IsNullable(this)) : make(kind());
++}
+ 
+ auto ValType::kind() const -> ValKind { return impl(this)->kind; }
++
++namespace {
++
++own<ValType> V8ValueTypeToWasmType(i::wasm::ValueType type) {
++  if (type.is_reference() &&
++      type.heap_representation() == i::wasm::HeapType::kExtern) {
++    return MakeExternRefType(type.is_nullable());
++  }
++  return ValType::make(V8ValueTypeToWasm(type));
++}
++
++i::wasm::ValueType WasmValTypeToV8(const ValType* type) {
++  if (type->kind() == ANYREF && !IsNullable(type)) {
++    return i::wasm::ValueType::Ref(i::wasm::HeapType::kExtern);
++  }
++  return WasmValKindToV8(type->kind());
++}
++
++}  // namespace
+ 
+ // Extern Types
+ 
+@@ -1560,6 +1594,31 @@
+     if (finalizer) (*finalizer)(env);
+   }
+ 
++  own<Trap> call(const Val args[], Val results[]) {
++    // Direct C API calls do not pass through a typed Wasm wrapper.
++    for (size_t n = 0; n < type->params().size(); ++n) {
++      const auto* parameter = type->params()[n].get();
++      if (parameter->kind() == ANYREF && !IsNullable(parameter) &&
++          (args[n].kind() != ANYREF || !args[n].ref())) {
++        return Trap::make(store, Name::make(std::string(
++            "nonnull externref argument is null")));
++      }
++    }
++    auto trap = kind == kCallback ? callback(args, results)
++                                 : callback_with_env(env, args, results);
++    if (trap) return trap;
++    // A callback must not inject null into a statically non-null guest value.
++    for (size_t n = 0; n < type->results().size(); ++n) {
++      const auto* result = type->results()[n].get();
++      if (result->kind() == ANYREF && !IsNullable(result) &&
++          (results[n].kind() != ANYREF || !results[n].ref())) {
++        return Trap::make(store, Name::make(std::string(
++            "nonnull externref host result is null")));
++      }
++    }
++    return nullptr;
++  }
++
+   static i::Address v8_callback(i::Address host_data_foreign, i::Address argv);
+ };
+ 
+@@ -1576,11 +1635,11 @@
+     // TODO(jkummerow): Consider making vec<> range-based for-iterable.
+     for (size_t i = 0; i < type->results().size(); i++) {
+       i::wasm::SerializedSignatureHelper::SetReturn(
+-          *sig, i, WasmValKindToV8(type->results()[i]->kind()));
++          *sig, i, WasmValTypeToV8(type->results()[i].get()));
+     }
+     for (size_t i = 0; i < type->params().size(); i++) {
+       i::wasm::SerializedSignatureHelper::SetParam(
+-          *sig, i, WasmValKindToV8(type->params()[i]->kind()));
++          *sig, i, WasmValTypeToV8(type->params()[i].get()));
+     }
+     return sig;
+   }
+@@ -1593,12 +1652,12 @@
+     ownvec<ValType> params = ownvec<ValType>::make_uninitialized(param_arity);
+ 
+     for (int i = 0; i < result_arity; ++i) {
+-      results[i] = ValType::make(V8ValueTypeToWasm(
+-          i::wasm::SerializedSignatureHelper::GetReturn(sig, i)));
++      results[i] = V8ValueTypeToWasmType(
++          i::wasm::SerializedSignatureHelper::GetReturn(sig, i));
+     }
+     for (int i = 0; i < param_arity; ++i) {
+-      params[i] = ValType::make(V8ValueTypeToWasm(
+-          i::wasm::SerializedSignatureHelper::GetParam(sig, i)));
++      params[i] = V8ValueTypeToWasmType(
++          i::wasm::SerializedSignatureHelper::GetParam(sig, i));
+     }
+     return FuncType::make(std::move(params), std::move(results));
+   }
+@@ -1615,10 +1674,10 @@
+     size_t parameter_count() const { return type->params().size(); }
+     size_t return_count() const { return type->results().size(); }
+     i::wasm::ValueType GetParam(size_t i) const {
+-      return WasmValKindToV8(type->params()[i]->kind());
++      return WasmValTypeToV8(type->params()[i].get());
+     }
+     i::wasm::ValueType GetReturn(size_t i) const {
+-      return WasmValKindToV8(type->results()[i]->kind());
++      return WasmValTypeToV8(type->results()[i].get());
+     }
+   };
+   static uint64_t Hash(FuncType* type) {
+@@ -1827,11 +1886,7 @@
+                                const Val args[], Val results[]) {
+   FuncData* func_data =
+       i::Cast<i::Managed<FuncData>>(data->embedder_data())->raw();
+-  if (func_data->kind == FuncData::kCallback) {
+-    return (func_data->callback)(args, results);
+-  }
+-  DCHECK(func_data->kind == FuncData::kCallbackWithEnv);
+-  return (func_data->callback_with_env)(func_data->env, args, results);
++  return func_data->call(args, results);
+ }
+ 
+ i::Handle<i::JSReceiver> GetProperException(
+@@ -1884,6 +1939,14 @@
+   const i::wasm::WasmModule* module = instance_data->module();
+   // Caching {sig} would give a ~10% reduction in overhead.
+   const i::wasm::FunctionSig* sig = module->functions[function_index].sig;
++  for (size_t n = 0; n < sig->parameter_count(); ++n) {
++    auto parameter = sig->GetParam(n);
++    if (parameter == i::wasm::ValueType::Ref(i::wasm::HeapType::kExtern) &&
++        (args[n].kind() != ANYREF || !args[n].ref())) {
++      return Trap::make(seal<Store>(store), Name::make(std::string(
++          "nonnull externref argument is null")));
++    }
++  }
+   PrepareFunctionData(isolate, function_data, sig, module);
+   i::DirectHandle<i::Code> wrapper_code(function_data->c_wrapper_code(isolate),
+                                         isolate);
+@@ -1984,12 +2047,7 @@
+     }
+   }
+ 
+-  own<Trap> trap;
+-  if (self->kind == kCallbackWithEnv) {
+-    trap = self->callback_with_env(self->env, params.get(), results.get());
+-  } else {
+-    trap = self->callback(params.get(), results.get());
+-  }
++  auto trap = self->call(params.get(), results.get());
+ 
+   if (trap) {
+     isolate->Throw(*impl(trap.get())->v8_object());
+@@ -2042,6 +2100,9 @@
+ 
+ auto Global::make(Store* store_abs, const GlobalType* type, const Val& val)
+     -> own<Global> {
++  if (type->content()->kind() == ANYREF && !IsNullable(type->content())) {
++    return nullptr;
++  }
+   StoreImpl* store = impl(store_abs);
+   v8::Isolate::Scope isolate_scope(store->isolate());
+   i::Isolate* isolate = store->i_isolate();
+@@ -2159,6 +2220,9 @@
+ 
+ auto Table::make(Store* store_abs, const TableType* type, const Ref* ref)
+     -> own<Table> {
++  if (type->element()->kind() == ANYREF && !IsNullable(type->element())) {
++    return nullptr;
++  }
+   StoreImpl* store = impl(store_abs);
+   i::Isolate* isolate = store->i_isolate();
+   v8::Isolate::Scope isolate_scope(store->isolate());
+@@ -2386,6 +2450,7 @@
+   const auto& params = type->functype()->params();
+   std::vector<i::wasm::ValueType> types;
+   for (size_t n = 0; n < params.size(); ++n) {
++    if (params[n]->kind() == ANYREF && !IsNullable(params[n].get())) return nullptr;
+     types.push_back(WasmValKindToV8(params[n]->kind()));
+   }
+   i::wasm::FunctionSig sig(0, types.size(), types.data());
+@@ -2948,6 +3013,14 @@
+ 
+ WASM_DEFINE_TYPE(valtype, wasm::ValType)
+ 
++wasm_valtype_t* wee8_valtype_new_externref(bool nullable) {
++  return release_valtype(wasm::MakeExternRefType(nullable));
++}
++
++bool wee8_valtype_is_nullable(const wasm_valtype_t* type) {
++  return wasm::IsNullable(type);
++}
++
+ wasm_valtype_t* wasm_valtype_new(wasm_valkind_t k) {
+   return release_valtype(wasm::ValType::make(reveal_valkind(k)));
+ }

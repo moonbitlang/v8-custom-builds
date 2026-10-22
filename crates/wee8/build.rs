@@ -37,6 +37,11 @@ use std::{
 const RELEASE: &str = "v0.106.0-moonbit.4";
 const HEADER_SHA256: &str = "985638e18622d37c87787ae8693177a110e7fbb0617b9f131c96564e77c1d746";
 
+// The source header adds function-type nullability without changing the .4 ABI.
+// Only explicit paired source overrides may use it before a matching release.
+const SOURCE_HEADER_SHA256: &str =
+    "b3a0da64cd613796725d56e88420e16fecd51604b87481c539deb8708f634cea";
+
 const WASM_HEADER_SHA256: &str = "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301";
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -44,21 +49,31 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-env-changed=WEE8_HEADER");
     println!("cargo:rerun-if-env-changed=WEE8_MIRROR");
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    let (archive, header) = match (env::var_os("WEE8_ARCHIVE"), env::var_os("WEE8_HEADER")) {
-        (Some(archive), Some(header)) => {
-            (dunce::canonicalize(archive)?, dunce::canonicalize(header)?)
-        }
-        (None, None) => release_files(&out, &env::var("TARGET")?)?,
-        _ => {
-            return Err(
-                "set both WEE8_ARCHIVE and WEE8_HEADER, or neither to download the release".into(),
-            );
-        }
-    };
+    let (archive, header, source_override) =
+        match (env::var_os("WEE8_ARCHIVE"), env::var_os("WEE8_HEADER")) {
+            (Some(archive), Some(header)) => (
+                dunce::canonicalize(archive)?,
+                dunce::canonicalize(header)?,
+                true,
+            ),
+            (None, None) => {
+                let (archive, header) = release_files(&out, &env::var("TARGET")?)?;
+                (archive, header, false)
+            }
+            _ => {
+                return Err(
+                    "set both WEE8_ARCHIVE and WEE8_HEADER, or neither to download the release"
+                        .into(),
+                );
+            }
+        };
     // This interface depends on the sized-vector ABI from this exact header.
     // V8's older header has the same symbol names but incompatible signatures.
     let upstream = header.with_file_name("wasm.h");
-    if sha256(&header)? != HEADER_SHA256 || sha256(&upstream)? != WASM_HEADER_SHA256 {
+    let header_hash = sha256(&header)?;
+    let matching_header =
+        header_hash == HEADER_SHA256 || (source_override && header_hash == SOURCE_HEADER_SHA256);
+    if !matching_header || sha256(&upstream)? != WASM_HEADER_SHA256 {
         return Err(
             "WEE8_HEADER must be wee8.h with its matching upstream wasm.h alongside it".into(),
         );

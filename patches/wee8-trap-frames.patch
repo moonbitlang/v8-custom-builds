@@ -1,0 +1,52 @@
+Skip non-Wasm frames in C API trap origins and traces.
+
+Native JS-string builtin failures can capture frames without a WasmInstance.
+Filter them before reading Wasm-specific metadata. Preserve Wasm frame order.
+
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -1191,6 +1191,7 @@
+   PtrComprCageAccessScope ptr_compr_cage_access_scope(isolate);
+   i::DirectHandle<i::CallSiteInfo> frame(
+       i::Cast<i::CallSiteInfo>(frames->get(index)), isolate);
++  if (!frame->IsWasm()) return nullptr;
+   i::Handle<i::WasmInstanceObject> instance(frame->GetWasmInstance(), isolate);
+   uint32_t func_index = frame->GetWasmFunctionIndex();
+   size_t module_offset = i::CallSiteInfo::GetSourcePosition(frame);
+@@ -1209,10 +1210,11 @@
+ 
+   i::DirectHandle<i::FixedArray> frames =
+       isolate->GetSimpleStackTrace(impl(this)->v8_object());
+-  if (frames->length() == 0) {
+-    return own<Frame>();
+-  }
+-  return CreateFrameFromInternal(frames, 0, isolate, impl(this)->store());
++  for (int n = 0; n < frames->length(); ++n) {
++    auto frame = CreateFrameFromInternal(frames, n, isolate, impl(this)->store());
++    if (frame) return frame;
++  }
++  return own<Frame>();
+ }
+ 
+ ownvec<Frame> Trap::trace() const {
+@@ -1222,12 +1224,14 @@
+ 
+   i::DirectHandle<i::FixedArray> frames =
+       isolate->GetSimpleStackTrace(impl(this)->v8_object());
+-  int num_frames = frames->length();
+-  // {num_frames} can be 0; the code below can handle that case.
+-  ownvec<Frame> result = ownvec<Frame>::make_uninitialized(num_frames);
+-  for (int i = 0; i < num_frames; i++) {
+-    result[i] =
+-        CreateFrameFromInternal(frames, i, isolate, impl(this)->store());
++  std::vector<own<Frame>> wasm_frames;
++  for (int n = 0; n < frames->length(); ++n) {
++    auto frame = CreateFrameFromInternal(frames, n, isolate, impl(this)->store());
++    if (frame) wasm_frames.push_back(std::move(frame));
++  }
++  ownvec<Frame> result = ownvec<Frame>::make_uninitialized(wasm_frames.size());
++  for (size_t n = 0; n < wasm_frames.size(); ++n) {
++    result[n] = std::move(wasm_frames[n]);
+   }
+   return result;
+ }

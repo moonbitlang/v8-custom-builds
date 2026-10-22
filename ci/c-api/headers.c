@@ -19,6 +19,10 @@ void check_header_declarations(wasm_store_t* store) {
   (void)compile;
   (void)store;
 #if WEE8_EXTENSIONS
+  wasm_valtype_t* (*ref_type)(bool) = wee8_valtype_new_externref;
+  bool (*nullable)(const wasm_valtype_t*) = wee8_valtype_is_nullable;
+  (void)ref_type;
+  (void)nullable;
   uintptr_t (*limit)(wasm_store_t*, uintptr_t) = wee8_store_set_stack_limit;
   wasm_tagtype_t* type = wasm_tagtype_new(wasm_functype_new_0_0());
   wasm_tag_t* tag = wasm_tag_new(store, type);

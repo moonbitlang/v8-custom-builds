@@ -16,6 +16,15 @@ extern "C" {
 // wasm_val_vec_delete. All inputs are borrowed unless explicitly stated.
 // Runtime wasm_tag_* names are wee8 extensions despite their retained prefix.
 
+// Function-signature externref nullability, absent from upstream wasm.h's
+// value kinds. Copies preserve it; wasm_valtype_kind still returns WASM_EXTERNREF.
+// Numeric types are not nullable. Use only for function parameters/results;
+// non-null global/table/tag construction is not supported by this extension.
+// Runtime wasm_val_t values still use WASM_EXTERNREF, with NULL for null.
+// A NULL argument/result at a non-null function boundary produces a trap.
+WASM_API_EXTERN wasm_valtype_t* wee8_valtype_new_externref(bool nullable);
+WASM_API_EXTERN bool wee8_valtype_is_nullable(const wasm_valtype_t*);
+
 // Set the native stack boundary for this store on its owning thread. Returns
 // the previous boundary for restoration; zero is rejected and returns zero.
 // The embedder must supply an address within the thread's actual stack and
