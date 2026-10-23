@@ -72,6 +72,14 @@ fn main() {
             include_str!("../../custom_wee8/tests/runtime-shared-memory.wat"),
             include_bytes!("../../custom_wee8/tests/runtime-shared-memory.wasm").as_slice(),
         ),
+        (
+            include_str!("../../custom_wee8/tests/store-singleton.wat"),
+            include_bytes!("../../custom_wee8/tests/store-singleton.wasm").as_slice(),
+        ),
+        (
+            include_str!("../../custom_wee8/tests/store-recursive.wat"),
+            include_bytes!("../../custom_wee8/tests/store-recursive.wasm").as_slice(),
+        ),
     ] {
         assert_eq!(wat::parse_str(source).unwrap(), binary);
     }

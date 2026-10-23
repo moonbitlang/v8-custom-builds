@@ -1,0 +1,25 @@
+Release each C API store's foreground task runner before isolate disposal.
+
+The process-wide engine stays alive across stores; platform shutdown is not
+a substitute for the per-isolate notification required by libplatform.h.
+
+--- a/v8/src/wasm/c-api.cc
++++ b/v8/src/wasm/c-api.cc
+@@ -31,6 +31,7 @@
+ #include "src/builtins/builtins.h"
+ #include "src/compiler/wasm-compiler.h"
+ #include "src/flags/flags.h"
++#include "src/init/v8.h"
+ #include "src/objects/call-site-info-inl.h"
+ #include "src/objects/js-collection-inl.h"
+ #include "src/objects/managed-inl.h"
+@@ -471,6 +472,9 @@
+ #endif
+     context()->Exit();
+   }
++  // The engine/platform outlives individual stores. Terminate this isolate's
++  // foreground queue before disposal, including tasks posted during disposal.
++  v8::platform::NotifyIsolateShutdown(i::V8::GetCurrentPlatform(), isolate_);
+   isolate_->Dispose();
+   delete create_params_.array_buffer_allocator;
+ }
