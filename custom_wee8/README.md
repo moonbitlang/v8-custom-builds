@@ -135,6 +135,7 @@ python3 custom_wee8/tests/check.py target/native-checks/<target>
 | `runtime-entry-contract` | Actual canonical/inline tables, distinct addresses and pair-return conventions |
 | `generated-builtin-contract` | Deserialized builtin identities, code kind and argument count; every omitted TFJ body and CPP adaptor traps |
 | `runtime-boundaries` guests | Table operations, bulk memory, guest exceptions, GC roots across native collection, allocation pressure, interrupts, serialization and shared-memory atomics/growth |
+| `store-lifetimes` | Fresh-store teardown releases foreground task runners; repeated deserialization keeps singleton and recursive-group canonical storage bounded |
 
 Unsupported invocations run in isolated processes and must reach the named entry
 or generated trap. Null dereferences, ordinary returns and unrelated failures do
@@ -156,6 +157,20 @@ The packaged externref guest checks i31 zero and signed boundaries, GC structs a
 arrays, callbacks and exception payloads across proven collection, globals/tables,
 null handling, and module serialization.
 Moonrun validation uses the wee8 backend in `moonbitlang/moon/crates/moonrun`.
+
+Lifetime checks keep one engine alive while repeatedly creating and deleting
+stores, matching an embedded runtime that reuses compiled modules. They check
+foreground task-runner ownership and V8's canonical-type storage after warmup,
+not RSS thresholds. Each deserialized guest also executes, including GC types
+whose canonical descriptions must remain valid. The native recipe runs these
+checks against the produced archive on all five platforms before publication.
+
+For ownership changes, test both returned values and resource lifetime. Include
+repeated operations under the longer-lived owner, not just process shutdown;
+reachable queues and caches can retain memory even when a leak scanner reports
+no unreachable allocations. Use allocator profiles to investigate growth, then
+turn the identified ownership or bounded-storage invariant into a deterministic
+regression. Passing short functional tests alone does not establish cleanup.
 
 ## V8 upgrades
 

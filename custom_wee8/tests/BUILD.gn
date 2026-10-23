@@ -8,6 +8,7 @@ check_targets = [
   "generated-builtin-catalog",
   "runtime-catalog",
   "runtime-boundaries",
+  "store-lifetimes",
 ]
 
 group("checks") {

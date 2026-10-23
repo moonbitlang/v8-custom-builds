@@ -90,3 +90,12 @@ for mode in ["--liftoff-only --no-wasm-lazy-compilation",
     subprocess.run([str(executable), mode, str(assets / "runtime-boundaries.wasm"),
                     str(assets / "runtime-shared-memory.wasm")], check=True, timeout=120)
 print("Custom wee8 context and runtime boundaries passed in four Wasm compilation modes")
+
+# Keep the engine alive across stores. Successful guest results alone cannot
+# detect queued tasks or duplicate type metadata retained by global structures.
+executable = (args.probes / ("store-lifetimes" + suffix)).resolve()
+for check, fixture in [("shutdown", "store-singleton"),
+                       ("types", "store-singleton"),
+                       ("types", "store-recursive")]:
+    subprocess.run([str(executable), check, str(assets / (fixture + ".wasm"))],
+                   check=True, timeout=120)
