@@ -1,4 +1,12 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:18 +0800
 Subject: Make JavaScript source parsing an optional build capability
+
+Upstream-Status: Local runtime capability policy
+Maintenance: Review compiler entry points and shared AST metadata when upgrading V8.
+Tests: Script/module/function/streaming rejection and native context contracts.
+Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/no-source-parser.patch
 
 Base: rusty_v8 v0.106.0, V8 12.9.202.13. Applies after no-regexp.patch.
 
@@ -17,9 +25,11 @@ On upgrade, check direct Parser/PreParser callers, the parsing interface,
 background compilation, snapshot generation and the GN exclusion list. Validate
 both ordinary and custom targets, rejection of source APIs, Wasm instantiation and GC.
 
---- a/v8/BUILD.gn
-+++ b/v8/BUILD.gn
-@@ -26,6 +26,9 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 50512084c30703c1bf416612d5f5cad02892cdfd..bcf1cd33c011dbdbccebade474dcd28129ef43be 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -26,6 +26,9 @@ target_is_simulator = (target_cpu != v8_target_cpu && !v8_multi_arch_build) ||
  emit_builtins_as_inline_asm = is_win && is_clang
  
  declare_args() {
@@ -29,7 +39,7 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
    # The Wasm-only producer disables the JavaScript RegExp library.
    v8_enable_regexp = true
  
-@@ -1082,6 +1085,11 @@
+@@ -1082,6 +1085,11 @@ config("features") {
    defines =
        [ "V8_TYPED_ARRAY_MAX_SIZE_IN_HEAP=${v8_typed_array_max_size_in_heap}" ]
  
@@ -41,7 +51,7 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
    if (v8_enable_regexp) {
      defines += [ "V8_ENABLE_REGEXP=1" ]
    } else {
-@@ -5358,6 +5366,20 @@
+@@ -5358,6 +5366,20 @@ group("v8_tracing") {
    }
  }
  
@@ -62,7 +72,7 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
  v8_source_set("v8_base_without_compiler") {
    # Only targets in this file and gcmole can depend on this.
    visibility = [
-@@ -5898,6 +5920,20 @@
+@@ -5898,6 +5920,20 @@ v8_source_set("v8_base_without_compiler") {
      ]
    }
  
@@ -83,19 +93,21 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
    if (v8_enable_webassembly) {
      sources += [
        ### gcmole(all) ###
-@@ -6290,6 +6326,10 @@
-     ":v8_version",
+@@ -6291,6 +6327,10 @@ v8_source_set("v8_base_without_compiler") {
      "src/inspector:inspector",
    ]
-+
+ 
 +  if (!v8_enable_javascript_parser) {
 +    deps += [ ":v8_javascript_parser_disabled" ]
 +  }
- 
++
    public_deps = [
      ":cppgc_base",
---- a/v8/src/codegen/compiler.cc
-+++ b/v8/src/codegen/compiler.cc
+     ":generate_bytecode_builtins_list",
+diff --git a/src/codegen/compiler.cc b/src/codegen/compiler.cc
+index a6407a56aa8d6d73ec0bdcf94fa4bbd4e2c1cbb4..738fde5ab2f3621f905c6d68cd3fa140725b5799 100644
+--- a/src/codegen/compiler.cc
++++ b/src/codegen/compiler.cc
 @@ -57,7 +57,9 @@
  #include "src/objects/shared-function-info.h"
  #include "src/objects/string.h"
@@ -106,7 +118,7 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
  #include "src/parsing/parsing.h"
  #include "src/parsing/pending-compilation-error-handler.h"
  #include "src/parsing/scanner-character-streams.h"
-@@ -1652,8 +1654,10 @@
+@@ -1652,8 +1654,10 @@ BackgroundCompileTask::BackgroundCompileTask(
            REPLMode::kNo, type,
            (options & ScriptCompiler::CompileOptions::kEagerCompile) == 0 &&
                v8_flags.lazy_streaming)),
@@ -117,7 +129,7 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
        stack_size_(v8_flags.stack_size),
        worker_thread_runtime_call_stats_(
            isolate->counters()->worker_thread_runtime_call_stats()),
-@@ -1940,6 +1944,8 @@
+@@ -1940,6 +1944,8 @@ void BackgroundCompileTask::Run(
      }
    }
  
@@ -126,21 +138,23 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
    // Update the character stream's runtime call stats.
    info.character_stream()->set_runtime_call_stats(info.runtime_call_stats());
  
-@@ -1965,6 +1971,11 @@
-   parser.ParseOnBackground(isolate, &info, script_, start_position_,
+@@ -1966,6 +1972,11 @@ void BackgroundCompileTask::Run(
                             end_position_, function_literal_id_);
    parser.UpdateStatistics(script_, &use_counts_, &total_preparse_skipped_);
-+
+ 
 +#else
 +  info.pending_error_handler()->ReportMessageAt(
 +      0, 0, MessageTemplate::kJavaScriptParserDisabled);
 +#endif
- 
++
    TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"),
                 "V8.CompileCodeBackground");
---- a/v8/src/common/message-template.h
-+++ b/v8/src/common/message-template.h
-@@ -12,6 +12,7 @@
+   RCS_SCOPE(isolate, RuntimeCallCounterIdForCompile(&info),
+diff --git a/src/common/message-template.h b/src/common/message-template.h
+index 969e7e03ca0c99686f91fac998591a9527777ca5..c7aa6b4646ae7bfb52e297c6caca8559bf0b1d3a 100644
+--- a/src/common/message-template.h
++++ b/src/common/message-template.h
+@@ -12,6 +12,7 @@ namespace internal {
  
  #define MESSAGE_TEMPLATES(T)                                                   \
    /* Error */                                                                  \
@@ -148,9 +162,11 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
    T(RegExpDisabled, "RegExp is not available in this Wasm runtime") \
    T(None, "")                                                                  \
    T(ConflictingPrivateName,                                                    \
---- a/v8/src/flags/flag-definitions.h
-+++ b/v8/src/flags/flag-definitions.h
-@@ -2291,7 +2291,11 @@
+diff --git a/src/flags/flag-definitions.h b/src/flags/flag-definitions.h
+index b490483aa4526f69727813db84647ca65a3765d5..1ac78a81e8a11dc4df015589ee0624b8527ff836 100644
+--- a/src/flags/flag-definitions.h
++++ b/src/flags/flag-definitions.h
+@@ -2304,7 +2304,11 @@ DEFINE_BOOL(enable_regexp_unaligned_accesses, true,
              "enable unaligned accesses for the regexp engine")
  
  // api.cc
@@ -162,9 +178,12 @@ both ordinary and custom targets, rejection of source APIs, Wasm instantiation a
  DEFINE_BOOL(stress_background_compile, false,
              "stress test parsing on background")
  DEFINE_BOOL(concurrent_cache_deserialization, true,
+diff --git a/src/parsing/parsing-disabled.cc b/src/parsing/parsing-disabled.cc
+new file mode 100644
+index 0000000000000000000000000000000000000000..574a7351f37e9e6c211c8ef47f3ef0fb0efd4443
 --- /dev/null
-+++ b/v8/src/parsing/parsing-disabled.cc
-@@ -0,0 +0,42 @@
++++ b/src/parsing/parsing-disabled.cc
+@@ -0,0 +1,42 @@
 +// Copyright 2026 the V8 project authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.

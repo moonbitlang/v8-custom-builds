@@ -1,4 +1,12 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:17 +0800
 Subject: Disable JavaScript optimization in the custom wee8 profile
+
+Upstream-Status: Local runtime capability policy
+Maintenance: Reaudit shared Wasm compiler flags on each V8 upgrade; retain Wasm optimizing compilation.
+Tests: Native context/runtime contracts in all four Wasm modes.
+Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/no-js-optimizer.patch
 
 Base: rusty_v8 v0.106.0, V8 12.9.202.13.
 
@@ -9,9 +17,11 @@ Shared Wasm compiler infrastructure stays enabled. On upgrade, audit flag
 implications and compilation-job callers; measure linked consumers rather than
 assuming every unreachable object disappears from the static archive.
 
---- a/v8/src/flags/flag-definitions.h
-+++ b/v8/src/flags/flag-definitions.h
-@@ -1120,10 +1120,20 @@
+diff --git a/src/flags/flag-definitions.h b/src/flags/flag-definitions.h
+index 2c9c12e6cf4a9ebfdc5cb08ef7a53b0ca77222bb..b490483aa4526f69727813db84647ca65a3765d5 100644
+--- a/src/flags/flag-definitions.h
++++ b/src/flags/flag-definitions.h
+@@ -1120,10 +1120,20 @@ DEFINE_BOOL(print_deopt_stress, false, "print number of possible deopt points")
  // Flags for TurboFan.
  #ifdef V8_ENABLE_TURBOFAN
  #define V8_ENABLE_TURBOFAN_BOOL true
@@ -32,7 +42,7 @@ assuming every unreachable object disappears from the static archive.
  #else
  #define V8_ENABLE_TURBOFAN_BOOL false
  DEFINE_BOOL_READONLY(turbofan, false, "use the Turbofan optimizing compiler")
-@@ -1422,8 +1424,13 @@
+@@ -1422,8 +1432,13 @@ DEFINE_EXPERIMENTAL_FEATURE(
  DEFINE_BOOL(turboshaft_wasm_instruction_selection_staged, false,
              "run instruction selection on Turboshaft IR directly for wasm, on "
              "architectures where we are staging the feature")

@@ -1,0 +1,158 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:19 +0800
+Subject: Make asm.js an optional build capability
+
+Upstream-Status: Local runtime capability policy
+Maintenance: Review asm.js translator source lists and lazy/direct callers when upgrading V8.
+Tests: Direct asm.js rejection and packaged Wasm consumers.
+Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/wee8-without-asmjs.patch
+
+Base: rusty_v8 v0.106.0, V8 12.9.202.13.
+
+Keep the upstream translator intact and enabled by default. The custom
+profile excludes it; guard direct callers instead of depending on dead stripping.
+Retain shared Wasm metadata and runtime IDs for generated code and snapshots.
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 54678a5762ef9cc4706043f0d5f538aa5e7539ab..c4049cf42ead4f5db4ea7ff5a57e0faa14a69afa 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -28,6 +28,9 @@ emit_builtins_as_inline_asm = is_win && is_clang
+ declare_args() {
+   v8_custom_wee8 = false
+ 
++  # Keep asm.js translation optional independently of binary Wasm support.
++  v8_enable_asmjs = true
++
+   # Disable JavaScript source parsing for native Wasm embedders.
+   v8_enable_javascript_parser = true
+ 
+@@ -1095,6 +1098,12 @@ config("features") {
+     defines += [ "V8_CUSTOM_WEE8" ]
+   }
+ 
++  if (v8_enable_asmjs) {
++    defines += [ "V8_ENABLE_ASMJS=1" ]
++  } else {
++    defines += [ "V8_ENABLE_ASMJS=0" ]
++  }
++
+   if (v8_enable_javascript_parser) {
+     defines += [ "V8_ENABLE_JAVASCRIPT_PARSER=1" ]
+   } else {
+@@ -6008,6 +6017,16 @@ v8_source_set("v8_base_without_compiler") {
+       "src/wasm/well-known-imports.cc",
+       "src/wasm/wrappers.cc",
+     ]
++    if (!v8_enable_asmjs) {
++      # Preserve the upstream source list and shared Wasm export metadata.
++      sources -= [
++        "src/asmjs/asm-js.cc",
++        "src/asmjs/asm-parser.cc",
++        "src/asmjs/asm-scanner.cc",
++        "src/asmjs/asm-types.cc",
++      ]
++      sources += [ "src/asmjs/asm-js-disabled.cc" ]
++    }
+     if (!is_official_build) {
+       sources += [
+         ### gcmole(all) ###
+diff --git a/src/asmjs/asm-js-disabled.cc b/src/asmjs/asm-js-disabled.cc
+new file mode 100644
+index 0000000000000000000000000000000000000000..423918e2b43a13345aa7d009fd68588a0a92c0d2
+--- /dev/null
++++ b/src/asmjs/asm-js-disabled.cc
+@@ -0,0 +1,14 @@
++// Copyright 2026 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "src/asmjs/asm-js.h"
++
++namespace v8::internal {
++
++// Shared Wasm export handling retains this name even without the asm.js
++// frontend. Compilation and instantiation callers are guarded at their entry
++// points, so no disabled implementation can accidentally accept asm.js.
++const char* const AsmJs::kSingleFunctionName = "__single_function__";
++
++}  // namespace v8::internal
+diff --git a/src/codegen/compiler.cc b/src/codegen/compiler.cc
+index 738fde5ab2f3621f905c6d68cd3fa140725b5799..b92aac237a5748fc976d9fd0ae3bc1292952aaaa 100644
+--- a/src/codegen/compiler.cc
++++ b/src/codegen/compiler.cc
+@@ -655,7 +655,7 @@ uint64_t TurbofanCompilationJob::trace_id() const {
+ 
+ namespace {
+ 
+-#if V8_ENABLE_WEBASSEMBLY
++#if V8_ENABLE_WEBASSEMBLY && V8_ENABLE_ASMJS
+ bool UseAsmWasm(FunctionLiteral* literal, bool asm_wasm_broken) {
+   // Check whether asm.js validation is enabled.
+   if (!v8_flags.validate_asm) return false;
+@@ -826,7 +826,7 @@ ExecuteSingleUnoptimizedCompilationJob(
+     AccountingAllocator* allocator,
+     std::vector<FunctionLiteral*>* eager_inner_literals,
+     LocalIsolate* local_isolate) {
+-#if V8_ENABLE_WEBASSEMBLY
++#if V8_ENABLE_WEBASSEMBLY && V8_ENABLE_ASMJS
+   if (UseAsmWasm(literal, parse_info->flags().is_asm_wasm_broken())) {
+     std::unique_ptr<UnoptimizedCompilationJob> asm_job(
+         AsmJs::NewCompilationJob(parse_info, literal, allocator));
+diff --git a/src/common/message-template.h b/src/common/message-template.h
+index c7aa6b4646ae7bfb52e297c6caca8559bf0b1d3a..1386ea9798bb92dfd5aa79c774cc0196b3851123 100644
+--- a/src/common/message-template.h
++++ b/src/common/message-template.h
+@@ -12,6 +12,7 @@ namespace internal {
+ 
+ #define MESSAGE_TEMPLATES(T)                                                   \
+   /* Error */                                                                  \
++  T(AsmJsDisabled, "asm.js is disabled") \
+   T(JavaScriptParserDisabled, "JavaScript source parsing is disabled") \
+   T(RegExpDisabled, "RegExp is not available in this Wasm runtime") \
+   T(None, "")                                                                  \
+diff --git a/src/flags/flag-definitions.h b/src/flags/flag-definitions.h
+index 1ac78a81e8a11dc4df015589ee0624b8527ff836..e52f49f183dbd328f7d2ea2535bc1626e6e352c8 100644
+--- a/src/flags/flag-definitions.h
++++ b/src/flags/flag-definitions.h
+@@ -1654,8 +1654,13 @@ DEFINE_BOOL(
+     experimental_wasm_pgo_from_file, false,
+     "experimental: read and use Wasm PGO data from a local file (for testing)")
+ 
++#if !V8_ENABLE_ASMJS
++DEFINE_BOOL_READONLY(validate_asm, false,
++                     "validate asm.js modules and translate them to Wasm")
++#else
+ DEFINE_BOOL(validate_asm, true,
+             "validate asm.js modules and translate them to Wasm")
++#endif
+ // Directly interpret asm.js code as regular JavaScript code.
+ // asm.js validation is disabled since it triggers wasm code generation.
+ DEFINE_NEG_IMPLICATION(jitless, validate_asm)
+diff --git a/src/runtime/runtime-compiler.cc b/src/runtime/runtime-compiler.cc
+index e72e04ab53f7a5b7e44000f6d34c142786d32c22..5f233cbf91c34ae2b03b412cf8bdc708c1ee2342 100644
+--- a/src/runtime/runtime-compiler.cc
++++ b/src/runtime/runtime-compiler.cc
+@@ -176,6 +176,13 @@ enum AsmJsInstantiateResult {
+ };
+ 
+ RUNTIME_FUNCTION(Runtime_InstantiateAsmJs) {
++#if !V8_ENABLE_ASMJS
++  // Keep the runtime ID/builtin layout stable, but never fall back to lazy
++  // JavaScript compilation when this build has no asm.js implementation.
++  HandleScope scope(isolate);
++  THROW_NEW_ERROR_RETURN_FAILURE(
++      isolate, NewTypeError(MessageTemplate::kAsmJsDisabled));
++#else
+   HandleScope scope(isolate);
+   DCHECK_EQ(args.length(), 4);
+   DirectHandle<JSFunction> function = args.at<JSFunction>(0);
+@@ -223,6 +230,7 @@ RUNTIME_FUNCTION(Runtime_InstantiateAsmJs) {
+   function->set_code(*BUILTIN_CODE(isolate, CompileLazy));
+   DCHECK(!isolate->has_exception());
+   return Smi::zero();
++#endif  // V8_ENABLE_ASMJS
+ }
+ 
+ namespace {

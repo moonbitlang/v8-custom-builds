@@ -1,0 +1,27 @@
+{
+  "src/c-api.cc": {
+    "repository": "https://github.com/denoland/v8",
+    "revision": "245ce17ed8483e6bc3de7f668635f46c5bfdd8a0",
+    "path": "src/wasm/c-api.cc",
+    "sha256": "83873b3688554a0134ab12be58608b293d2b6bc2581b3da4af6835c193e09209"
+  },
+  "src/c-api.h": {
+    "repository": "https://github.com/denoland/v8",
+    "revision": "245ce17ed8483e6bc3de7f668635f46c5bfdd8a0",
+    "path": "src/wasm/c-api.h",
+    "sha256": "9a5bf5c7df5cdcf52ec9d6468932c74a5c2139a4a8e1f44b7f13e3cdffb51921"
+  },
+  "src/wasm.hh": {
+    "repository": "https://github.com/denoland/v8",
+    "revision": "245ce17ed8483e6bc3de7f668635f46c5bfdd8a0",
+    "path": "third_party/wasm-api/wasm.hh",
+    "sha256": "cdc02e5a44a2b28e8f7941c0ea73f6c19532b5db83b399d3cea252ddfb740b91"
+  },
+  "include/wasm.h": {
+    "repository": "https://github.com/WebAssembly/wasm-c-api",
+    "revision": "9d6b93764ac96cdd9db51081c363e09d2d488b4d",
+    "path": "include/wasm.h",
+    "sha256": "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301",
+    "unmodified": true
+  }
+}

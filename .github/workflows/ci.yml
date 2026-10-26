@@ -24,18 +24,16 @@ jobs:
           bash -n build.sh
           git submodule update --init --checkout --depth=1 rusty_v8
           git -C rusty_v8 submodule update --init --depth=1 build v8
-          for patch in patches/*.patch; do
-            git -C rusty_v8 apply "../$patch"
-          done
-          echo '7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301  rusty_v8/v8/third_party/wasm-api/wasm.h' | sha256sum -c -
+          python3 tools/prepare-source.py
+          python3 tools/compare-adapter.py > /dev/null
       - name: Check public headers as C and C++
         run: |
           for extensions in 0 1; do
             cc -std=c11 -Werror -DLIBWASM_STATIC -DWEE8_EXTENSIONS="$extensions" \
-              -Icustom_wee8/include -Irusty_v8/v8/third_party/wasm-api \
+              -Icustom_wee8/include \
               -fsyntax-only ci/c-api/headers.c
             c++ -std=c++17 -Werror -DLIBWASM_STATIC -DWEE8_EXTENSIONS="$extensions" \
-              -Icustom_wee8/include -Irusty_v8/v8/third_party/wasm-api \
+              -Icustom_wee8/include \
               -x c++ -fsyntax-only ci/c-api/headers.c
           done
       - name: Check workflows

@@ -1,4 +1,12 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:17 +0800
 Subject: Adapt the pinned build tools to the supported runner environments
+
+Upstream-Status: Local build compatibility
+Maintenance: Drop each workaround when the pinned upstream handles its compiler, host architecture or Visual Studio version.
+Tests: Native consumer matrix; Linux ARM64 system Clang and Windows toolchain discovery.
+Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/host-tools.patch
 
 Base: rusty_v8 v0.106.0 (e9f20a2493883b53cb58b19a2fe761358dd57996),
 including its Chromium build submodule at
@@ -44,63 +52,10 @@ https://github.com/denoland/rusty_v8/blob/v0.106.0/build.rs
 https://github.com/denoland/rusty_v8/blob/v0.106.0/tools/ninja_gn_binaries.py
 https://chromium.googlesource.com/chromium/src/build/+/c6d44e625aa64fa89cbdc971dfd301353bee04f3/vs_toolchain.py
 
-diff --git a/build.rs b/build.rs
-index 4aead47..19a215a 100644
---- a/build.rs
-+++ b/build.rs
-@@ -210,6 +210,19 @@ fn build_v8(is_asan: bool) {
-     println!("clang_base_path (system): {}", clang_base_path.display());
-     gn_args.push(format!("clang_base_path={:?}", clang_base_path));
-     gn_args.push("treat_warnings_as_errors=false".to_string());
-+    if target_os == "linux" {
-+      // Distribution Clang packages do not use Chromium's compiler-rt layout.
-+      let output = Command::new(clang_base_path.join("bin/clang"))
-+        .arg(format!("--target={}", env::var("TARGET").unwrap()))
-+        .args(["--rtlib=compiler-rt", "--print-libgcc-file-name"])
-+        .output()
-+        .expect("query Clang's builtins library");
-+      assert!(output.status.success());
-+      let library = String::from_utf8(output.stdout).unwrap();
-+      let library = library.trim();
-+      assert!(Path::new(library).is_file(), "missing compiler-rt: {library}");
-+      gn_args.push(format!("clang_builtin_library={library:?}"));
-+    }
-   } else {
-     println!("using Chromium's clang");
-     let clang_base_path = clang_download();
-@@ -241,8 +254,10 @@ fn build_v8(is_asan: bool) {
-   if target_arch == "aarch64" {
-     gn_args.push(r#"target_cpu="arm64""#.to_string());
-     gn_args.push("use_sysroot=true".to_string());
--    maybe_install_sysroot("arm64");
--    maybe_install_sysroot("amd64");
-+    if target_os == "linux" {
-+      maybe_install_sysroot("arm64");
-+      maybe_install_sysroot("amd64");
-+    }
-   }
-   if target_arch == "arm" {
-     gn_args.push(r#"target_cpu="arm""#.to_string());
-diff --git a/tools/ninja_gn_binaries.py b/tools/ninja_gn_binaries.py
-index 029be98..98e6427 100755
---- a/tools/ninja_gn_binaries.py
-+++ b/tools/ninja_gn_binaries.py
-@@ -27,6 +27,11 @@ def get_platform():
-     machine = platform.machine().lower()
-     if machine == 'x86_64':
-         machine = 'amd64'
-+    elif machine == 'aarch64':
-+        machine = 'arm64'
-+    # The pinned Windows GN/Ninja packages are x64; Windows ARM64 can run them.
-+    if system == 'windows':
-+        machine = 'amd64'
- 
-     return f'{system}-{machine}'
- 
-diff --git a/build/config/clang/BUILD.gn b/build/config/clang/BUILD.gn
-index fcca59b..e08c417 100644
---- a/build/config/clang/BUILD.gn
-+++ b/build/config/clang/BUILD.gn
+diff --git a/config/clang/BUILD.gn b/config/clang/BUILD.gn
+index fcca59b0f0bf4c019ea0dbca34f0c457af03d54b..e08c4176f4845dad528af22854d39f19ed92e416 100644
+--- a/config/clang/BUILD.gn
++++ b/config/clang/BUILD.gn
 @@ -163,7 +163,12 @@ group("llvm-symbolizer_data") {
  }
  
@@ -115,10 +70,10 @@ index fcca59b..e08c417 100644
      not_needed(invoker, "*")
      config(target_name) {
      }
-diff --git a/build/config/clang/clang.gni b/build/config/clang/clang.gni
-index 9928fc3..c5556b0 100644
---- a/build/config/clang/clang.gni
-+++ b/build/config/clang/clang.gni
+diff --git a/config/clang/clang.gni b/config/clang/clang.gni
+index 9928fc37b8b55232506a30f93d0474be4b0f9f4c..c5556b0d5071f2517c337abb565e4dcf32685716 100644
+--- a/config/clang/clang.gni
++++ b/config/clang/clang.gni
 @@ -32,6 +32,9 @@ declare_args() {
  
    clang_base_path = default_clang_base_path
@@ -129,10 +84,10 @@ index 9928fc3..c5556b0 100644
    # Specifies whether or not bitcode should be embedded during compilation.
    # This is used for creating a MLGO corpus from Chromium in the non-ThinLTO case.
    clang_embed_bitcode = false
-diff --git a/build/vs_toolchain.py b/build/vs_toolchain.py
-index f3a6fc7..a8e1f59 100755
---- a/build/vs_toolchain.py
-+++ b/build/vs_toolchain.py
+diff --git a/vs_toolchain.py b/vs_toolchain.py
+index f3a6fc7deec432bf9ce5d1030bd5be9fca0a1bb4..a8e1f5926c2de59598f0fccd65f17f8d3fb08e92 100755
+--- a/vs_toolchain.py
++++ b/vs_toolchain.py
 @@ -49,7 +49,8 @@ json_data_file = os.path.join(script_dir, 'win_toolchain.json')
  # The first version is assumed by this script to be the one that is packaged,
  # which makes a difference for the arm64 runtime.

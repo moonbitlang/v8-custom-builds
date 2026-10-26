@@ -9,8 +9,8 @@ independent. This producer does not build rusty_v8's adapter or Rust V8 bindings
 
 | Directory | Responsibility |
 | --- | --- |
-| [`custom_wee8`](custom_wee8) | GN settings, native context, implementation selections and their tests |
-| `patches` | Upstream insertion points, optional capabilities, C API adaptation and build-host fixes |
+| [`custom_wee8`](custom_wee8) | Owned C adapter, headers, GN settings, native context, implementation selections and tests |
+| [`patches/series`](patches/series) | Ordered Git patches for upstream insertion points, capabilities, engine fixes and build integration |
 | `tools/native` | Reuses the pinned rusty_v8 platform/toolchain bootstrap to build wee8 |
 | [`crates/wee8`](crates/wee8) | Rust ownership wrapper and explicit published-release pin |
 | `ci` | Packaged C API/Rust consumer checks, platform matrix and release validation |
@@ -26,8 +26,8 @@ cd v8-custom-builds
 CARGO_BUILD_JOBS=8 bash build.sh
 ```
 
-The script checks out the pinned dependencies, applies `patches/*.patch` in
-filename order, copies `custom_wee8` into the source tree, then builds and packages
+The script checks out the pinned dependencies, applies `patches/series` through
+`tools/prepare-source.py`, copies `custom_wee8` into the source tree, then builds and packages
 the Rust host target. Upstream settings such as `CLANG_BASE_PATH`, `GN`, `NINJA`
 and compiler caching remain available. Use a fresh checkout when changing source
 revisions or patches; remove build output when changing compiler or GN settings.
@@ -50,10 +50,9 @@ adapter and the configured C++ runtime dependencies. It must not be supplied as
 The Rust wrapper downloads and verifies its configured release, generates C
 bindings and links wee8. To test a new archive, provide both `WEE8_ARCHIVE`
 (decompressed) and `WEE8_HEADER` pointing to `wee8.h`, with its matching `wasm.h`
-in the same directory. The current published .3 release keeps its original
-combined header; the wrapper accepts that exact release header as well.
-Changing the native recipe does not silently
-change the wrapper's release pin. Host services such as WASI belong to the embedder.
+in the same directory. The authoritative release pin is in
+[`crates/wee8/build.rs`](crates/wee8/build.rs). Changing the native recipe does not
+silently change that pin. Host services such as WASI belong to the embedder.
 
 ## Runtime contract
 
@@ -74,33 +73,35 @@ traps while retaining their IDs and metadata. This is not a general-purpose JS
 runtime or a complete whitelist of every V8 subsystem.
 
 See [`custom_wee8/README.md`](custom_wee8/README.md) for the retained implementations,
-patch responsibilities, validation and upgrade procedure.
+patch responsibilities and validation. The [maintenance contract](custom_wee8/MAINTENANCE.md)
+describes source ownership, patch regeneration and upstream reconciliation.
 
 ## C API scope
 
-`wasm-c-api.patch` adapts the pinned V8 implementation to the unmodified
+The owned [`custom_wee8/src/c-api.cc`](custom_wee8/src/c-api.cc) adapts the pinned
+V8 implementation to the unmodified
 [Wasm C API header at 9d6b937](https://github.com/WebAssembly/wasm-c-api/blob/9d6b93764ac96cdd9db51081c363e09d2d488b4d/include/wasm.h).
 It validates sized argument/import vectors, retains callback arities and
 finalizers, fixes value copying, returns start-function exceptions as traps
 without unsolicited output, and records native link dependencies.
 
 Our declarations live in [`custom_wee8/include/wee8.h`](custom_wee8/include/wee8.h),
-which includes the unchanged upstream `wasm.h`. Capability patches implement the
-extensions without editing that upstream C header. The build stages `wee8.h`
-beside it for the native adapter and packages both. Existing function symbols and
+which includes the unchanged upstream `wasm.h`. The owned adapter implements the
+extensions without editing that upstream C header. Both headers live together
+under `custom_wee8/include` and ship together. Existing function symbols and
 ownership contracts are unchanged; runtime `wasm_tag_*` names remain explicitly
 marked as extensions for compatibility.
 
-`wasm-exceptions.patch` adds tag types, store-owned runtime tag handles and
+The adapter provides tag types, store-owned runtime tag handles and
 catchable exception construction, matching and payload access. Runtime tag and
 exception functions are wee8 extensions. The pinned V8's `experimental_wasm_exnref`
 flag is enabled before initialization for `try_table` and `throw_ref`. Host-created
 exceptions carry native tag identity; ordinary host traps remain uncatchable.
 Payloads support scalar numbers and nullable externref. Use the matching header.
 
-`wasm-strings.patch` connects `custom_wee8/src/c-api-strings.inc` to the native
-adapter. It adds explicit per-module options for V8's JS-string builtins
-and imported string constants, plus owned string creation and UTF-16 copying.
+The adapter includes `custom_wee8/src/c-api-strings.inc` for explicit per-module
+options for V8's JS-string builtins and imported string constants, plus owned
+string creation and UTF-16 copying.
 Only V8-validated builtin imports are omitted from the host import list. Native
 roots retain their owning isolate explicitly, allowing primitive strings through
 calls, callbacks, globals, tables and exception payloads. Module sharing retains
@@ -117,35 +118,29 @@ enable legacy stringref. See the [feature policy](custom_wee8/README.md#wasm-fea
 for the distinction between obsolete proposals and features not enabled in this
 pinned runtime.
 
-`wee8-externref.patch` completes `extern.convert_any` transport, including
+It supports `extern.convert_any` transport, including
 immediate i31 values and guest GC objects. These remain opaque store-owned roots
 through calls, callbacks, globals, tables and exception payloads. The existing
 Object-root representation needs no extra boxing; host-info attachment still
 requires receiver objects.
 
-`wee8-exception-traces.patch` captures Wasm call sites when a host-created
+The adapter captures Wasm call sites when a host-created
 catchable exception is constructed. Existing `wasm_trap_origin` and
 `wasm_trap_trace` expose those frames; rethrow preserves the original trace.
 Construction outside guest execution yields an empty trace.
 
-`wee8-host-signatures.patch` preserves externref nullability in function
+Function introspection preserves externref nullability in function
 parameters and results. The additive `wee8_valtype_new_externref` constructor and
 `wee8_valtype_is_nullable` query complement the standard value kind; copies and
 function introspection retain the distinction. A null argument or callback result
 at a non-null function boundary traps. This does not extend global, table or tag
 construction to non-null references, or change `wasm.h` or `wasm_val_t`.
 
-`wee8-trap-frames.patch` filters non-Wasm frames captured by native JS-string
+Trap extraction filters non-Wasm frames captured by native JS-string
 builtin failures before reading Wasm instance metadata. Both trap origin and
 trace retain the remaining Wasm frames in order.
 
-These two native fixes require a new archive release. The Rust crate still
-uses `.4` by default; its existing API does not use the new nullability symbols.
-Explicit paired source overrides also accept this tree's additive header for
-producer validation. The ordinary published-archive checks do not validate these
-native changes; the native matrix's C consumer covers both regressions.
-
-`wee8-stack-limit.patch` exposes `wee8_store_set_stack_limit`, setting a per-store
+The adapter exposes `wee8_store_set_stack_limit`, setting a per-store
 native stack boundary and returning its previous address for restoration. It does
 not resize the OS thread stack. The caller must supply a valid address on the
 store's owning thread, reserve space for host/V8 frames, and avoid changing the

@@ -1,11 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:19 +0800
 Subject: Select the complete custom wee8 runtime with one build switch
+
+Upstream-Status: Local runtime configuration
+Maintenance: Keep the custom switch scoped to custom wee8 and reconcile upstream config propagation on upgrades.
+Tests: GN source/configuration checks and native contracts on all platforms.
+Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/wee8-profile.patch
 
 Default V8 retains upstream behavior. The custom toolchain selects its native
 context, implementation lists and JavaScript tier settings together.
 
---- a/v8/BUILD.gn
-+++ b/v8/BUILD.gn
-@@ -26,6 +26,8 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index bcf1cd33c011dbdbccebade474dcd28129ef43be..54678a5762ef9cc4706043f0d5f538aa5e7539ab 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -26,6 +26,8 @@ target_is_simulator = (target_cpu != v8_target_cpu && !v8_multi_arch_build) ||
  emit_builtins_as_inline_asm = is_win && is_clang
  
  declare_args() {
@@ -14,11 +24,10 @@ context, implementation lists and JavaScript tier settings together.
    # Disable JavaScript source parsing for native Wasm embedders.
    v8_enable_javascript_parser = true
  
-@@ -1084,6 +1087,14 @@
- 
+@@ -1085,6 +1087,14 @@ config("features") {
    defines =
        [ "V8_TYPED_ARRAY_MAX_SIZE_IN_HEAP=${v8_typed_array_max_size_in_heap}" ]
-+
+ 
 +  if (v8_custom_wee8) {
 +    assert(v8_enable_webassembly && !v8_enable_javascript_parser &&
 +               !v8_enable_asmjs && !v8_enable_i18n_support && !v8_enable_regexp &&
@@ -26,10 +35,11 @@ context, implementation lists and JavaScript tier settings together.
 +           "custom_wee8 requires its native Wasm capability settings")
 +    defines += [ "V8_CUSTOM_WEE8" ]
 +  }
- 
++
    if (v8_enable_javascript_parser) {
      defines += [ "V8_ENABLE_JAVASCRIPT_PARSER=1" ]
-@@ -3316,6 +3327,12 @@
+   } else {
+@@ -3316,6 +3326,12 @@ v8_header_set("v8_internal_headers") {
    public_configs = [ "src/inspector:inspector_config" ]
  
    sources = [

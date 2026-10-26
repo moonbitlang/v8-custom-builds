@@ -28,7 +28,7 @@ foreach(name, check_targets) {
       "//v8:wee8",
     ]
     configs += [ ":probe_config" ]
-    include_dirs = [ "//v8/third_party/wasm-api" ]
+    include_dirs = [ "//custom_wee8/include" ]
   }
 }
 

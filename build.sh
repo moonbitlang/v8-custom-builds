@@ -11,15 +11,7 @@ fi
 
 # Native builds explicitly opt into source checkout; Cargo consumers skip it.
 git submodule update --init --recursive --checkout --depth=1
-for patch in "$root"/patches/*.patch; do
-  git -C rusty_v8 apply --reverse --check "$patch" 2>/dev/null ||
-    git -C rusty_v8 apply "$patch"
-done
-
-# Keep the owned build settings, implementation and checks together. Upstream
-# insertion patches include these sources directly; no second overlay is needed.
-cp -R custom_wee8 rusty_v8/
-cp custom_wee8/include/wee8.h rusty_v8/v8/third_party/wasm-api/wee8.h
+python3 tools/prepare-source.py
 unset DOCS_RS DENO_TRYBUILD V8_FORCE_DEBUG EXTRA_GN_ARGS
 unset GN_ARGS
 cargo build -vv --release --locked --manifest-path tools/native/Cargo.toml \
@@ -37,8 +29,8 @@ for probe in wee8-runtime-check cpp-entry-contract runtime-entry-contract genera
              generated-builtin-catalog runtime-catalog runtime-boundaries store-lifetimes; do
   cp "$gn_out/custom_wee8/$probe$exe" "$root/target/native-checks/$target/"
 done
-cp rusty_v8/v8/third_party/wasm-api/wasm.h "$out/wasm_c_api_$target.h"
-cp rusty_v8/v8/third_party/wasm-api/wee8.h "$out/wee8_c_api_$target.h"
+cp custom_wee8/include/wasm.h "$out/wasm_c_api_$target.h"
+cp custom_wee8/include/wee8.h "$out/wee8_c_api_$target.h"
 cp "$root/licenses/wasm-c-api.txt" "$out/WASM_API_LICENSE_$target.txt"
 
 # Keep notices from the complete source tree without archive metadata.
