@@ -22,7 +22,7 @@ def main():
         if line.strip() and not line.lstrip().startswith("#")
     ]
     patches = sorted(
-        str(p.relative_to(root / "patches"))
+        p.relative_to(root / "patches").as_posix()
         for p in (root / "patches").rglob("*.patch")
     )
     if sorted(series) != patches or len(series) != len(set(series)):
