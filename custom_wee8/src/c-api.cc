@@ -426,6 +426,9 @@ auto Engine::make(own<Config>&& config) -> own<Engine> {
   // The pinned V8 gates the standardized try_table/throw_ref instructions.
   i::v8_flags.experimental_wasm_exnref = true;
 #if defined(V8_CUSTOM_WEE8)
+  // Compilation must reject every invalid body, including uncalled functions.
+  // Embedders may delegate body validation to this synchronous native boundary.
+  i::v8_flags.wasm_lazy_validation = false;
   // Apply the feature ceiling before flag implications and engine startup.
   // This also covers prototype decoders that still consult flags directly.
   i::v8_flags.wasm_staging = false;

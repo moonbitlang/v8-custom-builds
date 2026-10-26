@@ -19,6 +19,8 @@ void check_header_declarations(wasm_store_t* store) {
   (void)compile;
   (void)store;
 #if WEE8_EXTENSIONS
+  bool (*eager_validation)(void) = wee8_module_validation_is_eager;
+  (void)eager_validation;
   wasm_valtype_t* (*ref_type)(bool) = wee8_valtype_new_externref;
   bool (*nullable)(const wasm_valtype_t*) = wee8_valtype_is_nullable;
   (void)ref_type;

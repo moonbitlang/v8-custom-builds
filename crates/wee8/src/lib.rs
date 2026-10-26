@@ -58,6 +58,7 @@ mod references;
 pub use references::ExternRef;
 mod strings;
 mod types;
+mod validation;
 use std::{
     cell::{Cell, RefCell},
     ffi::c_void,
@@ -577,20 +578,7 @@ impl<T: 'static> Store<T> {
         // optional-feature policy. Keep this explicit: wasmparser defaults
         // include proposals this engine does not implement. C API representation
         // and memory-borrow restrictions are checked separately below.
-        let features = wasmparser::WasmFeatures::WASM2
-            | wasmparser::WasmFeatures::TAIL_CALL
-            | wasmparser::WasmFeatures::EXTENDED_CONST
-            | wasmparser::WasmFeatures::RELAXED_SIMD
-            | wasmparser::WasmFeatures::MULTI_MEMORY
-            | wasmparser::WasmFeatures::THREADS
-            | wasmparser::WasmFeatures::GC
-            | wasmparser::WasmFeatures::FUNCTION_REFERENCES
-            | wasmparser::WasmFeatures::EXCEPTIONS;
-        let types = wasmparser::Validator::new_with_features(features)
-            .validate_all(bytes)
-            .map_err(|error| {
-                format!("outside wee8's supported Wasm subset or invalid Wasm: {error}")
-            })?;
+        let types = validation::module_types(bytes)?;
         let types = types.as_ref();
         let binary = ffi::wasm_byte_vec_t {
             size: bytes.len(),
@@ -610,7 +598,7 @@ impl<T: 'static> Store<T> {
         let raw = NonNull::new(unsafe {
             ffi::wee8_module_new(self.state.inner.raw.as_ptr(), &binary, &raw_options)
         })
-        .ok_or("module validation or compilation failed")?;
+        .ok_or_else(|| validation::compilation_error(bytes))?;
         let module = Module {
             raw,
             store: self,

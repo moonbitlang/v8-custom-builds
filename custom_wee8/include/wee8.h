@@ -57,6 +57,11 @@ typedef struct wee8_compile_options_t {
   bool js_string_builtins;
   const wasm_name_t* imported_string_constants;
 } wee8_compile_options_t;
+// Query after engine initialization. When true, successful wasm_module_new and
+// wee8_module_new have validated every function body, including lazy/uncalled
+// functions. V8 flag configuration must not change after engine initialization.
+// Older archives without this query require the embedder's validation fallback.
+WASM_API_EXTERN bool wee8_module_validation_is_eager(void);
 WASM_API_EXTERN bool wee8_module_validate(
   wasm_store_t*, const wasm_byte_vec_t*, const wee8_compile_options_t*);
 WASM_API_EXTERN wasm_module_t* wee8_module_new(

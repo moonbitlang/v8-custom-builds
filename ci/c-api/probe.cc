@@ -51,6 +51,7 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
                            const uint8_t* start_bytes, size_t start_len) {
   wasm_engine_t* engine = wasm_engine_new();
   assert(engine);
+  assert(wee8_module_validation_is_eager());
   wasm_store_t* store = wasm_store_new(engine);
   assert(store);
   wasm_byte_vec_t binary = {len, reinterpret_cast<char*>(const_cast<uint8_t*>(bytes))};
