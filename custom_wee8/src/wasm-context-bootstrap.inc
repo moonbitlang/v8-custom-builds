@@ -5,8 +5,35 @@
 //
 // Keep the existing NativeContext layout. Unallocated optional slots remain
 // undefined; accessing them is unsupported. The selection headers handle
-// builtin/runtime entry bodies separately; WasmJs registrations remain shared
-// with upstream.
+// builtin/runtime entry bodies separately. This initializer also owns the
+// private Wasm allocation maps; it does not install the JavaScript Wasm API.
+
+namespace {
+
+// Reuse Genesis's function/map factory, but provide no callable JavaScript
+// constructor or prototype methods. V8's Wasm factories use the initial map.
+Handle<JSFunction>
+CreateWasmAllocationConstructor(Isolate *isolate, const char *name,
+                                const char *tag_name, InstanceType type,
+                                int size, int in_object_properties = 0) {
+  auto *factory = isolate->factory();
+  Handle<JSFunction> constructor =
+      CreateFunction(isolate, name, type, size, in_object_properties,
+                     factory->the_hole_value(), Builtin::kIllegal, 1, false);
+  Handle<JSObject> prototype(Cast<JSObject>(constructor->instance_prototype()),
+                             isolate);
+  JSObject::AddProperty(isolate, prototype, factory->to_string_tag_symbol(),
+                        factory->InternalizeUtf8String(tag_name),
+                        static_cast<PropertyAttributes>(DONT_ENUM | READ_ONLY));
+  return constructor;
+}
+
+constexpr wasm::ValueType kWasmContextJsTagParams[] = {wasm::kWasmExternRef};
+constexpr wasm::FunctionSig kWasmContextJsTagSignature{
+    0, arraysize(kWasmContextJsTagParams), kWasmContextJsTagParams};
+
+} // namespace
+
 void Genesis::InitializeWasmContext(Handle<JSGlobalObject> global_object,
                                     Handle<JSFunction> empty_function) {
   Factory *factory = isolate()->factory();
@@ -131,4 +158,70 @@ void Genesis::InitializeWasmContext(Handle<JSGlobalObject> global_object,
   native_context()->set_object_function_prototype_map(object_prototype->map());
   native_context()->set_extras_binding_object(
       *factory->NewJSObjectWithNullProto());
+
+  // The C adapter allocates these objects through V8's ordinary Wasm
+  // factories. Keep their layouts and names, without constructing a private
+  // WebAssembly namespace or retaining JavaScript methods on their prototypes.
+  native_context()->set_wasm_module_constructor(*CreateWasmAllocationConstructor(
+      isolate(), "Module", "WebAssembly.Module", WASM_MODULE_OBJECT_TYPE,
+      WasmModuleObject::kHeaderSize));
+  native_context()->set_wasm_instance_constructor(
+      *CreateWasmAllocationConstructor(
+          isolate(), "Instance", "WebAssembly.Instance",
+          WASM_INSTANCE_OBJECT_TYPE, WasmInstanceObject::kHeaderSize));
+  native_context()->set_wasm_table_constructor(*CreateWasmAllocationConstructor(
+      isolate(), "Table", "WebAssembly.Table", WASM_TABLE_OBJECT_TYPE,
+      WasmTableObject::kHeaderSize));
+  native_context()->set_wasm_memory_constructor(
+      *CreateWasmAllocationConstructor(
+          isolate(), "Memory", "WebAssembly.Memory", WASM_MEMORY_OBJECT_TYPE,
+          WasmMemoryObject::kHeaderSize));
+  native_context()->set_wasm_global_constructor(
+      *CreateWasmAllocationConstructor(
+          isolate(), "Global", "WebAssembly.Global", WASM_GLOBAL_OBJECT_TYPE,
+          WasmGlobalObject::kHeaderSize));
+  native_context()->set_wasm_tag_constructor(*CreateWasmAllocationConstructor(
+      isolate(), "Tag", "WebAssembly.Tag", WASM_TAG_OBJECT_TYPE,
+      WasmTagObject::kHeaderSize));
+  native_context()->set_wasm_exported_function_map(
+      *isolate()->sloppy_function_without_prototype_map());
+
+  // The exception package stores its tag and payload in named in-object fields.
+  // Preserve the upstream WasmJs::PrepareForSnapshot layout used by the native
+  // exception implementation, without its JavaScript constructor/getArg/is.
+  Handle<JSFunction> exception = CreateWasmAllocationConstructor(
+      isolate(), "Exception", "WebAssembly.Exception",
+      WASM_EXCEPTION_PACKAGE_TYPE, WasmExceptionPackage::kSize,
+      WasmExceptionPackage::kInObjectFieldCount);
+  native_context()->set_wasm_exception_constructor(*exception);
+  DirectHandle<Map> exception_map(exception->initial_map(), isolate());
+  Map::EnsureDescriptorSlack(isolate(), exception_map, 2);
+  Descriptor tag = Descriptor::DataField(
+      isolate(), factory->wasm_exception_tag_symbol(),
+      WasmExceptionPackage::kTagIndex, DONT_ENUM, Representation::Tagged());
+  exception_map->AppendDescriptor(isolate(), &tag);
+  Descriptor values = Descriptor::DataField(
+      isolate(), factory->wasm_exception_values_symbol(),
+      WasmExceptionPackage::kValuesIndex, DONT_ENUM, Representation::Tagged());
+  exception_map->AppendDescriptor(isolate(), &values);
+
+  // Wasm exception handling recognizes V8-originated exceptions through JSTag.
+  // Its canonical index belongs to the running engine and is refreshed after
+  // snapshot restoration, as in the upstream context initialization.
+  auto js_tag = WasmExceptionTag::New(isolate(), 0);
+  native_context()->set_wasm_js_tag(
+      *WasmTagObject::New(isolate(), &kWasmContextJsTagSignature, 0, js_tag,
+                          Handle<WasmTrustedInstanceData>()));
+}
+
+void Genesis::InitializeWasmContextAfterSnapshot(
+    Isolate *isolate, DirectHandle<NativeContext> native_context) {
+  if (native_context->is_wasm_js_installed() != Smi::zero())
+    return;
+  DirectHandle<WasmTagObject> js_tag(
+      Cast<WasmTagObject>(native_context->wasm_js_tag()), isolate);
+  js_tag->set_canonical_type_index(
+      wasm::GetWasmEngine()->type_canonicalizer()->AddRecursiveGroup(
+          &kWasmContextJsTagSignature));
+  native_context->set_is_wasm_js_installed(Smi::FromInt(1));
 }

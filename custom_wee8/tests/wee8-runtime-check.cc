@@ -2,6 +2,7 @@
 #include "include/v8.h"
 #include "src/api/api-inl.h"
 #include "src/flags/flags.h"
+#include "src/objects/contexts-inl.h"
 #include "src/runtime/runtime.h"
 #include <cstdint>
 #include <cstdio>
@@ -33,6 +34,19 @@ int main(int argc, char **argv) {
     v8::HandleScope handles(isolate);
     auto context = v8::Context::New(isolate);
     v8::Context::Scope entered_context(context);
+    {
+      // Check the restored heap, not just the absence of global properties:
+      // the Wasm context must not retain a private JavaScript WebAssembly API.
+      auto *internal = reinterpret_cast<v8::internal::Isolate *>(isolate);
+      if (!internal->initialized_from_snapshot() ||
+          !v8::internal::IsUndefined(
+              internal->native_context()->get(
+                  v8::internal::Context::WASM_WEBASSEMBLY_OBJECT_INDEX),
+              internal)) {
+        std::fputs("Snapshot retains the JavaScript WebAssembly API\n", stderr);
+        status = 5;
+      }
+    }
     if (v8::internal::v8_flags.turbofan || v8::internal::v8_flags.maglev ||
         v8::internal::v8_flags.sparkplug ||
         v8::internal::v8_flags.validate_asm ||

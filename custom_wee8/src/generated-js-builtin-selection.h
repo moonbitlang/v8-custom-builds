@@ -62,71 +62,6 @@ namespace v8::internal {
   V(StringIteratorPrototypeNext)                                               \
   V(TypedArrayPrototypeValues)
 
-// Wasm well-known-import recognition shares Math identities and fallbacks.
-// Retain this bounded group conservatively; no Math global is installed.
-#define WASM_CONTEXT_MATH_JS_BUILTINS(V)                                       \
-  V(MathAbs)                                                                   \
-  V(MathCeil)                                                                  \
-  V(MathFloor)                                                                 \
-  V(MathRound)                                                                 \
-  V(MathTrunc)                                                                 \
-  V(MathPow)                                                                   \
-  V(MathMax)                                                                   \
-  V(MathMin)                                                                   \
-  V(MathAcos)                                                                  \
-  V(MathAcosh)                                                                 \
-  V(MathAsin)                                                                  \
-  V(MathAsinh)                                                                 \
-  V(MathAtan)                                                                  \
-  V(MathAtan2)                                                                 \
-  V(MathAtanh)                                                                 \
-  V(MathCbrt)                                                                  \
-  V(MathClz32)                                                                 \
-  V(MathCos)                                                                   \
-  V(MathCosh)                                                                  \
-  V(MathExp)                                                                   \
-  V(MathExpm1)                                                                 \
-  V(MathFround)                                                                \
-  V(MathF16round)                                                              \
-  V(MathImul)                                                                  \
-  V(MathLog)                                                                   \
-  V(MathLog1p)                                                                 \
-  V(MathLog10)                                                                 \
-  V(MathLog2)                                                                  \
-  V(MathSin)                                                                   \
-  V(MathSign)                                                                  \
-  V(MathSinh)                                                                  \
-  V(MathSqrt)                                                                  \
-  V(MathTan)                                                                   \
-  V(MathTanh)                                                                  \
-  V(MathHypot)                                                                 \
-  V(MathRandom)
-
-// Wasm well-known imports recognize these accessors and use their fallbacks.
-// Retain the bodies without exposing DataView construction or methods.
-#define WASM_CONTEXT_DATAVIEW_JS_BUILTINS(V)                                   \
-  V(DataViewPrototypeGetByteLength)                                            \
-  V(DataViewPrototypeGetBigInt64)                                              \
-  V(DataViewPrototypeGetBigUint64)                                             \
-  V(DataViewPrototypeGetFloat32)                                               \
-  V(DataViewPrototypeGetFloat64)                                               \
-  V(DataViewPrototypeGetInt8)                                                  \
-  V(DataViewPrototypeGetInt16)                                                 \
-  V(DataViewPrototypeGetInt32)                                                 \
-  V(DataViewPrototypeGetUint8)                                                 \
-  V(DataViewPrototypeGetUint16)                                                \
-  V(DataViewPrototypeGetUint32)                                                \
-  V(DataViewPrototypeSetBigInt64)                                              \
-  V(DataViewPrototypeSetBigUint64)                                             \
-  V(DataViewPrototypeSetFloat32)                                               \
-  V(DataViewPrototypeSetFloat64)                                               \
-  V(DataViewPrototypeSetInt8)                                                  \
-  V(DataViewPrototypeSetInt16)                                                 \
-  V(DataViewPrototypeSetInt32)                                                 \
-  V(DataViewPrototypeSetUint8)                                                 \
-  V(DataViewPrototypeSetUint16)                                                \
-  V(DataViewPrototypeSetUint32)
-
 // Preserve native wrapper bodies and imported-string builtins independently
 // of JS linkage. Keeping WasmPromising does not enable a public Promise API.
 #define WASM_CONTEXT_WASM_JS_BUILTINS(V)                                       \
@@ -152,14 +87,14 @@ namespace v8::internal {
   V(WebAssemblyStringEquals)                                                   \
   V(WebAssemblyStringCompare)
 
+// Math/DataView JavaScript entrypoints are outside the C adapter interface.
+// Wasm numeric and memory instructions retain their own lowering and helpers.
 constexpr bool WasmContextKeepsJsBuiltin(Builtin builtin) {
   switch (builtin) {
 #define RETAIN(Name) case Builtin::k##Name:
     WASM_CONTEXT_ENTRY_JS_BUILTINS(RETAIN)
     WASM_CONTEXT_PRIMITIVE_JS_BUILTINS(RETAIN)
     WASM_CONTEXT_ITERATION_JS_BUILTINS(RETAIN)
-    WASM_CONTEXT_MATH_JS_BUILTINS(RETAIN)
-    WASM_CONTEXT_DATAVIEW_JS_BUILTINS(RETAIN)
     WASM_CONTEXT_WASM_JS_BUILTINS(RETAIN)
 #undef RETAIN
     return true;

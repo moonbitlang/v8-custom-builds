@@ -116,6 +116,13 @@ C consumer and native contract suite over standalone probing programs. Lifetime
 regressions assert ownership release or bounded storage after warmup, not an RSS
 threshold. Keep genuine new canonical types alive while reclaiming duplicates.
 
+The owned context initializer must track the allocation layouts used by V8's
+Wasm factories. On upgrades, compare it with `WasmJs::PrepareForSnapshot` and
+`WasmJs::Install`, especially exception-package descriptors and the post-restore
+JSTag canonical type registration. Keep JavaScript API installation separate from
+these native requirements. Regenerate the snapshot and embedded builtin blob
+together; testing an older archive cannot validate this initialization path.
+
 ## Upgrading and validating
 
 1. Record the old dependency pins. Compare old upstream, new upstream and our

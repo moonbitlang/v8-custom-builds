@@ -682,30 +682,30 @@ TFJ	NumberConstructor	retain	kDontAdaptArgumentsSentinel
 TFJ	GenericLazyDeoptContinuation	retain	JSParameterCount(1), kReceiver, kResult
 TFJ	FastConsoleAssert	omit	kDontAdaptArgumentsSentinel
 TFJ	DataViewPrototypeGetBuffer	omit	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetByteLength	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetByteLength	omit	kDontAdaptArgumentsSentinel
 TFJ	DataViewPrototypeGetByteOffset	omit	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetUint8	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetInt8	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetUint16	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetInt16	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetUint32	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetInt32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint8	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt8	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint16	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt16	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetUint32	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetInt32	omit	kDontAdaptArgumentsSentinel
 TFJ	DataViewPrototypeGetFloat16	omit	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetFloat32	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetFloat64	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetBigUint64	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeGetBigInt64	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetUint8	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetInt8	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetUint16	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetInt16	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetUint32	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetInt32	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat32	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetFloat64	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBigUint64	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeGetBigInt64	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint8	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt8	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint16	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt16	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetUint32	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetInt32	omit	kDontAdaptArgumentsSentinel
 TFJ	DataViewPrototypeSetFloat16	omit	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetFloat32	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetFloat64	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetBigUint64	retain	kDontAdaptArgumentsSentinel
-TFJ	DataViewPrototypeSetBigInt64	retain	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat32	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetFloat64	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetBigUint64	omit	kDontAdaptArgumentsSentinel
+TFJ	DataViewPrototypeSetBigInt64	omit	kDontAdaptArgumentsSentinel
 TFJ	FinalizationRegistryConstructor	omit	kDontAdaptArgumentsSentinel
 TFJ	FinalizationRegistryRegister	omit	kDontAdaptArgumentsSentinel
 TFJ	FinalizationRegistryPrototypeCleanupSome	omit	kDontAdaptArgumentsSentinel
@@ -733,42 +733,42 @@ TFJ	IteratorPrototypeSome	omit	JSParameterCount(1), kReceiver, kPredicate
 TFJ	IteratorPrototypeEvery	omit	JSParameterCount(1), kReceiver, kPredicate
 TFJ	IteratorPrototypeFind	omit	JSParameterCount(1), kReceiver, kPredicate
 TFJ	MapGroupBy	omit	JSParameterCount(2), kReceiver, kItems, kCallback
-TFJ	MathAbs	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathCeil	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathFloor	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathRound	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathTrunc	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathPow	retain	JSParameterCount(2), kReceiver, kBase, kExponent
-TFJ	MathMax	retain	kDontAdaptArgumentsSentinel
-TFJ	MathMin	retain	kDontAdaptArgumentsSentinel
-TFJ	MathAcos	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathAcosh	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathAsin	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathAsinh	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathAtan	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathAtan2	retain	JSParameterCount(2), kReceiver, kY, kX
-TFJ	MathAtanh	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathCbrt	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathClz32	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathCos	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathCosh	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathExp	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathExpm1	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathFround	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathF16round	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathImul	retain	JSParameterCount(2), kReceiver, kX, kY
-TFJ	MathLog	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathLog1p	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathLog10	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathLog2	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathSin	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathSign	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathSinh	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathSqrt	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathTan	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathTanh	retain	JSParameterCount(1), kReceiver, kX
-TFJ	MathHypot	retain	kDontAdaptArgumentsSentinel
-TFJ	MathRandom	retain	JSParameterCount(0), kReceiver
+TFJ	MathAbs	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathCeil	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathFloor	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathRound	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathTrunc	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathPow	omit	JSParameterCount(2), kReceiver, kBase, kExponent
+TFJ	MathMax	omit	kDontAdaptArgumentsSentinel
+TFJ	MathMin	omit	kDontAdaptArgumentsSentinel
+TFJ	MathAcos	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathAcosh	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathAsin	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathAsinh	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathAtan	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathAtan2	omit	JSParameterCount(2), kReceiver, kY, kX
+TFJ	MathAtanh	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathCbrt	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathClz32	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathCos	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathCosh	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathExp	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathExpm1	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathFround	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathF16round	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathImul	omit	JSParameterCount(2), kReceiver, kX, kY
+TFJ	MathLog	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog1p	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog10	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathLog2	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathSin	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathSign	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathSinh	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathSqrt	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathTan	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathTanh	omit	JSParameterCount(1), kReceiver, kX
+TFJ	MathHypot	omit	kDontAdaptArgumentsSentinel
+TFJ	MathRandom	omit	JSParameterCount(0), kReceiver
 TFJ	NumberPrototypeToString	retain	kDontAdaptArgumentsSentinel
 TFJ	NumberIsFinite	retain	JSParameterCount(1), kReceiver, kValue
 TFJ	NumberIsInteger	retain	JSParameterCount(1), kReceiver, kValue
