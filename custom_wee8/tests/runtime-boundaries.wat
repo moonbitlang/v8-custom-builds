@@ -14,6 +14,7 @@
     local.get 0 i32.eqz if unreachable end)
   (func (export "run") (param $iterations i32) (result i32)
     (local $i i32)
+    (local $number f64)
     ref.null func i32.const 2 table.grow i32.const 2 i32.eq call $check
     i32.const 0 i32.const 0 i32.const 2 table.init $functions
     i32.const 2 i32.const 0 i32.const 2 table.copy
@@ -29,6 +30,21 @@
     i32.const 16 i32.const 7 i32.const 4 memory.fill
     i32.const 17 i32.load8_u i32.const 7 i32.eq call $check
     data.drop $bytes
+    ;; Derive an exact sample from the host argument so the optimizing compiler
+    ;; must execute these operations. No JS Math or DataView entry is involved.
+    local.get $iterations i32.const 7 i32.and i32.const 1 i32.add
+    f64.convert_i32_u local.set $number
+    local.get $number local.get $number f64.mul f64.sqrt
+    local.get $number f64.eq call $check
+    local.get $number f64.const 0.75 f64.add f64.floor
+    local.get $number f64.eq call $check
+    local.get $number f64.const 2 f64.mul f64.const 0.5 f64.add f64.nearest
+    local.get $number f64.const 2 f64.mul f64.eq call $check
+    f64.const -0 local.get $number f64.copysign
+    i64.reinterpret_f64 i64.eqz call $check
+    local.get $number f64.neg f64.abs local.get $number f64.eq call $check
+    i32.const 32 local.get $number f64.const 0.5 f64.add f64.store
+    i32.const 32 f64.load local.get $number f64.const 0.5 f64.add f64.eq call $check
     block $caught (result i32)
       try_table (catch $problem $caught)
         i32.const 42 throw $problem
