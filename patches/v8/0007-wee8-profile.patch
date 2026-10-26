@@ -6,7 +6,6 @@ Subject: Select the complete custom wee8 runtime with one build switch
 Upstream-Status: Local runtime configuration
 Maintenance: Keep the custom switch scoped to custom wee8 and reconcile upstream config propagation on upgrades.
 Tests: GN source/configuration checks and native contracts on all platforms.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/wee8-profile.patch
 
 Default V8 retains upstream behavior. The custom toolchain selects its native
 context, implementation lists and JavaScript tier settings together.

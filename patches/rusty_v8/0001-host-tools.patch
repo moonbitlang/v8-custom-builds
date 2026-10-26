@@ -6,51 +6,13 @@ Subject: Adapt the pinned build tools to the supported runner environments
 Upstream-Status: Local build compatibility
 Maintenance: Drop each workaround when the pinned upstream handles its compiler, host architecture or Visual Studio version.
 Tests: Native consumer matrix; Linux ARM64 system Clang and Windows toolchain discovery.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/host-tools.patch
 
-Base: rusty_v8 v0.106.0 (e9f20a2493883b53cb58b19a2fe761358dd57996),
-including its Chromium build submodule at
-c6d44e625aa64fa89cbdc971dfd301353bee04f3.
-
-These are build-host compatibility adjustments, not V8 feature cuts:
-
-- Map Linux's aarch64 machine name to arm64 for the pinned GN/Ninja package
-  names. The existing Windows mapping selects the available x64 tools;
-  Windows ARM64 can execute them through Windows emulation. That mapping
-  remains from the earlier ARM64 experiment and does not imply support:
-  Windows ARM64 is excluded from the current build and release matrix.
-- Restrict the ARM64 branch's Linux sysroot downloads to Linux targets.
-  macOS and Windows do not need those Linux sysroots. Linux retains the
-  upstream sysroot selection; this patch does not change its glibc baseline.
-- When using a system Clang on Linux, ask that compiler for its target's
-  compiler-rt builtins archive. Distribution packages do not necessarily
-  match Chromium's directory layout. Pass the existing file through a
-  dedicated GN argument affecting only compiler_builtins, leaving other
-  clang_lib targets on their original path. Linux ARM64 CI supplies Clang
-  18 and its matching compiler-rt development package; this is separate
-  from the Linux sysroot and does not replace it.
-- Recognize Visual Studio 2026, its installation directory named 18, and
-  its VC145 runtime directory. The pinned discovery code knows only older
-  versions. Keep the existing version-selection and override mechanism;
-  this change adds a discovery option, not a requirement to use VS 2026.
-
-Validation: build and run the standalone archive consumer on the affected
-supported platforms. Linux ARM64 exercises the system-Clang path, macOS
-ARM64 exercises the sysroot guard, and Windows x64 exercises the selected
-Visual Studio installation. A Windows run using VS 2022 does not validate
-VS 2026 discovery. The separate glibc 2.23 link check covers Linux x64 only;
-do not treat it as validation of Linux ARM64's minimum glibc version.
-
-On an upstream upgrade, review these changes individually against that
-tag's build scripts and tool packages. Drop mappings, discovery rules, and
-the compiler-rt override when upstream handles the corresponding case.
-Reconsider Windows ARM64's tool selection as part of the planned v145
-upgrade instead of treating the old emulation mapping as the final design.
-
-Upstream build and tool discovery:
-https://github.com/denoland/rusty_v8/blob/v0.106.0/build.rs
-https://github.com/denoland/rusty_v8/blob/v0.106.0/tools/ninja_gn_binaries.py
-https://chromium.googlesource.com/chromium/src/build/+/c6d44e625aa64fa89cbdc971dfd301353bee04f3/vs_toolchain.py
+Adapt the native bootstrap to supported hosts:
+- Normalize aarch64 to arm64 for GN/Ninja packages. Windows keeps x64 tools;
+  Windows ARM64 remains outside the supported matrix.
+- Download Linux sysroots only for Linux targets.
+- Ask system Clang for compiler-rt instead of assuming Chromium's layout,
+  then pass that path to the Chromium build patch.
 
 diff --git a/build.rs b/build.rs
 index 4aead47749ab16a58d96e477762cbdcf9421d098..19a215ad86c85e1067710125e71aa95161be421f 100644

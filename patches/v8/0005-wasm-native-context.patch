@@ -6,7 +6,6 @@ Subject: Select a native Wasm context and its implementation entries
 Upstream-Status: Local runtime insertion points
 Maintenance: Reconcile upstream context factories and every builtin/runtime table consumer when upgrading V8.
 Tests: Context, entry-table, generated-builtin and runtime contracts.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/wasm-native-context.patch
 
 The profile is optional; normal V8 retains its initialization and entries.
 Policy and allocation sources live in custom_wee8/src, copied before GN runs.

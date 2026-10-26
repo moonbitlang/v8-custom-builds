@@ -89,8 +89,7 @@ git format-patch --full-index -k --no-signature --no-stat --zero-commit <upstrea
 
 Replace that dependency's patch files and update `patches/series` together.
 Review the regenerated diff and verify fresh application. Do not repair hunk
-counts or offsets manually. The initial numbered series records the previous
-recipe commit and patch name in `Original-Recipe` for history lookup.
+counts or offsets manually.
 
 ## Adapter maintenance contract
 

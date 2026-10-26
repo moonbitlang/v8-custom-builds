@@ -6,7 +6,6 @@ Subject: Reclaim duplicate canonical-type candidates
 Upstream-Status: Backport: V8 9423d125979b0fdb466816694e0edcee14c220b6 and 8c9a0bd40d7e290ea19a907400f1b892d63ad5d7
 Maintenance: Drop after the pinned V8 contains equivalent ZoneSnapshot and duplicate-candidate rollback. Preserve new canonical types under the canonicalizer mutex.
 Tests: store-lifetimes singleton/recursive cases and zone rollback across allocation segments.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/wee8-canonical-type-storage.patch
 
 Backport the ZoneSnapshot/Restore approach used by upstream V8:
 https://chromium.googlesource.com/v8/v8/+/3dbba7b86bcd7904134a95dd4bebb78579081d95/src/wasm/canonical-types.cc

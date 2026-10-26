@@ -6,7 +6,6 @@ Subject: Allow the native bootstrap to build wee8 without the Rust adapter
 Upstream-Status: Local native producer integration
 Maintenance: Reconcile bootstrap entry points and GN target names on every rusty_v8 upgrade.
 Tests: Native archive and check targets on all supported platforms.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/native-target.patch
 
 Reuse the pinned upstream toolchain/GN setup from the native build driver.
 The upstream crate entry point retains its own target; this producer calls

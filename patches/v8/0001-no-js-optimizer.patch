@@ -6,16 +6,10 @@ Subject: Disable JavaScript optimization in the custom wee8 profile
 Upstream-Status: Local runtime capability policy
 Maintenance: Reaudit shared Wasm compiler flags on each V8 upgrade; retain Wasm optimizing compilation.
 Tests: Native context/runtime contracts in all four Wasm modes.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/no-js-optimizer.patch
 
-Base: rusty_v8 v0.106.0, V8 12.9.202.13.
-
-V8_CUSTOM_WEE8 selects read-only false flags so ordinary optimization and
-final-link dead stripping can discard unreachable JavaScript compilation paths.
-The original flags and implementations remain intact outside this profile.
-Shared Wasm compiler infrastructure stays enabled. On upgrade, audit flag
-implications and compilation-job callers; measure linked consumers rather than
-assuming every unreachable object disappears from the static archive.
+V8_CUSTOM_WEE8 makes JavaScript optimization flags read-only false so the
+compiler and linker can discard unreachable paths. Shared Wasm compilation
+stays enabled; ordinary V8 keeps its original flags and implementations.
 
 diff --git a/src/flags/flag-definitions.h b/src/flags/flag-definitions.h
 index 2c9c12e6cf4a9ebfdc5cb08ef7a53b0ca77222bb..b490483aa4526f69727813db84647ca65a3765d5 100644

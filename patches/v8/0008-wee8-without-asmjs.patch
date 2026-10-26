@@ -6,13 +6,10 @@ Subject: Make asm.js an optional build capability
 Upstream-Status: Local runtime capability policy
 Maintenance: Review asm.js translator source lists and lazy/direct callers when upgrading V8.
 Tests: Direct asm.js rejection and packaged Wasm consumers.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/wee8-without-asmjs.patch
 
-Base: rusty_v8 v0.106.0, V8 12.9.202.13.
-
-Keep the upstream translator intact and enabled by default. The custom
-profile excludes it; guard direct callers instead of depending on dead stripping.
-Retain shared Wasm metadata and runtime IDs for generated code and snapshots.
+Keep the upstream translator enabled by default. The custom profile excludes
+it and guards direct callers. Shared Wasm metadata and runtime IDs remain for
+generated code and snapshots.
 
 diff --git a/BUILD.gn b/BUILD.gn
 index 54678a5762ef9cc4706043f0d5f538aa5e7539ab..c4049cf42ead4f5db4ea7ff5a57e0faa14a69afa 100644

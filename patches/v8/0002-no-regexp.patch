@@ -6,7 +6,6 @@ Subject: Make the JavaScript RegExp library an optional build capability
 Upstream-Status: Local runtime capability policy
 Maintenance: Review registrations, external references, generated Torque code and direct RegExp callers on every V8 upgrade.
 Tests: Native RegExp rejection, builtin inventories, packaged native string consumers.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/no-regexp.patch
 
 diff --git a/BUILD.gn b/BUILD.gn
 index 19e0d2b584790eed3f633152f25665aa333d6f4a..50512084c30703c1bf416612d5f5cad02892cdfd 100644

@@ -6,24 +6,11 @@ Subject: Make JavaScript source parsing an optional build capability
 Upstream-Status: Local runtime capability policy
 Maintenance: Review compiler entry points and shared AST metadata when upgrading V8.
 Tests: Script/module/function/streaming rejection and native context contracts.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/no-source-parser.patch
 
-Base: rusty_v8 v0.106.0, V8 12.9.202.13. Applies after no-regexp.patch.
-
-v8_enable_javascript_parser defaults to true, preserving the upstream source
-implementations and build. The custom_wee8 toolchain scope opts out. A separate GN target
-implements the parsing interface by reporting an explicit compilation error;
-the parser, preparser, scanner, text streams, literal buffer, rewriter and
-name inferrer are excluded from
-that build. The shared compiler guards its direct background-parser invocation.
-
-This removes JavaScript source parsing, not all JavaScript runtime machinery.
-Wasm compilation, builtin generation, context creation and native wrappers
-remain. AST metadata is still shared with the compiler. No Wasm text parser is added; wee8 consumes Wasm binary modules.
-
-On upgrade, check direct Parser/PreParser callers, the parsing interface,
-background compilation, snapshot generation and the GN exclusion list. Validate
-both ordinary and custom targets, rejection of source APIs, Wasm instantiation and GC.
+The custom profile excludes JavaScript parser/scanner sources and returns
+explicit compilation errors, including from background compilation. Shared
+AST metadata, Wasm compilation and builtin/context machinery remain.
+The upstream parser stays enabled by default.
 
 diff --git a/BUILD.gn b/BUILD.gn
 index 50512084c30703c1bf416612d5f5cad02892cdfd..bcf1cd33c011dbdbccebade474dcd28129ef43be 100644

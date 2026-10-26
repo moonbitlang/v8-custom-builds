@@ -6,16 +6,11 @@ Subject: Bound optional Wasm proposals in the custom wee8 runtime
 Upstream-Status: Local runtime capability policy
 Maintenance: Review optional flags and newly unconditional Wasm proposals on every V8 upgrade.
 Tests: Feature-policy runtime guests and packaged proposal-policy tests.
-Original-Recipe: c755c8163a2702c822eaf875ce52c1d02823e267 patches/wasm-feature-policy.patch
 
-The custom layer owns a positive list of optional Wasm features. Keep modern
-exception handling and Wasm inlining; reject legacy stringref and exception
-opcodes. Imported JS strings use per-module CompileTimeImports independently.
-
-Limit flags before C API initialization for decoders that read flags directly,
-and cap both feature-set entry points so origin-trial callbacks cannot enable
-an excluded proposal. Ordinary V8 retains its existing behavior. This enforces
-the accepted feature set, not source removal or a promised binary size saving.
+Allow modern exception handling and Wasm inlining; reject legacy stringref
+and exception opcodes. Imported JS strings use per-module CompileTimeImports.
+Apply the policy to flags and both feature-set entry points so decoders and
+origin-trial callbacks cannot bypass it. Ordinary V8 keeps its existing policy.
 
 diff --git a/src/wasm/wasm-features.cc b/src/wasm/wasm-features.cc
 index 17a038304fb747d1f55d43bf8fce919e725ea4a0..5d01cad037d1b142fac08d912cbf36a5e79f2212 100644
