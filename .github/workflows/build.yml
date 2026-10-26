@@ -89,7 +89,7 @@ jobs:
       - name: Native cache key
         id: native-key
         env:
-          RECIPE: ${{ hashFiles('build.sh', 'tools/native/**', 'custom_wee8/BUILD.gn', 'custom_wee8/src/**', 'custom_wee8/include/**', 'custom_wee8/tests/*.cc', 'custom_wee8/tests/BUILD.gn', 'patches/*.patch', 'licenses/*') }}
+          RECIPE: ${{ hashFiles('build.sh', 'tools/prepare-source.py', 'tools/native/**', 'custom_wee8/BUILD.gn', 'custom_wee8/src/**', 'custom_wee8/include/**', 'custom_wee8/tests/*.cc', 'custom_wee8/tests/BUILD.gn', 'patches/series', 'patches/**/*.patch', 'licenses/*') }}
         run: echo "key=native-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$(git rev-parse HEAD:rusty_v8)-$RECIPE" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: native

@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:18 +0800
+Subject: Bound optional Wasm proposals in the custom wee8 runtime
+
+Upstream-Status: Local runtime capability policy
+Maintenance: Review optional flags and newly unconditional Wasm proposals on every V8 upgrade.
+Tests: Feature-policy runtime guests and packaged proposal-policy tests.
+
+Allow modern exception handling and Wasm inlining; reject legacy stringref
+and exception opcodes. Imported JS strings use per-module CompileTimeImports.
+Apply the policy to flags and both feature-set entry points so decoders and
+origin-trial callbacks cannot bypass it. Ordinary V8 keeps its existing policy.
+
+diff --git a/src/wasm/wasm-features.cc b/src/wasm/wasm-features.cc
+index 17a038304fb747d1f55d43bf8fce919e725ea4a0..5d01cad037d1b142fac08d912cbf36a5e79f2212 100644
+--- a/src/wasm/wasm-features.cc
++++ b/src/wasm/wasm-features.cc
+@@ -3,6 +3,9 @@
+ // found in the LICENSE file.
+ 
+ #include "src/wasm/wasm-features.h"
++#if defined(V8_CUSTOM_WEE8)
++#include "custom_wee8/src/wasm-feature-policy.h"
++#endif
+ 
+ #include "src/execution/isolate-inl.h"
+ #include "src/flags/flags.h"
+@@ -30,6 +33,9 @@ WasmEnabledFeatures WasmEnabledFeatures::FromFlags() {
+     features.Add(WasmEnabledFeature::feat);
+   FOREACH_WASM_FEATURE_FLAG(CHECK_FEATURE_FLAG)
+ #undef CHECK_FEATURE_FLAG
++#if defined(V8_CUSTOM_WEE8)
++  features.Intersect(kCustomWee8OptionalFeatures);
++#endif
+   return features;
+ }
+ 
+@@ -58,6 +64,9 @@ WasmEnabledFeatures WasmEnabledFeatures::FromContext(
+     }
+   }
+   // This space intentionally left blank for future Wasm origin trials.
++#if defined(V8_CUSTOM_WEE8)
++  features.Intersect(kCustomWee8OptionalFeatures);
++#endif
+   return features;
+ }
+ 

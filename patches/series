@@ -1,0 +1,13 @@
+# Apply in this order. Paths identify the upstream dependency.
+rusty_v8/0001-host-tools.patch
+chromium-build/0001-host-tools.patch
+rusty_v8/0002-native-target.patch
+v8/0001-no-js-optimizer.patch
+v8/0002-no-regexp.patch
+v8/0003-no-source-parser.patch
+v8/0004-wasm-feature-policy.patch
+v8/0005-wasm-native-context.patch
+v8/0006-wee8-canonical-type-storage.patch
+v8/0007-wee8-profile.patch
+v8/0008-wee8-without-asmjs.patch
+v8/0009-select-owned-c-api.patch

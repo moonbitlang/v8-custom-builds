@@ -8,6 +8,9 @@ Ordinary V8 defaults to `false` and keeps its original behavior.
 | File or directory | Responsibility |
 | --- | --- |
 | `BUILD.gn` | Native toolchain scope and capability settings |
+| `src/c-api.cc`, `src/c-api.h`, `src/wasm.hh` | Owned C adapter and its private C++ declarations |
+| `include/wasm.h`, `include/wee8.h` | Standard and additive public C APIs |
+| `upstream.json` | Exact baselines and digests for copied upstream files |
 | `src/wasm-context-bootstrap.inc` | Private native context initialization |
 | `src/wasm-feature-policy.h` | Positive list of optional Wasm features |
 | `src/cpp-builtin-selection.h` | C++ builtin entries |
@@ -15,8 +18,8 @@ Ordinary V8 defaults to `false` and keeps its original behavior.
 | `src/generated-js-builtin-selection.h` | Generated JS-entry bodies (TFJ) |
 | `tests` | Native probes, reviewed inventories, Wasm guests and one check runner |
 
-The source files are included through the upstream insertion points in
-`wasm-native-context.patch`. GN regenerates the embedded builtin blob and matching
+The adapter is selected by a small GN patch; runtime selection files use the
+upstream insertion points in `v8/0005-wasm-native-context.patch`. GN regenerates the embedded builtin blob and matching
 snapshot together. The producer does not rewrite archives after compilation.
 
 ## Retained implementations
@@ -91,25 +94,24 @@ optional flags and features made unconditional upstream.
 
 ## Upstream patches
 
-The recipe applies patches in filename order. The files retain separate purposes;
-none is an additional runtime selection layer.
+[`patches/series`](../patches/series) lists the explicit application order, grouped
+by dependency. Each patch carries its purpose, upgrade obligation and test contract.
+See [MAINTENANCE.md](MAINTENANCE.md) for regeneration and adapter review.
 
 | Patch | Purpose |
 | --- | --- |
-| `host-tools.patch` | Compatibility with supported build runners and toolchains |
-| `native-target.patch` | Reuse the native bootstrap and expose artifact/check targets |
-| `no-js-optimizer.patch` | Make JS optimizing-tier flags read-only false; retain the shared Wasm compiler |
-| `no-regexp.patch` | Optional RegExp capability across Torque, registrations, external references and direct callers |
-| `no-source-parser.patch` | Optional parser capability; exclude parser/scanner sources and reject source compilation |
-| `wasm-c-api.patch` | Adapt the pinned C API implementation and native link dependencies |
-| `wasm-exceptions.patch` | Implement native tags and catchable exception extensions |
-| `wasm-feature-policy.patch` | Apply the optional-feature list at engine startup and feature-set construction |
-| `wasm-native-context.patch` | Connect the context and three implementation selections to V8 |
-| `wee8-externref.patch` | Complete opaque transport of externalized Wasm values |
-| `wee8-exception-traces.patch` | Capture original Wasm frames for native catchable exceptions |
-| `wee8-stack-limit.patch` | Expose per-store native stack boundaries and restoration |
-| `wee8-profile.patch` | Declare the single custom switch, common define and owned headers |
-| `wee8-without-asmjs.patch` | Optional asm.js capability; exclude the translator and guard direct callers |
+| `rusty_v8/0001-host-tools.patch` | Build-runner and toolchain compatibility |
+| `chromium-build/0001-host-tools.patch` | Chromium toolchain compatibility |
+| `rusty_v8/0002-native-target.patch` | Reuse the native bootstrap and expose artifact/check targets |
+| `v8/0001-no-js-optimizer.patch` | Disable JS optimizing tiers while retaining the shared Wasm compiler |
+| `v8/0002-no-regexp.patch` | Optional RegExp capability across generators and direct callers |
+| `v8/0003-no-source-parser.patch` | Exclude parser/scanner frontends and reject JS source compilation |
+| `v8/0004-wasm-feature-policy.patch` | Constrain feature-set construction to the owned optional-feature policy |
+| `v8/0005-wasm-native-context.patch` | Connect the context and implementation selections to V8 |
+| `v8/0006-wee8-canonical-type-storage.patch` | Backport rollback of duplicate canonical-type candidates |
+| `v8/0007-wee8-profile.patch` | Declare the custom switch, common define and owned headers |
+| `v8/0008-wee8-without-asmjs.patch` | Exclude the asm.js frontend and guard direct callers |
+| `v8/0009-select-owned-c-api.patch` | Select the owned adapter and preserve native link dependencies |
 
 ICU, Maglev and Sparkplug use existing GN settings. Parser and asm.js source lists
 exclude only their frontends; shared AST/Wasm metadata remains. The disabled
@@ -174,6 +176,9 @@ regression. Passing short functional tests alone does not establish cleanup.
 
 ## V8 upgrades
 
+Follow the [maintenance contract](MAINTENANCE.md#upgrading-and-validating), including
+reconciliation of the owned adapter with its recorded upstream baseline. In addition:
+
 1. Reapply the insertion patches. Audit private-context allocations against their
    factory/serializer consumers and review direct parser/asm.js/RegExp callers.
    Drop build-host fixes when upstream supplies them.
@@ -191,9 +196,9 @@ regression. Passing short functional tests alone does not establish cleanup.
 ## Public C headers
 
 `include/wee8.h` owns all wee8 extension declarations and includes the unmodified
-upstream `wasm.h` at 9d6b93764ac96cdd9db51081c363e09d2d488b4d. Native capability
-patches contain implementation changes; they do not add declarations to that C
-header. The build copies the extension header beside it for the native adapter.
+upstream `wasm.h` at 9d6b93764ac96cdd9db51081c363e09d2d488b4d. Both live in
+`include/`; the owned adapter implements extensions without editing the standard
+header. Its private C++ declarations live in `src/` and are not a public interface.
 Both headers ship together, while the recipe check pins the upstream bytes and
 compiles both include modes as C and C++. The packaged probes include `wee8.h`.
 Runtime `wasm_tag_*` functions remain extensions despite their existing prefix;

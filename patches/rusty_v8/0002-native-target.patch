@@ -1,0 +1,65 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:17 +0800
+Subject: Allow the native bootstrap to build wee8 without the Rust adapter
+
+Upstream-Status: Local native producer integration
+Maintenance: Reconcile bootstrap entry points and GN target names on every rusty_v8 upgrade.
+Tests: Native archive and check targets on all supported platforms.
+
+Reuse the pinned upstream toolchain/GN setup from the native build driver.
+The upstream crate entry point retains its own target; this producer calls
+the same bootstrap with the wee8 build group and does not compile that crate.
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 3de64b8c34d369de9ab549075080ef4166f56295..a217647ab172058af38a6470a23c051964acfd5e 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -48,3 +48,16 @@ config("rusty_v8_config") {
+     ]
+   }
+ }
++
++# Public entry point for the isolated native Wasm runtime.
++group("custom_wee8") {
++  deps = [ "//v8:wee8(//custom_wee8:custom_wee8)" ]
++}
++
++# The producer builds the artifact and its checks in the same toolchain scope.
++group("wee8-build") {
++  deps = [
++    ":custom_wee8",
++    "//custom_wee8/tests:checks(//custom_wee8:custom_wee8)",
++  ]
++}
+diff --git a/build.rs b/build.rs
+index 19a215ad86c85e1067710125e71aa95161be421f..9b9c6d21f7e7c4401b67cceed826c7ff7323ba58 100644
+--- a/build.rs
++++ b/build.rs
+@@ -110,7 +110,7 @@ fn main() {
+     // cargo publish doesn't like pyc files.
+     env::set_var("PYTHONDONTWRITEBYTECODE", "1");
+ 
+-    build_v8(is_asan);
++    build_v8(is_asan, "rusty_v8");
+     build_binding();
+ 
+     return;
+@@ -171,7 +171,7 @@ fn build_binding() {
+     .expect("Couldn't write bindings!");
+ }
+ 
+-fn build_v8(is_asan: bool) {
++fn build_v8(is_asan: bool, target: &str) {
+   env::set_var("DEPOT_TOOLS_WIN_TOOLCHAIN", "0");
+ 
+   if need_gn_ninja_download() {
+@@ -333,7 +333,7 @@ fn build_v8(is_asan: bool) {
+   if env_bool("PRINT_GN_ARGS") {
+     print_gn_args(&gn_out);
+   }
+-  build("rusty_v8", None);
++  build(target, None);
+ }
+ 
+ fn print_gn_args(gn_out_dir: &Path) {

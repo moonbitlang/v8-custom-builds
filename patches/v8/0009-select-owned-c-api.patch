@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: wee8 maintenance <noreply@moonbitlang.com>
+Date: Mon, 26 Oct 2026 10:18:19 +0800
+Subject: Select the owned wee8 C adapter and native link dependencies
+
+Upstream-Status: Local adapter integration
+Maintenance: Reconcile the wee8 GN target on V8 upgrades; select exactly one adapter and preserve the consumer's CRT choice.
+Tests: GN source selection; C/C++ public headers; packaged C consumer and Rust wrapper suite on all platforms.
+
+The implementation and private declarations live under custom_wee8/src.
+The public headers live under custom_wee8/include. Upstream c-api.cc and its
+headers stay unmodified. Preserve the original wasm-c-api.patch linkage:
+configured libc++/libc++abi dependencies and Windows /Zl for consumer CRT choice.
+
+diff --git a/BUILD.gn b/BUILD.gn
+index c4049cf42ead4f5db4ea7ff5a57e0faa14a69afa..b1dbcd63c3303d3f556e6d98b25495d5116da452 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -7350,7 +7350,14 @@ if (v8_monolithic) {
+ 
+ if (v8_enable_webassembly) {
+   v8_static_library("wee8") {
++    if (is_win) {
++      # Let the consumer choose its CRT, matching rusty_v8's adapter.
++      cflags = [ "/Zl" ]
++    }
+     deps = [
++      # Include the configured C++ runtime in the complete archive, as rusty_v8 does.
++      # Static libraries do not receive these final-link dependencies automatically.
++      "//build/config:shared_library_deps",
+       ":v8_base",
+       ":v8_libbase",
+       ":v8_libplatform",
+@@ -7366,13 +7373,25 @@ if (v8_enable_webassembly) {
+ 
+     configs = [ ":internal_config" ]
+ 
+-    sources = [
+-      ### gcmole(all) ###
+-      "src/wasm/c-api.cc",
+-      "src/wasm/c-api.h",
+-      "third_party/wasm-api/wasm.h",
+-      "third_party/wasm-api/wasm.hh",
+-    ]
++    if (v8_custom_wee8) {
++      # This adapter owns its C ABI and private C++ handle declarations.
++      # Keep upstream's implementation and headers intact for ordinary wee8.
++      sources = [
++        "//custom_wee8/src/c-api.cc",
++        "//custom_wee8/src/c-api.h",
++        "//custom_wee8/src/wasm.hh",
++        "//custom_wee8/include/wasm.h",
++        "//custom_wee8/include/wee8.h",
++      ]
++    } else {
++      sources = [
++        ### gcmole(all) ###
++        "src/wasm/c-api.cc",
++        "src/wasm/c-api.h",
++        "third_party/wasm-api/wasm.h",
++        "third_party/wasm-api/wasm.hh",
++      ]
++    }
+   }
+ }
+ 
