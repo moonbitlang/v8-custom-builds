@@ -72,6 +72,16 @@ thread-spawning or shared-memory interface. Multiple guest memories are allowed;
 The Rust call interface supports scalar numbers and either externref nullability, with
 at most one result; callable `funcref` handles are not exposed yet.
 
+For repeated calls, resolve `instance.get_func("run")` once. The returned `Func`
+borrows the instance, caches its signature, and checks dynamic `Value` arguments
+on every call. `Instance::call` shares that signature cache while retaining its
+name-based interface. For numeric signatures, `function.typed::<(i32, i64), i32>()`
+checks the signature once and uses stack storage for arguments and the result.
+Numeric scalars, tuples of up to eight scalars, and `()` are supported; results
+remain limited to one scalar or `()`. Reference calls keep the dynamic interface.
+All paths preserve store reentry and memory-borrow guards. The instance caches
+its memory object, while host borrows query its current backing address.
+
 `Store::as_context` and `Caller::as_context` provide the same borrowed
 `StoreContext` interface for host data and reference creation. Shared host code
 can take a context and call `ExternRef::new(context, value)` from either place.

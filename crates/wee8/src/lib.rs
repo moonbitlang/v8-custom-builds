@@ -49,6 +49,8 @@
 //! module.instantiate(&[]).unwrap();
 //! ```
 
+mod calls;
+pub use calls::{Func, TypedFunc, WasmParams, WasmResult};
 mod memory;
 pub use memory::{Memory, MemoryType};
 mod exceptions;
@@ -59,7 +61,7 @@ pub use references::ExternRef;
 mod strings;
 mod types;
 use std::{
-    cell::{Cell, RefCell},
+    cell::{Cell, OnceCell, RefCell},
     ffi::c_void,
     panic::{AssertUnwindSafe, catch_unwind},
     ptr::{self, NonNull},
@@ -1054,7 +1056,7 @@ impl<'store, T> Module<'store, T> {
                 data: ptr::null_mut(),
             };
             ffi::wasm_module_exports(self.raw.as_ptr(), &mut types);
-            let names = (0..types.size)
+            let names: Vec<Vec<u8>> = (0..types.size)
                 .map(|index| {
                     let name = &*ffi::wasm_exporttype_name(*types.data.add(index));
                     if name.size == 0 {
@@ -1065,10 +1067,21 @@ impl<'store, T> Module<'store, T> {
                 })
                 .collect();
             ffi::wasm_exporttype_vec_delete(&mut types);
+            // Export handles own the roots. Cache the memory object, whose data
+            // address is queried afresh for each host borrow after memory.grow.
+            let memory = names
+                .iter()
+                .position(|name| name == b"memory")
+                .filter(|&index| index < exports.size)
+                .map(|index| ffi::wasm_extern_as_memory(*exports.data.add(index)))
+                .unwrap_or(ptr::null_mut());
+            let functions = (0..names.len()).map(|_| OnceCell::new()).collect();
             Ok(Instance {
                 raw,
                 exports,
                 names,
+                memory,
+                functions,
                 store: self.store,
             })
         }
@@ -1080,6 +1093,8 @@ pub struct Instance<'store, T> {
     raw: NonNull<ffi::wasm_instance_t>,
     exports: ffi::wasm_extern_vec_t,
     names: Vec<Vec<u8>>,
+    memory: *mut ffi::wasm_memory_t,
+    functions: Vec<OnceCell<calls::Signature>>,
     store: &'store Store<T>,
 }
 
@@ -1113,72 +1128,7 @@ impl<'store, T> Instance<'store, T> {
     /// Call an exported function with numeric or externref arguments and at most
     /// one result. Guest traps and host callback failures remain distinct errors.
     pub fn call(&mut self, name: &str, args: &[Value<'_>]) -> Result<Vec<Value<'store>>> {
-        let _execution = self.store.state.inner.enter()?;
-        for value in args {
-            value.check_store(&self.store.state.inner)?;
-        }
-        unsafe {
-            let func = ffi::wasm_extern_as_func(self.export(name)?);
-            if func.is_null() {
-                return Err("export is not a function".into());
-            }
-            let ty = ffi::wasm_func_type(func);
-            if ty.is_null() {
-                return Err("failed to inspect function signature".into());
-            }
-            let params = &*ffi::wasm_functype_params(ty);
-            let returns = &*ffi::wasm_functype_results(ty);
-            if returns.size > 1 {
-                ffi::wasm_functype_delete(ty);
-                return Err("wee8 calls support at most one return value".into());
-            }
-            let signature_valid = params.size == args.len()
-                && args.iter().enumerate().all(|(i, v)| {
-                    ValType::from_type(*params.data.add(i)).is_ok_and(|ty| v.matches_ty(&ty))
-                });
-            let result_types = (0..returns.size)
-                .map(|i| ValType::from_type(*returns.data.add(i)))
-                .collect::<Result<Vec<_>>>();
-            ffi::wasm_functype_delete(ty);
-            if !signature_valid {
-                return Err("argument signature mismatch".into());
-            }
-            let result_types = result_types?;
-            let mut args_raw = RawValues(args.iter().map(|v| v.raw()).collect());
-            let mut result_raw = RawValues(
-                result_types
-                    .iter()
-                    .map(|ty| ffi::wasm_val_t {
-                        kind: ty.raw_kind(),
-                        of: ffi::wasm_val_t__bindgen_ty_1 { i64_: 0 },
-                    })
-                    .collect(),
-            );
-            let args = ffi::wasm_val_vec_t {
-                size: args_raw.0.len(),
-                data: args_raw.0.as_mut_ptr(),
-            };
-            let mut results = ffi::wasm_val_vec_t {
-                size: result_raw.0.len(),
-                data: result_raw.0.as_mut_ptr(),
-            };
-            let memory = self
-                .names
-                .iter()
-                .position(|name| name == b"memory")
-                .map(|index| ffi::wasm_extern_as_memory(*self.exports.data.add(index)))
-                .unwrap_or(ptr::null_mut());
-            self.store.state.inner.memory.set(memory);
-            let trap = ffi::wasm_func_call(func, &args, &mut results);
-            if !trap.is_null() {
-                return Err(self.store.take_trap(trap));
-            }
-            result_raw
-                .0
-                .iter()
-                .map(|v| Value::from_raw(v, &self.store.state.inner))
-                .collect()
-        }
+        self.get_func(name)?.call(args)
     }
 }
 
