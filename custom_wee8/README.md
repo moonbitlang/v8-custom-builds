@@ -27,14 +27,23 @@ snapshot together. The producer does not rewrite archives after compilation.
 The native context creates function/object maps for callbacks, private array and
 buffer maps for results, stacks and Wasm memory, a WeakMap map for host-info
 finalization, errors/CallSite diagnostics, factory caches and serializer state.
-It installs no JS library globals. Unallocated optional context slots remain
-undefined and unsupported.
+It also creates the private Wasm allocation constructors and exception-package
+layout used by V8 factories, without the JavaScript `WebAssembly` namespace or
+its prototype methods. Unallocated optional context slots remain undefined and
+unsupported.
+
+`wasm-context-bootstrap.inc` owns this initialization path. V8's existing
+`mksnapshot` serializes its heap and regenerates the matching builtin blob; each
+store restores that context through the ordinary deserializer. The context layout
+and snapshot format stay upstream-compatible. After restoration, the initializer
+refreshes JSTag's canonical type ID in the running engine, as upstream does.
+Snapshot generation and restoration are not reimplemented.
 
 | Selection | Retained | Rationale |
 | --- | ---: | --- |
 | C++ builtins | 33 of 488 | Native function-template entry, core sentinels and Error/CallSite diagnostics |
 | Canonical runtimes | 144 of 619 | Declared Wasm helpers; shared allocation, interrupts, errors, primitive conversion, diagnostics and host-info ownership |
-| Generated JS entries (TFJ) | 120 of 432 | Native entry/coercion, primitives, conservative sequence/Math/DataView fallbacks and Wasm wrappers/imported strings |
+| Generated JS entries (TFJ) | 63 of 432 | Native entry/coercion, primitives, sequence fallbacks and Wasm wrappers/imported strings |
 
 The lists are the selection mechanism. The reviewed `tests/*-inventory.tsv` files
 record names, kinds, signatures and decisions so upstream changes require review.
@@ -52,11 +61,13 @@ objects. They never alias everything to `Illegal`. Blob offsets and sizes can
 change when regenerated; retained metadata does not preserve omitted API behavior.
 
 Date, Promise, Temporal, collection, JSON and other unselected APIs are unsupported.
-Retained sequence/Math/DataView bodies are conservative allowances for shared Wasm
-machinery, not usable public JS APIs. `WasmJs::PrepareForSnapshot` and Wasm
-registration still use upstream machinery. Other generated kinds
-(TFC/TFS/TFH/ASM/BCH) retain their bodies. Source exclusion, bytecode-handler removal
-and a smaller Wasm registration layer remain separate work.
+Retained sequence bodies are conservative allowances for shared Wasm machinery.
+Math/DataView JS entrypoints are omitted: C API host imports use V8's Wasm-to-C
+call path, not its recognized JavaScript-builtin import path. Wasm numeric
+instructions, loads/stores and native JS-string builtins keep their own
+implementations. Other generated kinds (TFC/TFS/TFH/ASM/BCH) retain their bodies.
+The external-reference table still retains JavaScript Wasm callbacks; pruning
+those references and their source is separate work.
 
 ## Wasm feature policy
 
@@ -131,12 +142,12 @@ python3 custom_wee8/tests/check.py target/native-checks/<target>
 
 | Check | Contract |
 | --- | --- |
-| `wee8-runtime-check` | Snapshot initialization, empty globals, script/module/function/streaming rejection, direct asm.js rejection and RegExp API rejection |
+| `wee8-runtime-check` | Snapshot restoration without a private JavaScript WebAssembly API, empty globals, script/module/function/streaming rejection, direct asm.js rejection and RegExp API rejection |
 | Catalogs vs inventories | Every CPP/TFJ selection and descriptor signature; canonical runtime argument/result metadata |
 | `cpp-entry-contract` | Actual CPP metadata and external-reference slots agree and retain distinct entry addresses |
 | `runtime-entry-contract` | Actual canonical/inline tables, distinct addresses and pair-return conventions |
 | `generated-builtin-contract` | Deserialized builtin identities, code kind and argument count; every omitted TFJ body and CPP adaptor traps |
-| `runtime-boundaries` guests | Table operations, bulk memory, guest exceptions, GC roots across native collection, allocation pressure, interrupts, serialization and shared-memory atomics/growth |
+| `runtime-boundaries` guests | Numeric rounding, signed zero, floating-point loads/stores, table operations, bulk memory, guest exceptions, GC roots across native collection, allocation pressure, interrupts, serialization and shared-memory atomics/growth |
 | `store-lifetimes` | Fresh-store teardown releases foreground task runners; repeated deserialization keeps singleton and recursive-group canonical storage bounded |
 
 Unsupported invocations run in isolated processes and must reach the named entry
