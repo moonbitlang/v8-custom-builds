@@ -232,6 +232,22 @@ serialization, mixed host/native imports, guest traps, exception payloads and
 store ownership. The packaged C consumer additionally forces collection while
 a callback retains its string argument and exercises global/table transport.
 
+### Deferred limitation: directly re-exported builtins
+
+Calling a directly re-exported `wasm:js-string` import from the host is unsupported.
+For example, importing `test` and exporting that same function can validate and
+instantiate successfully, but calling the export reaches an inherited
+`UNIMPLEMENTED()` branch in the V8 C adapter and aborts the process instead of
+returning a trap. Exporting a defined Wasm function that calls the builtin works.
+The equivalent direct call through rusty_v8 also works; this is a wee8 interface
+limitation.
+
+Repair is deferred because Moonrun invokes compiler-defined Wasm entrypoints and
+test drivers, rather than directly re-exported native builtins. Revisit this
+before an embedder relies on that call path. A repair needs native adapter
+regression coverage and a matching archive release; changing the Rust wrapper
+alone does not complete the native call path.
+
 ### Native stack boundaries and exception frames
 
 `unsafe Store::set_stack_limit(address)` sets a per-store native stack boundary
