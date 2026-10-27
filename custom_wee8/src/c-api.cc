@@ -32,6 +32,7 @@
 #include "src/api/api-inl.h"
 #include "src/builtins/builtins.h"
 #include "src/compiler/wasm-compiler.h"
+#include "src/execution/interrupts-scope.h"
 #include "src/flags/flags.h"
 #include "src/init/v8.h"
 #include "src/objects/call-site-info-inl.h"
@@ -486,6 +487,11 @@ auto Engine::make(own<Config>&& config) -> own<Engine> {
 // points that heap-allocate but don't call into generated code.
 // For example, finalization of incremental marking is relying on it.
 void CheckAndHandleInterrupts(i::Isolate* isolate) {
+  // These API entries allocate but do not execute Wasm. Service GC and other
+  // housekeeping without consuming termination into a discarded exception.
+  // V8 restores the request on scope exit; the next guest entry handles it.
+  i::PostponeInterruptsScope postpone_termination(
+      isolate, i::StackGuard::TERMINATE_EXECUTION);
   i::StackLimitCheck check(isolate);
   if (check.InterruptRequested()) {
     isolate->stack_guard()->HandleInterrupts();
@@ -495,6 +501,10 @@ void CheckAndHandleInterrupts(i::Isolate* isolate) {
 // Stores
 
 StoreImpl::~StoreImpl() {
+  {
+    std::lock_guard<std::mutex> lock(interrupt_->mutex);
+    interrupt_->isolate = nullptr;
+  }
   {
 #ifdef DEBUG
     i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate_);
@@ -577,6 +587,7 @@ auto Store::make(Engine*) -> own<Store> {
   v8::Isolate* isolate = v8::Isolate::New(store->create_params_);
   if (!isolate) return own<Store>();
   store->isolate_ = isolate;
+  store->interrupt_->isolate = isolate;
   isolate->SetData(0, store.get());
   // We intentionally do not call isolate->Enter() here, because that would
   // prevent embedders from using stores with overlapping but non-nested
@@ -1201,6 +1212,16 @@ auto Trap::make(Store* store_abs, const Message& message) -> own<Trap> {
                            isolate->factory()->wasm_uncatchable_symbol(),
                            isolate->factory()->true_value(), i::NONE);
   return implement<Trap>::type::make(store, exception);
+}
+
+i::Handle<i::JSReceiver> StoreImpl::TerminationException() {
+  if (termination_exception_.is_null()) {
+    auto trap = Trap::make(seal<Store>(this), Name::make(std::string(
+        "execution terminated")));
+    termination_exception_ = i_isolate()->global_handles()->Create(
+        *impl(trap.get())->v8_object());
+  }
+  return termination_exception_;
 }
 
 auto Trap::message() const -> Message {
@@ -1949,9 +1970,9 @@ i::Handle<i::JSReceiver> GetProperException(
     return i::Cast<i::JSReceiver>(maybe_exception);
   }
   if (v8::internal::IsTerminationException(*maybe_exception)) {
-    i::DirectHandle<i::String> string =
-        isolate->factory()->NewStringFromAsciiChecked("TerminationException");
-    return isolate->factory()->NewError(isolate->error_function(), string);
+    // Preserve a distinguishable, uncatchable trap at the C boundary. The root
+    // belongs to this store, and copies retain the same identity.
+    return StoreImpl::get(isolate)->TerminationException();
   }
   i::MaybeHandle<i::String> maybe_string =
       i::Object::ToString(isolate, maybe_exception);
@@ -2708,7 +2729,11 @@ own<Instance> Instance::make(Store* store_abs, const Module* module_abs,
           isolate, &thrower, module->v8_object(), imports_obj,
           i::MaybeHandle<i::JSArrayBuffer>());
   if (trap) {
-    if (thrower.error()) {
+    if (catcher.HasTerminated()) {
+      isolate->clear_exception();
+      *trap = implement<Trap>::type::make(store, store->TerminationException());
+      return own<Instance>();
+    } else if (thrower.error()) {
       *trap = implement<Trap>::type::make(
           store, GetProperException(isolate, thrower.Reify()));
       DCHECK(!thrower.error());                   // Reify() called Reset().
@@ -2798,6 +2823,25 @@ auto Instance::exports() const -> ownvec<Extern> {
 }  // namespace wasm
 
 // BEGIN FILE wasm-c.cc
+
+struct wee8_interrupt_t {
+  std::shared_ptr<wasm::StoreInterrupt> state;
+};
+
+// These roots move with GC; the current entry target is read from function data
+// on each invocation so tiering never leaves a cached code pointer behind.
+struct wee8_numeric_func_t {
+  wasm::StoreImpl* store;
+  v8::internal::Handle<v8::internal::WasmExportedFunctionData> data;
+  v8::internal::Handle<v8::internal::Code> wrapper;
+  v8::internal::Handle<v8::internal::Object> implicit_arg;
+
+  ~wee8_numeric_func_t() {
+    v8::internal::GlobalHandles::Destroy(data.location());
+    v8::internal::GlobalHandles::Destroy(wrapper.location());
+    v8::internal::GlobalHandles::Destroy(implicit_arg.location());
+  }
+};
 
 extern "C" {
 
@@ -3013,6 +3057,34 @@ WASM_DEFINE_OWN(store, wasm::Store)
 
 wasm_store_t* wasm_store_new(wasm_engine_t* engine) {
   return release_store(wasm::Store::make(engine));
+}
+
+wee8_interrupt_t* wee8_store_interrupt_handle(wasm_store_t* store) {
+  return new wee8_interrupt_t{wasm::impl(reveal_store(store))->interrupt()};
+}
+
+void wee8_interrupt_delete(wee8_interrupt_t* handle) { delete handle; }
+
+bool wee8_interrupt_terminate(const wee8_interrupt_t* handle) {
+  std::lock_guard<std::mutex> lock(handle->state->mutex);
+  auto isolate = handle->state->isolate;
+  if (!isolate) return false;
+  isolate->TerminateExecution();
+  return true;
+}
+
+bool wee8_interrupt_cancel(const wee8_interrupt_t* handle) {
+  std::lock_guard<std::mutex> lock(handle->state->mutex);
+  auto isolate = handle->state->isolate;
+  if (!isolate) return false;
+  isolate->CancelTerminateExecution();
+  return true;
+}
+
+bool wee8_interrupt_is_terminating(const wee8_interrupt_t* handle) {
+  std::lock_guard<std::mutex> lock(handle->state->mutex);
+  auto isolate = handle->state->isolate;
+  return isolate && isolate->IsExecutionTerminating();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3711,6 +3783,70 @@ wasm_trap_t* wasm_func_call(const wasm_func_t* func,
   }
   return release_trap(
       func->call(reveal_val_vec(args->data), reveal_val_vec(results->data)));
+}
+
+wee8_numeric_func_t* wee8_func_prepare_numeric(const wasm_func_t* func) {
+  namespace i = v8::internal;
+  auto function = wasm::impl(reveal_func(func));
+  auto store = function->store();
+  auto isolate = store->i_isolate();
+  v8::Isolate::Scope isolate_scope(store->isolate());
+  i::HandleScope scope(isolate);
+  auto raw = function->v8_object()->shared()->GetTrustedData(isolate);
+  if (!IsWasmExportedFunctionData(raw)) return nullptr;
+  i::DirectHandle<i::WasmExportedFunctionData> data(
+      i::Cast<i::WasmExportedFunctionData>(raw), isolate);
+  i::DirectHandle<i::WasmTrustedInstanceData> instance(data->instance_data(), isolate);
+  int index = data->function_index();
+  auto module = instance->module();
+  auto sig = module->functions[index].sig;
+  if (sig->parameter_count() > 8 || sig->return_count() > 1) return nullptr;
+  for (auto type : sig->all()) {
+    if (type != i::wasm::kWasmI32 && type != i::wasm::kWasmI64 &&
+        type != i::wasm::kWasmF32 && type != i::wasm::kWasmF64)
+      return nullptr;
+  }
+  i::Handle<i::Object> implicit_arg;
+  if (index < static_cast<int>(module->num_imported_functions)) {
+    implicit_arg = i::handle(
+        instance->dispatch_table_for_imports()->implicit_arg(index), isolate);
+    // Direct C callbacks still use their existing argument conversion. Avoid
+    // sending an imported JS/C callable through the Wasm entry wrapper.
+    if (IsWasmImportData(*implicit_arg)) return nullptr;
+  } else {
+    if (!instance->has_instance_object()) return nullptr;
+    implicit_arg = i::handle(instance->instance_object(), isolate);
+  }
+  if (!wasm::PrepareFunctionData(isolate, data, sig, module)) return nullptr;
+  return new wee8_numeric_func_t{
+      store, isolate->global_handles()->Create(*data),
+      isolate->global_handles()->Create(data->c_wrapper_code(isolate)),
+      isolate->global_handles()->Create(*implicit_arg)};
+}
+
+void wee8_numeric_func_delete(wee8_numeric_func_t* function) { delete function; }
+
+wasm_trap_t* wee8_numeric_func_call(const wee8_numeric_func_t* function,
+                                   void* args_and_result) {
+  namespace i = v8::internal;
+  auto store = function->store;
+  auto isolate = store->i_isolate();
+  v8::Isolate::Scope isolate_scope(store->isolate());
+  i::HandleScope scope(isolate);
+  i::Execution::CallWasm(isolate, function->wrapper,
+      function->data->internal()->call_target(), function->implicit_arg,
+      reinterpret_cast<i::Address>(args_and_result));
+  if (!isolate->has_exception()) return nullptr;
+  i::Handle<i::Object> exception(isolate->exception(), isolate);
+  isolate->clear_exception();
+  return release_trap(wasm::implement<wasm::Trap>::type::make(
+      store, wasm::GetProperException(isolate, exception)));
+}
+
+bool wee8_trap_is_termination(const wasm_trap_t* trap) {
+  auto value = wasm::impl(reveal_trap(trap));
+  wasm::PtrComprCageAccessScope scope(value->isolate());
+  return value->store()->IsTerminationException(*value->v8_object());
 }
 
 // Global Instances

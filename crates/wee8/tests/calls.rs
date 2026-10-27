@@ -51,6 +51,9 @@ fn function_resolution_preserves_pending_exceptions() {
     ] {
         assert!(matches!(throw.call(()), Err(Error::ThrownException)));
         assert_eq!(instance.get_func(name).is_ok(), succeeds);
+        if name == "ok" {
+            instance.get_func(name).unwrap().typed::<(), i32>().unwrap();
+        }
         let exception = store
             .take_exception()
             .unwrap_or_else(|| panic!("resolving {name} discarded the pending exception"));
@@ -308,4 +311,117 @@ fn typed_calls_recover_from_host_errors_and_bad_callback_results() {
         assert!(matches!(run.call(value), Err(Error::Host(_))));
         assert_eq!(run.call(42).unwrap(), 42);
     }
+}
+
+#[test]
+fn prepared_numeric_calls_preserve_mixed_width_bits() {
+    let store = Store::new(()).unwrap();
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+      (func (export "mix") (param i32 i64 f32 f64 i32 i64 f32 f64) (result i64)
+        local.get 0 i64.extend_i32_u
+        local.get 1 i64.xor
+        local.get 2 i32.reinterpret_f32 i64.extend_i32_u i64.xor
+        local.get 3 i64.reinterpret_f64 i64.xor
+        local.get 4 i64.extend_i32_u i64.xor
+        local.get 5 i64.xor
+        local.get 6 i32.reinterpret_f32 i64.extend_i32_u i64.xor
+        local.get 7 i64.reinterpret_f64 i64.xor))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let instance = module.instantiate(&[]).unwrap();
+    let function = instance.get_func("mix").unwrap();
+    let typed = function
+        .typed::<(i32, i64, f32, f64, i32, i64, f32, f64), i64>()
+        .unwrap();
+    // Include high bits, NaN payloads, signed zero and deliberately unaligned
+    // 64-bit values. Each parameter contributes to the result.
+    for n in 0..1000_i32 {
+        let args = (
+            i32::MIN + n,
+            i64::MIN + i64::from(n),
+            f32::from_bits(0x7fc0_1234),
+            -0.0_f64,
+            -n,
+            i64::MAX - i64::from(n),
+            -0.0_f32,
+            f64::from_bits(0x7ff8_0000_0000_1234),
+        );
+        let expected = i64::from(args.0 as u32)
+            ^ args.1
+            ^ i64::from(args.2.to_bits())
+            ^ args.3.to_bits() as i64
+            ^ i64::from(args.4 as u32)
+            ^ args.5
+            ^ i64::from(args.6.to_bits())
+            ^ args.7.to_bits() as i64;
+        assert_eq!(typed.call(args).unwrap(), expected);
+        assert_eq!(
+            function
+                .call(&[
+                    Value::I32(args.0),
+                    Value::I64(args.1),
+                    Value::F32(args.2),
+                    Value::F64(args.3),
+                    Value::I32(args.4),
+                    Value::I64(args.5),
+                    Value::F32(args.6),
+                    Value::F64(args.7)
+                ])
+                .unwrap(),
+            [Value::I64(expected)]
+        );
+    }
+}
+
+#[test]
+fn typed_reexports_keep_wasm_and_host_targets_alive() {
+    let store = Store::new(()).unwrap();
+    let consumer = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+      (import "p" "run" (func $run (param i32) (result i32)))
+      (export "run" (func $run)))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let linked = {
+        let producer = store
+            .compile(
+                &wat::parse_str(
+                    r#"(module
+          (func (export "run") (param i32) (result i32)
+            local.get 0 i32.const 1 i32.add))"#,
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        let instance = producer.instantiate(&[]).unwrap();
+        let export = instance.get_export("run").unwrap();
+        consumer
+            .instantiate_with_imports(&[Extern::Export(&export)])
+            .unwrap()
+    };
+    let run = linked.get_func("run").unwrap().typed::<i32, i32>().unwrap();
+    assert_eq!(run.call(41).unwrap(), 42);
+    let direct = {
+        let host = store
+            .host_func(&[ValType::I32], &[ValType::I32], |_, args| match args {
+                [Value::I32(n)] if *n >= 0 => Ok(vec![Value::I32(*n + 1)]),
+                _ => Err("negative input".into()),
+            })
+            .unwrap();
+        consumer.instantiate(&[&host]).unwrap()
+    };
+    let host = direct.get_func("run").unwrap().typed::<i32, i32>().unwrap();
+    assert_eq!(host.call(41).unwrap(), 42);
+    assert!(matches!(host.call(-1), Err(Error::Host(_))));
+    assert_eq!(host.call(41).unwrap(), 42);
+    assert_eq!(run.call(41).unwrap(), 42);
 }

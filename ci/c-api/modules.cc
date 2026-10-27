@@ -39,6 +39,7 @@ extern "C" void wee8_module_probe(wasm_store_t* store, const uint8_t* bytes,
 
   wasm_func_t* vector = wasm_extern_as_func(exports.data[0]);
   assert(!wasm_func_type(vector));
+  assert(!wee8_func_prepare_numeric(vector));
   assert(!wasm_global_type(wasm_extern_as_global(exports.data[1])));
   assert(!wasm_tag_type(wasm_extern_as_tag(exports.data[2])));
   wasm_memory_t* memory = wasm_extern_as_memory(exports.data[3]);
@@ -55,9 +56,22 @@ extern "C" void wee8_module_probe(wasm_store_t* store, const uint8_t* bytes,
   wasm_module_exports(module, &types);
   assert(types.size == 0 && !types.data);
   wasm_exporttype_vec_delete(&types);
+  auto prepared = wee8_func_prepare_numeric(wasm_extern_as_func(exports.data[4]));
+  assert(prepared);
+  auto interrupt = wee8_store_interrupt_handle(store);
+  assert(interrupt && !wee8_interrupt_is_terminating(interrupt));
+  assert(wee8_interrupt_cancel(interrupt));
+  wee8_interrupt_delete(interrupt);
   wasm_extern_vec_delete(&exports);
   wasm_instance_delete(instance);
   wasm_module_delete(module);
+  // The prepared plan owns roots independently of the source export vector.
+  uint8_t packed[64] = {};
+  assert(!wee8_numeric_func_call(prepared, packed));
+  int32_t numeric_result;
+  std::memcpy(&numeric_result, packed, sizeof(numeric_result));
+  assert(numeric_result == 42);
+  wee8_numeric_func_delete(prepared);
 
   binary = {invalid_len, reinterpret_cast<char*>(const_cast<uint8_t*>(invalid))};
   assert(!wee8_module_new_with_error(store, &binary, nullptr, &error));

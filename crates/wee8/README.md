@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and two headers
-from `v0.106.0-moonbit.6`. It verifies the release SHA-256 manifest and separately
+from `v0.106.0-moonbit.7`. It verifies the release SHA-256 manifest and separately
 pinned header hashes, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
@@ -49,7 +49,7 @@ This permits Wasm-to-Wasm linking without marshalling values through Rust.
 The Rust revision and native release are pinned together. Only that native API
 is supported: mismatched headers fail the build, and required symbols prevent
 linking an older archive. There is no older-release validator or parser fallback.
-The `.6` pin requires publication of the matching native artifacts; until then,
+The `.7` pin requires publication of the matching native artifacts; until then,
 validation uses the produced CI archives through the paired overrides above.
 
 The source of this policy is V8's
@@ -295,3 +295,29 @@ uses the standard C API trap-construction trace without throwing or changing a
 pending exception. Exception tracing keeps its existing behavior. These APIs use
 the pinned native archive, including its handling of traces containing native
 JS-string builtin frames.
+
+## Termination and prepared numeric calls
+
+`Store::interrupt_handle()` returns a cloneable `Send + Sync` control handle.
+Move it to a watchdog thread and call `terminate_execution()` to interrupt Wasm,
+including a loop that never calls the host. Calls and start functions report
+`Error::Terminated`; Wasm cannot catch termination as a tag exception. Let the
+call unwind before reusing the store. `cancel_terminate_execution()` cancels V8's
+termination request/state. A racing cancellation can let execution continue.
+`is_execution_terminating()` reports current V8 state, not request history.
+All methods return false after store destruction, and the handle does not retain
+the store. A blocking host callback still needs host-side cancellation.
+
+This follows ordinary V8's `TerminateExecution` / `CancelTerminateExecution`
+mechanism, with disposal synchronization like rusty_v8's `IsolateHandle`. Other
+store handles remain confined to their creating thread. No per-loop polling is
+added by the wrapper.
+
+Typed numeric Wasm exports now prepare V8's existing C-to-Wasm wrapper once.
+Rust writes the checked numeric arguments directly into its native packed buffer;
+the repeated call skips arity/type scans and general C value conversion. The
+prepared plan roots movable V8 objects and reads the current code target at each
+call, preserving GC and tiering. Direct host-function exports retain the existing
+callback conversion path. Dynamic/reference calls are unchanged. Both paths keep
+the same memory-borrow and re-entry guards, callback memory selection and error
+handling. These changes require `.7`; `.6` does not provide the new native symbols.

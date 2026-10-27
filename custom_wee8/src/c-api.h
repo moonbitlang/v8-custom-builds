@@ -11,6 +11,9 @@
 #ifndef V8_WASM_C_API_H_
 #define V8_WASM_C_API_H_
 
+#include <memory>
+#include <mutex>
+
 #include "include/v8-isolate.h"
 #include "include/v8-local-handle.h"
 #include "src/common/globals.h"
@@ -26,6 +29,13 @@ class JSWeakMap;
 }  // namespace v8
 
 namespace wasm {
+
+// Only this control block crosses threads. Disposal clears the pointer while
+// holding the same lock used by interrupt requests; handles do not retain V8.
+struct StoreInterrupt {
+  std::mutex mutex;
+  v8::Isolate* isolate = nullptr;
+};
 
 class StoreImpl {
  public:
@@ -47,6 +57,13 @@ class StoreImpl {
                    void (*finalizer)(void*));
   void* GetHostInfo(i::Handle<i::Object> key);
 
+  std::shared_ptr<StoreInterrupt> interrupt() const { return interrupt_; }
+  i::Handle<i::JSReceiver> TerminationException();
+  bool IsTerminationException(i::Tagged<i::Object> exception) const {
+    return !termination_exception_.is_null() &&
+           *termination_exception_ == exception;
+  }
+
  private:
   friend own<Store> Store::make(Engine*);
 
@@ -56,6 +73,8 @@ class StoreImpl {
   v8::Isolate* isolate_ = nullptr;
   v8::Eternal<v8::Context> context_;
   i::Handle<i::JSWeakMap> host_info_map_;
+  std::shared_ptr<StoreInterrupt> interrupt_ = std::make_shared<StoreInterrupt>();
+  i::Handle<i::JSReceiver> termination_exception_;
 };
 
 }  // namespace wasm

@@ -119,6 +119,17 @@ Changes must preserve these invariants:
   representation is not an engine feature policy. In particular, V8's JS API
   accepts vector signatures and rejects incompatible JS calls at invocation;
   the C/Rust boundary must likewise avoid rejecting an otherwise valid module.
+- Cross-thread termination uses V8's own interrupt state. The control handle
+  synchronizes isolate access with disposal and must not keep a store alive.
+  Never expose other store operations through it. Termination must remain
+  distinguishable from normal traps and catchable Wasm exceptions, including
+  start functions. Compare lifetime rules with rusty_v8's `IsolateHandle` and
+  termination behavior with V8's ordinary `TerminateExecution` path.
+- Prepared numeric calls use `Execution::CallWasm` and `CompileCWasmEntry`, just
+  like the general C API. Keep roots for movable objects, never cached code
+  addresses. Reconcile the packed representation with `CWasmArgumentsPacker`
+  on upgrades. The Rust sealed numeric traits establish the signature once;
+  store checks, memory borrows, re-entry rejection and trap handling still apply.
 - Standard `wasm.h` stays unmodified. Additive declarations belong in `wee8.h`.
   Changing declarations alone cannot enable functionality in an older archive.
 

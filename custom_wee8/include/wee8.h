@@ -60,7 +60,6 @@ typedef struct wee8_compile_options_t {
 // Query after engine initialization. When true, successful wasm_module_new and
 // wee8_module_new have validated every function body, including lazy/uncalled
 // functions. V8 flag configuration must not change after engine initialization.
-// Older archives without this query require the embedder's validation fallback.
 WASM_API_EXTERN bool wee8_module_validation_is_eager(void);
 WASM_API_EXTERN bool wee8_module_validate(
   wasm_store_t*, const wasm_byte_vec_t*, const wee8_compile_options_t*);
@@ -97,6 +96,40 @@ WASM_API_EXTERN wasm_module_t* wee8_module_deserialize(
 // wasm_module_imports returns only imports the host must supply. This predicate
 // lets validators distinguish native builtins without duplicating V8's catalog.
 WASM_API_EXTERN bool wee8_module_import_is_builtin(const wasm_module_t*, size_t index);
+
+// An interrupt handle may outlive its store without retaining it. Create on the
+// store thread; thereafter terminate/cancel/query may run on any thread. The
+// caller must retain the handle until all concurrent operations finish. These
+// delegate to V8, do not interrupt a blocking host callback, and do not make
+// other store operations thread-safe. terminate/cancel return false after store
+// destruction. Query reports V8's current termination state, not request history.
+typedef struct wee8_interrupt_t wee8_interrupt_t;
+WASM_API_EXTERN wee8_interrupt_t* wee8_store_interrupt_handle(wasm_store_t*);
+WASM_API_EXTERN void wee8_interrupt_delete(wee8_interrupt_t*);
+WASM_API_EXTERN bool wee8_interrupt_terminate(const wee8_interrupt_t*);
+WASM_API_EXTERN bool wee8_interrupt_cancel(const wee8_interrupt_t*);
+WASM_API_EXTERN bool wee8_interrupt_is_terminating(const wee8_interrupt_t*);
+// Termination uses the ordinary owned trap channel, but is not a guest exception.
+WASM_API_EXTERN bool wee8_trap_is_termination(const wasm_trap_t*);
+
+// Prepare the ordinary V8 C-to-Wasm entry for up to eight numeric parameters and
+// one numeric result (i32/i64/f32/f64). Returns NULL for other signatures or direct
+// host functions; those retain wasm_func_call. Preparation may allocate/GC but
+// cannot execute guest code. The owned plan roots the target, belongs to its store
+// thread and must be deleted before the store. No raw code address is cached.
+typedef struct wee8_numeric_func_t wee8_numeric_func_t;
+WASM_API_EXTERN wee8_numeric_func_t* wee8_func_prepare_numeric(const wasm_func_t*);
+WASM_API_EXTERN void wee8_numeric_func_delete(wee8_numeric_func_t*);
+// Unchecked numeric call: the caller must establish the function signature once,
+// then supply a writable buffer of at least 64 bytes containing parameters in
+// native endian, consecutively without padding (4 bytes for i32/f32, 8 for
+// i64/f64). Success overwrites its beginning with the result in the same layout.
+// No references may appear. Calls must obey the ordinary store, memory-borrow
+// and non-reentry rules. Errors use the normal owned trap channel; result bytes
+// are undefined on failure. This bypasses repeated arity/type scans and packing,
+// not V8's execution, GC, stack guards or exception machinery.
+WASM_API_EXTERN wasm_trap_t* wee8_numeric_func_call(
+  const wee8_numeric_func_t*, void* args_and_result);
 
 // Tag instances and exceptions are wee8 extensions, not portable wasm-c-api.
 // Handles are store-bound roots, following the other reference ownership rules.

@@ -16,16 +16,24 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-//! Export resolution owns no additional roots: function handles borrow the
-//! instance's export vector. Signatures are inspected once, on first use.
+//! Function handles borrow the instance's export vector. Signatures are inspected
+//! once; cached numeric plans own native roots released with the instance cache.
 
 use crate::{Instance, RawValues, Result, ValType, Value, ffi};
-use std::{marker::PhantomData, ptr::NonNull};
+use std::{cell::OnceCell, marker::PhantomData, ptr::NonNull};
 
 pub(super) struct Signature {
     raw: NonNull<ffi::wasm_func_t>,
     params: Vec<ValType>,
     results: Vec<ValType>,
+    numeric: OnceCell<Option<NumericFunc>>,
+}
+
+struct NumericFunc(NonNull<ffi::wee8_numeric_func_t>);
+impl Drop for NumericFunc {
+    fn drop(&mut self) {
+        unsafe { ffi::wee8_numeric_func_delete(self.0.as_ptr()) }
+    }
 }
 
 /// A resolved function borrowing its instance, and transitively its store.
@@ -91,6 +99,7 @@ impl<'store, T> Instance<'store, T> {
                             raw,
                             params,
                             results,
+                            numeric: OnceCell::new(),
                         })
                     })
                 };
@@ -169,6 +178,23 @@ impl<'instance, 'store, T> Func<'instance, 'store, T> {
         if self.params() != Params::TYPES || self.results() != Returns::TYPES {
             return Err("typed function signature mismatch".into());
         }
+        let store = &self.instance.store.state.inner;
+        if self.signature.numeric.get().is_none() {
+            if store.executing.get() {
+                return Err("cannot prepare a function during guest execution".into());
+            }
+            // Preparation can compile a wrapper and GC, but cannot enter Wasm.
+            // Preserve the pending exception just like signature introspection.
+            let _memory = store
+                .memory_access
+                .try_borrow_mut()
+                .map_err(|_| "cannot prepare a function while guest memory is borrowed")?;
+            let numeric = NonNull::new(unsafe {
+                ffi::wee8_func_prepare_numeric(self.signature.raw.as_ptr())
+            })
+            .map(NumericFunc);
+            let _ = self.signature.numeric.set(numeric);
+        }
         Ok(TypedFunc {
             function: Func {
                 instance: self.instance,
@@ -214,6 +240,26 @@ pub struct TypedFunc<'instance, 'store, T, Params, Returns> {
 impl<T, Params: WasmParams, Returns: WasmResult> TypedFunc<'_, '_, T, Params, Returns> {
     pub fn call(&self, args: Params) -> Result<Returns> {
         let _execution = self.function.instance.store.state.inner.enter()?;
+        if let Some(numeric) = self.function.signature.numeric.get().unwrap() {
+            let mut packed = [0u8; 64];
+            args.write_packed(&mut packed);
+            self.function
+                .instance
+                .store
+                .state
+                .inner
+                .memory
+                .set(self.function.instance.memory);
+            let trap = unsafe {
+                ffi::wee8_numeric_func_call(numeric.0.as_ptr(), packed.as_mut_ptr().cast())
+            };
+            if !trap.is_null() {
+                return Err(self.function.instance.store.take_trap(trap));
+            }
+            return Ok(Returns::read_packed(&packed));
+        }
+        // Direct host exports retain C callback conversion. This is a function
+        // kind distinction, not compatibility with older runtime releases.
         let mut args = args.into_raw();
         let mut results = Returns::empty();
         self.function.invoke(args.as_mut(), results.as_mut())?;
@@ -240,16 +286,20 @@ mod private {
         const TYPES: &'static [ValType];
         type Raw: AsMut<[ffi::wasm_val_t]>;
         fn into_raw(self) -> Self::Raw;
+        fn write_packed(self, buffer: &mut [u8; 64]);
     }
     pub trait Return {
         const TYPES: &'static [ValType];
         type Raw: AsMut<[ffi::wasm_val_t]>;
         fn empty() -> Self::Raw;
         unsafe fn from_raw(raw: Self::Raw) -> Self;
+        fn read_packed(buffer: &[u8; 64]) -> Self;
     }
     pub trait Scalar {
         const TYPE: ValType;
         fn into_value(self) -> ffi::wasm_val_t;
+        const SIZE: usize;
+        fn write(self, buffer: &mut [u8]);
     }
 
     impl Params for () {
@@ -258,6 +308,7 @@ mod private {
         fn into_raw(self) -> Self::Raw {
             []
         }
+        fn write_packed(self, _: &mut [u8; 64]) {}
     }
     impl Return for () {
         const TYPES: &'static [ValType] = &[];
@@ -266,12 +317,17 @@ mod private {
             []
         }
         unsafe fn from_raw(_: Self::Raw) -> Self {}
+        fn read_packed(_: &[u8; 64]) -> Self {}
     }
 
     macro_rules! scalar {
         ($rust:ty, $kind:ident, $field:ident) => {
             impl Scalar for $rust {
                 const TYPE: ValType = ValType::$kind;
+                const SIZE: usize = size_of::<Self>();
+                fn write(self, buffer: &mut [u8]) {
+                    buffer[..Self::SIZE].copy_from_slice(&self.to_ne_bytes());
+                }
                 fn into_value(self) -> ffi::wasm_val_t {
                     ffi::wasm_val_t {
                         kind: Self::TYPE.raw_kind(),
@@ -285,6 +341,9 @@ mod private {
                 fn into_raw(self) -> Self::Raw {
                     [self.into_value()]
                 }
+                fn write_packed(self, buffer: &mut [u8; 64]) {
+                    self.write(buffer);
+                }
             }
             impl Return for $rust {
                 const TYPES: &'static [ValType] = &[Self::TYPE];
@@ -294,6 +353,9 @@ mod private {
                 }
                 unsafe fn from_raw(raw: Self::Raw) -> Self {
                     unsafe { raw[0].of.$field }
+                }
+                fn read_packed(buffer: &[u8; 64]) -> Self {
+                    Self::from_ne_bytes(buffer[..Self::SIZE].try_into().unwrap())
                 }
             }
         };
@@ -309,6 +371,11 @@ mod private {
                 const TYPES: &'static [ValType] = &[$($ty::TYPE),+];
                 type Raw = [ffi::wasm_val_t; $length];
                 fn into_raw(self) -> Self::Raw { [$(self.$index.into_value()),+] }
+                fn write_packed(self, buffer: &mut [u8; 64]) {
+                    let mut rest = buffer.as_mut_slice();
+                    $(self.$index.write(rest); rest = &mut rest[$ty::SIZE..];)+
+                    let _ = rest;
+                }
             }
         }
     }
