@@ -34,6 +34,14 @@ multiple memories, threads/atomics, GC, typed function references, and
 standardized exception handling. The feature set is explicit because newer
 wasmparser defaults include proposals this engine does not implement.
 
+The Rust validator retains section/type metadata and host-boundary checks.
+Archives exposing `wee8_module_validation_is_eager` can take responsibility for
+instruction-body validation: successful native compilation must reject every
+invalid function, including unexported functions that are never called. Engine
+startup disables experimental lazy validation. Older archives, including the
+default `.5` release, retain full Rust validation. On native compilation failure,
+Rust runs its full validator to preserve detailed invalid-Wasm diagnostics.
+
 The source of this policy is V8's
 [always-enabled features](https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/src/wasm/wasm-features.h)
 and this repository's [optional-feature policy](../../custom_wee8/src/wasm-feature-policy.h).

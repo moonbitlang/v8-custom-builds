@@ -107,6 +107,10 @@ Changes must preserve these invariants:
   inspect only Wasm frames; JS-string builtin failures must remain reportable.
 - Compile options survive serialization and module reuse. Native strings remain
   V8 values; they do not become an embedder-side replacement for V8 builtins.
+- Successful module compilation validates all bodies before returning, including
+  uncalled functions. Disable experimental lazy validation at engine startup and
+  keep the capability query accurate. Rust may omit its body-validation pass only
+  when the linked archive advertises this guarantee; older archives retain it.
 - Standard `wasm.h` stays unmodified. Additive declarations belong in `wee8.h`.
   Changing declarations alone cannot enable functionality in an older archive.
 

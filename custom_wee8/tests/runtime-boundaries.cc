@@ -4,7 +4,7 @@
 #include "include/v8.h"
 #include "src/flags/flags.h"
 #include "src/wasm/module-decoder.h"
-#include "wasm.h"
+#include "wee8.h"
 #include <cassert>
 #include <cstdio>
 #include <fstream>
@@ -23,6 +23,7 @@ int main(int argc, char **argv) {
   // these before V8 applies implications, including direct decoder flag reads.
   namespace i = v8::internal;
   i::v8_flags.wasm_staging = true;
+  i::v8_flags.wasm_lazy_validation = true;
 #define REQUEST_EXCLUDED_FEATURE(name, ...)                                    \
   if (!i::wasm::kCustomWee8OptionalFeatures.contains(                          \
           i::wasm::WasmEnabledFeature::name))                                  \
@@ -32,6 +33,21 @@ int main(int argc, char **argv) {
   auto *engine = wasm_engine_new();
   assert(engine);
   assert(!i::v8_flags.wasm_staging);
+  assert(!i::v8_flags.wasm_lazy_validation);
+  assert(wee8_module_validation_is_eager());
+  {
+    // (module (func local.get 0)): no declared locals, export, or invocation.
+    // Test both compile entry points in every native compilation mode.
+    char data[] = {0,97,115,109,1,0,0,0,1,4,1,0x60,0,0,3,2,1,0,
+                   10,6,1,4,0,0x20,0,0x0b};
+    wasm_byte_vec_t invalid = {sizeof(data), data};
+    auto* store = wasm_store_new(engine);
+    assert(store);
+    assert(!wasm_module_new(store, &invalid));
+    wee8_compile_options_t options = {true, nullptr};
+    assert(!wee8_module_new(store, &invalid, &options));
+    wasm_store_delete(store);
+  }
 #define CHECK_EXCLUDED_FEATURE(name, ...)                                      \
   if (!i::wasm::kCustomWee8OptionalFeatures.contains(                          \
           i::wasm::WasmEnabledFeature::name))                                  \

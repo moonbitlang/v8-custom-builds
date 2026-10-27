@@ -25,6 +25,10 @@ bool StringCompileImports(const wee8_compile_options_t* options,
 }  // namespace
 
 extern "C" {
+bool wee8_module_validation_is_eager() {
+  return !v8::internal::v8_flags.wasm_lazy_validation;
+}
+
 bool wee8_module_validate(wasm_store_t* store, const wasm_byte_vec_t* bytes,
                           const wee8_compile_options_t* options) {
   v8::internal::wasm::CompileTimeImports imports;
