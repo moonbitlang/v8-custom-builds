@@ -232,24 +232,6 @@ fn cross_store_references_are_rejected_before_native_calls() {
 }
 
 #[test]
-#[cfg(not(wee8_native_modules))]
-fn unsupported_reference_boundary_types_are_rejected() {
-    let store = Store::new(()).unwrap();
-    for source in [
-        r#"(module (type $s (struct)) (import "h" "f" (func (param (ref null $s)))))"#,
-        r#"(module (type $s (struct)) (func (export "f") (result (ref $s)) struct.new $s))"#,
-        r#"(module (type $a (array i32)) (global (export "g") (ref null $a) (ref.null $a)))"#,
-        r#"(module (type $s (struct)) (table (export "t") 0 (ref null $s)))"#,
-    ] {
-        let error = match store.compile(&wat::parse_str(source).unwrap()) {
-            Ok(_) => panic!("accepted {source}"),
-            Err(error) => error,
-        };
-        assert!(error.to_string().contains("C API"), "{source}: {error}");
-    }
-}
-
-#[test]
 fn typed_function_references_stay_inside_the_guest() {
     let store = Store::new(()).unwrap();
     let module = store
@@ -385,19 +367,4 @@ fn nonnull_reference_extension_does_not_widen_other_external_types() {
         )
         .is_err()
     );
-    #[cfg(not(wee8_native_modules))]
-    for source in [
-        r#"(module (import "h" "tag" (tag (param (ref extern)))))"#,
-        r#"(module (import "h" "global" (global (ref extern))))"#,
-        r#"(module (import "h" "table" (table 1 (ref extern))))"#,
-    ] {
-        let error = store
-            .compile(&wat::parse_str(source).unwrap())
-            .err()
-            .unwrap();
-        assert!(
-            error.to_string().contains("unsupported in C API"),
-            "{error}"
-        );
-    }
 }

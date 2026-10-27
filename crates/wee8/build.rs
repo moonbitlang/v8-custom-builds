@@ -34,14 +34,8 @@ use std::{
     time::Duration,
 };
 
-const RELEASE: &str = "v0.106.0-moonbit.5";
+const RELEASE: &str = "v0.106.0-moonbit.6";
 const RELEASE_HEADER_SHA256: &str =
-    "b3a0da64cd613796725d56e88420e16fecd51604b87481c539deb8708f634cea";
-
-const EAGER_HEADER_SHA256: &str =
-    "b0feace8d90fbd78a267eb7d4373f70cd529eb7557a178d57857aeb296ac28d1";
-
-const NATIVE_MODULES_HEADER_SHA256: &str =
     "08f2234e526e688cb2326382943ec40d429267be9035ec311796a5bb105d215a";
 
 const WASM_HEADER_SHA256: &str = "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301";
@@ -62,31 +56,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
         }
     };
-    println!("cargo:rustc-check-cfg=cfg(wee8_eager_validation)");
-    println!("cargo:rustc-check-cfg=cfg(wee8_native_modules)");
-    // This interface depends on the sized-vector ABI from this exact header.
-    // V8's older header has the same symbol names but incompatible signatures.
+    // One pinned native contract. Header hashes reject old overrides before
+    // binding generation; the required symbols enforce the archive contract.
     let upstream = header.with_file_name("wasm.h");
-    let header_hash = sha256(&header)?;
-    if ![
-        RELEASE_HEADER_SHA256,
-        EAGER_HEADER_SHA256,
-        NATIVE_MODULES_HEADER_SHA256,
-    ]
-    .contains(&header_hash.as_str())
-        || sha256(&upstream)? != WASM_HEADER_SHA256
-    {
+    if sha256(&header)? != RELEASE_HEADER_SHA256 || sha256(&upstream)? != WASM_HEADER_SHA256 {
         return Err(
-            "WEE8_HEADER must be wee8.h with its matching upstream wasm.h alongside it".into(),
+            "WEE8_HEADER must match the pinned native API, with wasm.h alongside it".into(),
         );
-    }
-    // The newer header declares a capability symbol: linking an older archive
-    // with it fails instead of silently claiming the stronger native contract.
-    if header_hash != RELEASE_HEADER_SHA256 {
-        println!("cargo:rustc-cfg=wee8_eager_validation");
-    }
-    if header_hash == NATIVE_MODULES_HEADER_SHA256 {
-        println!("cargo:rustc-cfg=wee8_native_modules");
     }
     println!("cargo:rerun-if-changed={}", upstream.display());
     println!("cargo:rerun-if-changed={}", archive.display());

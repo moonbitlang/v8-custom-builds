@@ -111,10 +111,10 @@ Changes must preserve these invariants:
   V8 values; they do not become an embedder-side replacement for V8 builtins.
 - Successful module compilation validates all bodies before returning, including
   uncalled functions. Disable experimental lazy validation at engine startup and
-  keep the capability query accurate. Rust may omit its body-validation pass only
-  when the linked archive advertises this guarantee; older archives retain it.
-  New module extensions return V8's compile diagnostics and validated metadata,
-  so the Rust wrapper needs no second parser on that path. Compare changes with
+  keep the capability query accurate. The pinned Rust wrapper requires this
+  guarantee and the module extensions that return V8's diagnostics and validated
+  metadata. Reject mismatched native APIs; do not add a second parser or an
+  older-release fallback. Compare changes with
   ordinary V8's `WasmEngine::SyncCompile` and `SyncInstantiate`: the C value
   representation is not an engine feature policy. In particular, V8's JS API
   accepts vector signatures and rejects incompatible JS calls at invocation;

@@ -16,8 +16,6 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-#[cfg(not(wee8_native_modules))]
-use wee8::Error;
 use wee8::{Store, ValType, Value};
 
 #[test]
@@ -54,30 +52,4 @@ fn internal_simd_survives_serialization_and_scalar_host_calls() {
         .unwrap();
     let mut instance = module.instantiate(&[&check]).unwrap();
     assert_eq!(instance.call("run", &[]).unwrap(), [Value::I32(42)]);
-}
-
-#[test]
-#[cfg(not(wee8_native_modules))]
-fn vector_imports_and_exports_are_rejected_before_native_introspection() {
-    let store = Store::new(()).unwrap();
-    for source in [
-        r#"(module (import "host" "f" (func (param v128))))"#,
-        r#"(module (import "host" "f" (func (result v128))))"#,
-        // Duplicate import names must not hide the unsupported signature.
-        r#"(module (import "host" "f" (func (param i32)))
-                   (import "host" "f" (func (param v128))))"#,
-        r#"(module (import "host" "g" (global v128)))"#,
-        r#"(module (import "host" "g" (global (mut v128))))"#,
-        r#"(module (func (export "f") (param v128)))"#,
-        r#"(module (func (export "f") (result v128) (v128.const i32x4 0 0 0 0)))"#,
-        r#"(module (global (export "g") v128 (v128.const i32x4 0 0 0 0)))"#,
-        r#"(module (global (export "g") (mut v128) (v128.const i32x4 0 0 0 0)))"#,
-    ] {
-        let result = store.compile(&wat::parse_str(source).unwrap());
-        assert!(
-            matches!(result, Err(Error::Interface(ref message))
-            if message.contains("v128") && message.contains("C API")),
-            "{source}"
-        );
-    }
 }

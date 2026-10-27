@@ -16,8 +16,6 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-#![cfg(wee8_native_modules)]
-
 use wee8::Store;
 
 #[test]

@@ -60,8 +60,6 @@ mod references;
 pub use references::ExternRef;
 mod strings;
 mod types;
-#[cfg(not(wee8_native_modules))]
-mod validation;
 use std::{
     cell::{Cell, OnceCell, RefCell},
     ffi::c_void,
@@ -120,13 +118,6 @@ impl From<String> for Error {
 impl From<&str> for Error {
     fn from(message: &str) -> Self {
         Self::Interface(message.into())
-    }
-}
-
-#[cfg(not(wee8_native_modules))]
-impl From<wasmparser::BinaryReaderError> for Error {
-    fn from(error: wasmparser::BinaryReaderError) -> Self {
-        Self::Interface(error.to_string())
     }
 }
 
@@ -453,12 +444,10 @@ impl<'a, T> Caller<'a, T> {
             .memory_access
             .try_borrow_mut()
             .map_err(|_| "nested guest memory borrow")?;
-        #[cfg(wee8_native_modules)]
         if unsafe { ffi::wee8_memory_is_shared(memory) } {
             return Err("shared memory cannot be borrowed as an exclusive host byte slice".into());
         }
-        // The mutable state borrow also rejects nested memory views. Older
-        // archives exclude shared memory at compilation; new ones check above.
+        // The mutable state borrow also rejects nested memory views.
         // Callbacks cannot re-enter Wasm.
         let data = self
             .0
@@ -562,9 +551,8 @@ unsafe extern "C" fn call_host<T>(
 }
 
 impl<T: 'static> Store<T> {
-    /// Compile and validate with V8. New native archives accept all enabled Wasm
-    /// types; host representation is checked when accessing imports or exports.
-    /// Older archives retain their validation and boundary-type fallback.
+    /// Compile and validate with V8. All enabled Wasm types are accepted; host
+    /// representation is checked when accessing imports or exports.
     pub fn compile<'store>(&'store self, bytes: &[u8]) -> Result<Module<'store, T>> {
         self.compile_with_options(bytes, &CompileOptions::default())
     }
@@ -576,10 +564,6 @@ impl<T: 'static> Store<T> {
         bytes: &[u8],
         options: &CompileOptions,
     ) -> Result<Module<'store, T>> {
-        #[cfg(not(wee8_native_modules))]
-        return validation::compile_with_options(self, bytes, options);
-
-        #[cfg(wee8_native_modules)]
         unsafe {
             if !ffi::wee8_module_validation_is_eager() {
                 return Err("native module compilation requires eager validation".into());
@@ -831,12 +815,9 @@ impl<T> Module<'_, T> {
                 size: 0,
                 data: ptr::null_mut(),
             };
-            #[cfg(wee8_native_modules)]
             if !ffi::wee8_module_imports(self.raw.as_ptr(), &mut imports) {
                 return Err("import types are unsupported by the host API; use opaque exports for Wasm linking".into());
             }
-            #[cfg(not(wee8_native_modules))]
-            ffi::wasm_module_imports(self.raw.as_ptr(), &mut imports);
             let result = (0..imports.size)
                 .map(|index| {
                     let import = *imports.data.add(index);
@@ -985,19 +966,7 @@ impl<'store, T> Module<'store, T> {
     ) -> Result<Instance<'store, T>> {
         let _execution = self.store.state.inner.enter()?;
         unsafe {
-            #[cfg(wee8_native_modules)]
             let count = ffi::wee8_module_import_count(self.raw.as_ptr());
-            #[cfg(not(wee8_native_modules))]
-            let count = {
-                let mut types = ffi::wasm_importtype_vec_t {
-                    size: 0,
-                    data: ptr::null_mut(),
-                };
-                ffi::wasm_module_imports(self.raw.as_ptr(), &mut types);
-                let count = types.size;
-                ffi::wasm_importtype_vec_delete(&mut types);
-                count
-            };
             if count != raw_imports.len() {
                 return Err("import count mismatch".into());
             }
@@ -1030,45 +999,20 @@ impl<'store, T> Module<'store, T> {
                 functions: Vec::new(),
                 store: self.store,
             };
-            #[cfg(wee8_native_modules)]
-            {
-                for index in 0..instance.exports.size {
-                    let mut name = ffi::wasm_byte_vec_t {
-                        size: 0,
-                        data: ptr::null_mut(),
-                    };
-                    if !ffi::wee8_module_export_name(self.raw.as_ptr(), index, &mut name) {
-                        return Err("export metadata mismatch".into());
-                    }
-                    instance.names.push(if name.size == 0 {
-                        Vec::new()
-                    } else {
-                        std::slice::from_raw_parts(name.data.cast(), name.size).to_vec()
-                    });
-                    ffi::wasm_byte_vec_delete(&mut name);
-                }
-            }
-            #[cfg(not(wee8_native_modules))]
-            {
-                instance.names = {
-                    let mut types = ffi::wasm_exporttype_vec_t {
-                        size: 0,
-                        data: ptr::null_mut(),
-                    };
-                    ffi::wasm_module_exports(self.raw.as_ptr(), &mut types);
-                    let names: Vec<Vec<u8>> = (0..types.size)
-                        .map(|index| {
-                            let name = &*ffi::wasm_exporttype_name(*types.data.add(index));
-                            if name.size == 0 {
-                                Vec::new()
-                            } else {
-                                std::slice::from_raw_parts(name.data.cast(), name.size).to_vec()
-                            }
-                        })
-                        .collect();
-                    ffi::wasm_exporttype_vec_delete(&mut types);
-                    names
+            for index in 0..instance.exports.size {
+                let mut name = ffi::wasm_byte_vec_t {
+                    size: 0,
+                    data: ptr::null_mut(),
                 };
+                if !ffi::wee8_module_export_name(self.raw.as_ptr(), index, &mut name) {
+                    return Err("export metadata mismatch".into());
+                }
+                instance.names.push(if name.size == 0 {
+                    Vec::new()
+                } else {
+                    std::slice::from_raw_parts(name.data.cast(), name.size).to_vec()
+                });
+                ffi::wasm_byte_vec_delete(&mut name);
             }
             // Cache the object, not its data address, which can change on growth.
             instance.memory = instance

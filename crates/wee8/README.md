@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and two headers
-from `v0.106.0-moonbit.5`. It verifies the release SHA-256 manifest and separately
+from `v0.106.0-moonbit.6`. It verifies the release SHA-256 manifest and separately
 pinned header hashes, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
@@ -33,8 +33,7 @@ Wasm 2.0 (including sign extension), tail calls, extended constants, relaxed SIM
 multiple memories, threads/atomics, GC, typed function references, and
 standardized exception handling.
 
-With a matching new native archive, V8 owns validation, import/export metadata
-and compile diagnostics. The Rust wrapper does not parse the binary again.
+V8 owns validation, import/export metadata and compile diagnostics. The Rust wrapper does not parse the binary again.
 Successful compilation validates every body, including uncalled functions;
 experimental lazy validation stays disabled. Valid modules may expose `v128`, GC
 references, tags, tables or shared memory even when the host value API cannot
@@ -47,19 +46,18 @@ handle borrows its source instance and imports must belong to the same store.
 The receiving instance retains imported objects after the handle is dropped.
 This permits Wasm-to-Wasm linking without marshalling values through Rust.
 
-Older archives keep their fallback: the default `.5` release uses full Rust
-validation and rejects unsupported external types at compilation. The previous
-eager-validation header skips only instruction-body validation. Header checks
-select these contracts, and new symbols require their matching native archive.
-`wasmparser` remains a dependency solely for this compatibility path and framing
-tests; removing it requires raising the minimum native release separately.
+The Rust revision and native release are pinned together. Only that native API
+is supported: mismatched headers fail the build, and required symbols prevent
+linking an older archive. There is no older-release validator or parser fallback.
+The `.6` pin requires publication of the matching native artifacts; until then,
+validation uses the produced CI archives through the paired overrides above.
 
 The source of this policy is V8's
 [always-enabled features](https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/src/wasm/wasm-features.h)
 and this repository's [optional-feature policy](../../custom_wee8/src/wasm-feature-policy.h).
-The `.5` release disables legacy exception opcodes, legacy stringref, Memory64
+The pinned engine disables legacy exception opcodes, legacy stringref, Memory64
 and other staged or experimental proposals. Component-model and newer proposals
-are not enabled merely because wasmparser can validate them.
+are not enabled unless the pinned engine supports them.
 
 The C API boundary is checked separately. Function metadata supports scalar
 numbers, nullable `funcref`, and both nullable and non-null `externref`.
@@ -206,9 +204,8 @@ let mut instance = module.instantiate_with_imports(&[
 
 `Exception` owns a native root and borrows its store. Payloads may contain scalar
 numbers and nullable externref. Imported/exported tags with other payload types,
-including `funcref`, are rejected on host payload access (at compilation with
-older archives); guest-internal tags may still
-carry function references. `Caller::throw` returns an error marker while
+including `funcref`, are rejected on host payload access; guest-internal tags may
+still carry function references. `Caller::throw` returns an error marker while
 the store roots the exception until the callback trampoline takes it. Returning
 another outcome discards that pending root. A guest may catch the exception;
 ordinary host errors and callback panics still bypass Wasm catches.
@@ -296,5 +293,5 @@ instance-export lookup still becomes available only after instantiation.
 metadata, captured before the native trap is released. `Caller::capture_stack`
 uses the standard C API trap-construction trace without throwing or changing a
 pending exception. Exception tracing keeps its existing behavior. These APIs use
-the published `.5` archive, including its fix for traces containing native JS-string
-builtin frames. No additional native rebuild is required.
+the pinned native archive, including its handling of traces containing native
+JS-string builtin frames.

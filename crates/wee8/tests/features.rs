@@ -19,7 +19,7 @@
 use wee8::{Error, Store, Value};
 
 // Exercise the additional proposals through scalar exports and serialization,
-// using the published engine rather than testing only wasmparser acceptance.
+// using the pinned engine through the real host interface.
 #[test]
 fn released_v8_features_execute_through_scalar_exports() {
     for (proposal, source) in [
@@ -95,29 +95,10 @@ fn released_v8_features_execute_through_scalar_exports() {
 }
 
 #[test]
-#[cfg(not(wee8_native_modules))]
-fn shared_memory_is_rejected_at_the_host_boundary() {
-    let store = Store::new(()).unwrap();
-    for source in [
-        r#"(module (import "host" "memory" (memory 1 1 shared)))"#,
-        r#"(module (memory (export "memory") 1 1 shared))"#,
-        // Any export could be inspected through the native C API, not only the
-        // conventionally named memory borrowed by Caller::with_memory.
-        r#"(module (memory (export "other") 1 1 shared))"#,
-    ] {
-        assert!(
-            matches!(store.compile(&wat::parse_str(source).unwrap()),
-            Err(Error::Interface(message)) if message.contains("shared memory is unsupported in C API")),
-            "{source}"
-        );
-    }
-}
-
-#[test]
 fn proposals_unavailable_in_the_release_are_rejected() {
     let store = Store::new(()).unwrap();
     for source in [
-        // The .4 native release deliberately disables legacy exception opcodes.
+        // The pinned engine deliberately disables legacy exception opcodes.
         r#"(module
             (tag $answer (param i64))
             (func (export "run") (result i64)

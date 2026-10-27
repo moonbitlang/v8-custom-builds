@@ -156,12 +156,8 @@ fn options_only_exempt_validated_native_imports_from_boundary_checks() {
     let store = Store::new(()).unwrap();
     for wat in [
         r#"(module (import "wasm:js-string" "length" (func (param i32) (result i32))))"#,
-        #[cfg(not(wee8_native_modules))]
-        r#"(module (type $a (array (mut i16))) (import "wasm:js-string" "unknown" (func (param (ref null $a)))))"#,
         r#"(module (import "_" "bad" (global (mut externref))))"#,
         r#"(module (type $a (array (mut i8))) (import "wasm:js-string" "fromCharCodeArray" (func (param (ref null $a) i32 i32) (result (ref extern)))))"#,
-        #[cfg(not(wee8_native_modules))]
-        r#"(module (func (export "unsupported") (param v128)))"#,
     ] {
         assert!(
             store
