@@ -1,26 +1,68 @@
 name: Rust crate
 
-# These are consumers of the published archive, not native V8 builds.
+# Consume published archives or a completed producer run; never compile V8.
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      native-run:
+        description: Successful native run to test instead of the pinned release
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: rust-crate-${{ github.ref }}
+  group: rust-crate-${{ github.ref }}-${{ inputs.native-run || 'release' }}
   cancel-in-progress: true
 
 jobs:
+  archives:
+    runs-on: ubuntu-22.04
+    outputs:
+      available: ${{ steps.select.outputs.available }}
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: select
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_RUN: ${{ inputs.native-run }}
+        run: |
+          if [[ -n "$NATIVE_RUN" ]]; then
+            [[ "$NATIVE_RUN" =~ ^[0-9]+$ ]]
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN" > run.json
+            jq -e '.path == ".github/workflows/build.yml" and .conclusion == "success"' run.json
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "matrix=$(jq -c '{include: .}' ci/targets.json)" >> "$GITHUB_OUTPUT"
+          else
+            release=$(sed -n 's/^const RELEASE: &str = "\(.*\)";/\1/p' crates/wee8/build.rs)
+            test -n "$release"
+            gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | select(.draft == false) | .tag_name' > releases.txt
+            if grep -Fxq "$release" releases.txt; then
+              echo "available=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::$release is not published; validate this PR with a successful native-run artifact."
+              echo "Published consumer validation is pending $release. Use the native-run input to test produced archives without rebuilding V8." >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "matrix=$(jq -c '{include: [.[] | select(.target == "x86_64-unknown-linux-gnu" or .target == "aarch64-apple-darwin" or .target == "x86_64-pc-windows-msvc")]}' ci/targets.json)" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
-    name: wee8 / ${{ matrix.os }}
+    needs: archives
+    if: needs.archives.outputs.available == 'true'
+    name: wee8 / ${{ matrix.target }}
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-22.04, macos-14, windows-latest]
-    runs-on: ${{ matrix.os }}
+      matrix: ${{ fromJSON(needs.archives.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      TARGET: ${{ matrix.target }}
     defaults:
       run:
         shell: bash
@@ -30,6 +72,8 @@ jobs:
         working-directory: .
         run: git config --global core.autocrlf false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Compare the producer's native inputs with this wrapper.
       - name: Install Rust
         run: rustup toolchain install 1.95.0 --profile minimal --component clippy,rustfmt --no-self-update
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -38,7 +82,39 @@ jobs:
           shared-key: wee8-crate
           cache-targets: false
       - name: Check and test the published archive
+        if: inputs.native-run == ''
         run: |
           cargo +1.95.0 fmt --check
           cargo +1.95.0 clippy --locked --all-targets -- -D warnings
           cargo +1.95.0 test --locked
+      - name: Check and test produced archives
+        if: inputs.native-run != ''
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_RUN: ${{ inputs.native-run }}
+          RUSTUP_TOOLCHAIN: 1.95.0
+        run: |
+          revision=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN" --jq .head_sha)
+          git diff --exit-code "$revision" HEAD -- \
+            .github/workflows/build.yml ci/targets.json \
+            rusty_v8 build.sh tools/prepare-source.py tools/native \
+            custom_wee8/BUILD.gn custom_wee8/src custom_wee8/include \
+            custom_wee8/tests/BUILD.gn 'custom_wee8/tests/*.cc' patches licenses
+          gh run download "$NATIVE_RUN" --repo "$GITHUB_REPOSITORY" --name "native-$TARGET" --dir "dist/$TARGET"
+          jq -e --arg run "$NATIVE_RUN" --arg target "$TARGET" --arg revision "$revision" \
+            '.run == $run and .target == $target and .recipe == $revision' \
+            "dist/$TARGET/validation_$TARGET.json"
+          # This verifies checksums, stages the paired headers/archive and runs
+          # both the C consumer and Rust suite against the produced library.
+          bash ci/test-c-api.sh
+          root=$PWD
+          archive=libwee8.a
+          if [[ "$TARGET" == *-windows-msvc ]]; then
+            root=$(cygpath -m "$root")
+            archive=wee8.lib
+          fi
+          export WEE8_ARCHIVE="$root/target/c-api-native/$archive"
+          export WEE8_HEADER="$root/target/c-api-native/wee8.h"
+          cargo fmt --manifest-path crates/wee8/Cargo.toml --check
+          cargo clippy --locked --all-targets --manifest-path crates/wee8/Cargo.toml --target-dir target/wee8 -- -D warnings

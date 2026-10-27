@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and two headers
-from `v0.106.0-moonbit.5`. It verifies the release SHA-256 manifest and separately
+from `v0.106.0-moonbit.6`. It verifies the release SHA-256 manifest and separately
 pinned header hashes, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
@@ -31,23 +31,33 @@ Guest validation follows the core Wasm proposals enabled by the pinned V8
 revision, rather than the instructions currently emitted by MoonBit. This covers
 Wasm 2.0 (including sign extension), tail calls, extended constants, relaxed SIMD,
 multiple memories, threads/atomics, GC, typed function references, and
-standardized exception handling. The feature set is explicit because newer
-wasmparser defaults include proposals this engine does not implement.
+standardized exception handling.
 
-The Rust validator retains section/type metadata and host-boundary checks.
-Archives exposing `wee8_module_validation_is_eager` can take responsibility for
-instruction-body validation: successful native compilation must reject every
-invalid function, including unexported functions that are never called. Engine
-startup disables experimental lazy validation. Older archives, including the
-default `.5` release, retain full Rust validation. On native compilation failure,
-Rust runs its full validator to preserve detailed invalid-Wasm diagnostics.
+V8 owns validation, import/export metadata and compile diagnostics. The Rust wrapper does not parse the binary again.
+Successful compilation validates every body, including uncalled functions;
+experimental lazy validation stays disabled. Valid modules may expose `v128`, GC
+references, tags, tables or shared memory even when the host value API cannot
+represent them. `get_func` and `import_types` report unsupported host types when
+requested, without preventing other exports from running.
+
+`instance.get_export(name)` returns an opaque handle for
+`Extern::Export(&handle)` imports. V8 checks the native types when linking; the
+handle borrows its source instance and imports must belong to the same store.
+The receiving instance retains imported objects after the handle is dropped.
+This permits Wasm-to-Wasm linking without marshalling values through Rust.
+
+The Rust revision and native release are pinned together. Only that native API
+is supported: mismatched headers fail the build, and required symbols prevent
+linking an older archive. There is no older-release validator or parser fallback.
+The `.6` pin requires publication of the matching native artifacts; until then,
+validation uses the produced CI archives through the paired overrides above.
 
 The source of this policy is V8's
 [always-enabled features](https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/src/wasm/wasm-features.h)
 and this repository's [optional-feature policy](../../custom_wee8/src/wasm-feature-policy.h).
-The `.5` release disables legacy exception opcodes, legacy stringref, Memory64
+The pinned engine disables legacy exception opcodes, legacy stringref, Memory64
 and other staged or experimental proposals. Component-model and newer proposals
-are not enabled merely because wasmparser can validate them.
+are not enabled unless the pinned engine supports them.
 
 The C API boundary is checked separately. Function metadata supports scalar
 numbers, nullable `funcref`, and both nullable and non-null `externref`.
@@ -69,14 +79,14 @@ The C ABI value tags are private; both externref nullabilities use the same C
 value representation. There is no public `Kind` or `Value::kind()` that could
 confuse a representation tag with the full signature type.
 
-Global/table metadata still requires nullable references, and tag payloads permit
-only scalar numbers and nullable externref. Other GC reference types and `v128`
-at host boundaries are rejected before native introspection, which would
-otherwise abort. Shared memories and atomic operations
-may stay inside the guest, but importing or exporting a shared memory is rejected:
-the host memory API lends an exclusive, non-atomic slice. This does not add a host
-thread-spawning or shared-memory interface. Multiple guest memories are allowed;
-`Caller::with_memory` still selects the export named `memory`.
+The host metadata representation for globals/tables requires nullable references;
+tag payload access permits only scalar numbers and nullable externref. Unsupported
+types remain available as opaque native exports. Shared memory and atomics can
+execute and link between guests, but `Caller::with_memory` rejects shared memory
+because its exclusive non-atomic slice would be invalid. This does not add host
+thread spawning. Multiple guest memories are allowed; `Caller::with_memory`
+selects the export named `memory` of the top-level called instance, including
+calls through linked Wasm functions.
 The Rust call interface supports scalar numbers and either externref nullability, with
 at most one result; callable `funcref` handles are not exposed yet.
 
@@ -176,7 +186,8 @@ Export lookup reuses an existing tag slot for the same native identity. This
 tag table is separate from externrefs, whose roots and payloads remain in V8.
 
 `Module::import_types` describes function/tag/memory imports, and
-`instantiate_with_imports` accepts `Extern::Func`, `Extern::Tag` and `Extern::Memory`.
+`instantiate_with_imports` accepts `Extern::Func`, `Extern::Tag`, `Extern::Memory`
+and opaque `Extern::Export` handles.
 `Instance::tag` retrieves an exported tag. Existing function-only `imports` and
 `instantiate` remain available for existing consumers.
 
@@ -193,8 +204,8 @@ let mut instance = module.instantiate_with_imports(&[
 
 `Exception` owns a native root and borrows its store. Payloads may contain scalar
 numbers and nullable externref. Imported/exported tags with other payload types,
-including `funcref`, are rejected at compilation; guest-internal tags may still
-carry function references. `Caller::throw` returns an error marker while
+including `funcref`, are rejected on host payload access; guest-internal tags may
+still carry function references. `Caller::throw` returns an error marker while
 the store roots the exception until the callback trampoline takes it. Returning
 another outcome discards that pending root. A guest may catch the exception;
 ordinary host errors and callback panics still bypass Wasm catches.
@@ -282,5 +293,5 @@ instance-export lookup still becomes available only after instantiation.
 metadata, captured before the native trap is released. `Caller::capture_stack`
 uses the standard C API trap-construction trace without throwing or changing a
 pending exception. Exception tracing keeps its existing behavior. These APIs use
-the published `.5` archive, including its fix for traces containing native JS-string
-builtin frames. No additional native rebuild is required.
+the pinned native archive, including its handling of traces containing native
+JS-string builtin frames.

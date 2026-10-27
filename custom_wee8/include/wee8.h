@@ -66,6 +66,29 @@ WASM_API_EXTERN bool wee8_module_validate(
   wasm_store_t*, const wasm_byte_vec_t*, const wee8_compile_options_t*);
 WASM_API_EXTERN wasm_module_t* wee8_module_new(
   wasm_store_t*, const wasm_byte_vec_t*, const wee8_compile_options_t*);
+// Compile using V8's validation and return its diagnostic on failure. The
+// required error output is an owned byte vector (empty on success; otherwise
+// NUL-terminated), deleted with wasm_byte_vec_delete. Host type limitations do
+// not restrict module compilation, instantiation or Wasm-to-Wasm linking.
+WASM_API_EXTERN wasm_module_t* wee8_module_new_with_error(
+  wasm_store_t*, const wasm_byte_vec_t*, const wee8_compile_options_t*,
+  wasm_byte_vec_t* error);
+// Names/counts never convert Wasm types into C value kinds. Import counts exclude
+// native builtins. Export indices match wasm_instance_exports. Returned names
+// are owned byte vectors with no terminator; delete with wasm_name_delete.
+WASM_API_EXTERN size_t wee8_module_import_count(const wasm_module_t*);
+WASM_API_EXTERN bool wee8_module_export_name(const wasm_module_t*, size_t,
+                                            wasm_name_t* out);
+// Checked host introspection: false and an empty vector if any import type is
+// unrepresentable. Standard wasm_module_imports/exports return an empty vector
+// in that case. wasm_func_type/wasm_tag_type/wasm_global_type/wasm_table_type/
+// wasm_memory_type return NULL for unsupported representations. C callers must
+// successfully inspect global/table types before using their value accessors;
+// those accessors do not uniformly report unsupported types. wasm_func_call traps
+// on unsupported signatures. Opaque export handles remain usable for linking.
+WASM_API_EXTERN bool wee8_module_imports(const wasm_module_t*, wasm_importtype_vec_t* out);
+// Shared memory must not be exposed as an exclusive non-atomic host byte slice.
+WASM_API_EXTERN bool wee8_memory_is_shared(const wasm_memory_t*);
 // Serialized code is trusted engine output. Supply the same options used to
 // compile it. Incompatible native-code options are rejected by V8.
 WASM_API_EXTERN wasm_module_t* wee8_module_deserialize(

@@ -154,7 +154,13 @@ not promise a stable cross-engine ABI or full Wasm conformance.
 ## CI and releases
 
 Recipe and published-release Rust-consumer checks run on PRs and pushes to
-`main`; they do not compile V8. Native **Build and test** is manually triggered for
+`main`; they do not compile V8. If the pinned release is not yet published, the
+published consumer job reports that dependency and skips. Run **Rust crate**
+with `native-run` set to a successful **Build and test** run to validate all five
+produced archives without rebuilding V8. The selected run and current wrapper
+must have matching native inputs; artifact provenance and checksums are verified.
+
+Native **Build and test** is manually triggered for
 one target or all five supported platforms: Linux and macOS x86_64/ARM64, and
 Windows x86_64. It validates the freshly built archive with:
 
@@ -178,7 +184,8 @@ can otherwise reuse completed builds.
 `v0.106.0-moonbit.N` tag at that run's commit. It verifies all five platforms and
 publishes those exact artifacts without rebuilding. Use a new immutable tag for
 each release. Build artifacts are retained for 30 days. Update the wrapper's
-release pin deliberately after publication.
+release pin deliberately with the native API change; normal downloads require
+that release to be published. Before publication, use the produced artifacts.
 
 These checks do not replace full Wasm conformance, debug/sanitizer validation or
 integration with the wee8 backend in `moonbitlang/moon`.

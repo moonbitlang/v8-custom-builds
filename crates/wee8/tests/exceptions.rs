@@ -283,7 +283,7 @@ fn explicit_throw_is_distinct_from_host_errors_panics_and_ignored_markers() {
 }
 
 #[test]
-fn exported_tags_can_be_reimported_and_unsupported_tag_payloads_fail_validation() {
+fn exported_tags_can_be_reimported() {
     let store = Store::new(()).unwrap();
     let module = store
         .compile(&wat::parse_str(r#"(module (tag (export "tag") (param i32)))"#).unwrap())
@@ -312,35 +312,6 @@ fn exported_tags_can_be_reimported_and_unsupported_tag_payloads_fail_validation(
             .same(store.as_context(), first)
             .unwrap()
     );
-    for source in [
-        r#"(module (import "e" "tag" (tag (param v128))))"#,
-        r#"(module (type $s (struct)) (tag (export "tag") (param (ref null $s))))"#,
-        r#"(module (global (export "exception") exnref (ref.null exn)))"#,
-    ] {
-        assert!(store.compile(&wat::parse_str(source).unwrap()).is_err());
-    }
-}
-
-#[test]
-fn rejects_funcref_tag_imports_and_exports() {
-    let store = Store::new(()).unwrap();
-    for (source, boundary) in [
-        (
-            r#"(module (import "e" "tag" (tag (param funcref))))"#,
-            "import `e::tag`",
-        ),
-        (
-            r#"(module (tag (export "tag") (param funcref)))"#,
-            "export `tag`",
-        ),
-    ] {
-        let result = store.compile(&wat::parse_str(source).unwrap());
-        assert!(
-            matches!(result, Err(Error::Interface(ref message))
-                if message.contains("funcref") && message.contains(boundary)),
-            "must reject funcref payloads at {boundary} before native introspection"
-        );
-    }
 }
 
 #[test]
