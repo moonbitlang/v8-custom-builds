@@ -26,11 +26,11 @@ pub(super) struct Signature {
     raw: NonNull<ffi::wasm_func_t>,
     params: Vec<ValType>,
     results: Vec<ValType>,
-    numeric: OnceCell<Option<NumericFunc>>,
+    prepared: OnceCell<Option<PreparedCall>>,
 }
 
-struct NumericFunc(NonNull<ffi::wee8_numeric_func_t>);
-impl Drop for NumericFunc {
+struct PreparedCall(NonNull<ffi::wee8_numeric_func_t>);
+impl Drop for PreparedCall {
     fn drop(&mut self) {
         unsafe { ffi::wee8_numeric_func_delete(self.0.as_ptr()) }
     }
@@ -99,7 +99,7 @@ impl<'store, T> Instance<'store, T> {
                             raw,
                             params,
                             results,
-                            numeric: OnceCell::new(),
+                            prepared: OnceCell::new(),
                         })
                     })
                 };
@@ -179,7 +179,7 @@ impl<'instance, 'store, T> Func<'instance, 'store, T> {
             return Err("typed function signature mismatch".into());
         }
         let store = &self.instance.store.state.inner;
-        if self.signature.numeric.get().is_none() {
+        if self.signature.prepared.get().is_none() {
             if store.executing.get() {
                 return Err("cannot prepare a function during guest execution".into());
             }
@@ -189,11 +189,11 @@ impl<'instance, 'store, T> Func<'instance, 'store, T> {
                 .memory_access
                 .try_borrow_mut()
                 .map_err(|_| "cannot prepare a function while guest memory is borrowed")?;
-            let numeric = NonNull::new(unsafe {
+            let prepared = NonNull::new(unsafe {
                 ffi::wee8_func_prepare_numeric(self.signature.raw.as_ptr())
             })
-            .map(NumericFunc);
-            let _ = self.signature.numeric.set(numeric);
+            .map(PreparedCall);
+            let _ = self.signature.prepared.set(prepared);
         }
         Ok(TypedFunc {
             function: Func {
@@ -240,7 +240,7 @@ pub struct TypedFunc<'instance, 'store, T, Params, Returns> {
 impl<T, Params: WasmParams, Returns: WasmResult> TypedFunc<'_, '_, T, Params, Returns> {
     pub fn call(&self, args: Params) -> Result<Returns> {
         let _execution = self.function.instance.store.state.inner.enter()?;
-        if let Some(numeric) = self.function.signature.numeric.get().unwrap() {
+        if let Some(prepared) = self.function.signature.prepared.get().unwrap() {
             let mut packed = [0u8; 64];
             args.write_packed(&mut packed);
             self.function
@@ -251,7 +251,7 @@ impl<T, Params: WasmParams, Returns: WasmResult> TypedFunc<'_, '_, T, Params, Re
                 .memory
                 .set(self.function.instance.memory);
             let trap = unsafe {
-                ffi::wee8_numeric_func_call(numeric.0.as_ptr(), packed.as_mut_ptr().cast())
+                ffi::wee8_numeric_func_call(prepared.0.as_ptr(), packed.as_mut_ptr().cast())
             };
             if !trap.is_null() {
                 return Err(self.function.instance.store.take_trap(trap));

@@ -32,7 +32,7 @@ class ArtifactsTest(unittest.TestCase):
         self.write("crates/wee8/build.rs", 'const RELEASE: &str = "v0.106.0-moonbit.6";\n')
         self.producer = self.save()
         self.write("crates/wee8/src/lib.rs", "new Rust wrapper\n")
-        self.write("releases/v0.106.0-moonbit.6.md", "# v0.106.0-moonbit.6\n\nTested changes.\n")
+        self.write("CHANGELOG.md", "## [0.106.0-moonbit.6] - 2026-10-27\n\nTested changes.\n")
         self.revision = self.save()
         subprocess.run(["git", "update-ref", "refs/remotes/origin/main", self.revision], check=True)
         subprocess.run(["git", "tag", "v0.106.0-moonbit.6"], check=True)
@@ -199,8 +199,12 @@ class ArtifactsTest(unittest.TestCase):
             native.qualify(self.selected, path.parent, self.revision)
 
     def test_promotion_requires_nonempty_matching_tagged_notes(self):
-        for content in ("# v0.106.0-moonbit.6\n", "# wrong-version\n\nDescription.\n"):
-            self.write("releases/v0.106.0-moonbit.6.md", content)
+        for content in (
+                "## [0.106.0-moonbit.6] - 2026-10-27\n### Changed\n",
+                "## [Unreleased]\n\nDescription.\n",
+                "## [0.106.0-moonbit.5] - 2026-10-23\n\nDescription.\n",
+                "## [0.106.0-moonbit.6] - 2026-10-27\nA\n## [0.106.0-moonbit.6] - 2026-10-27\nB\n"):
+            self.write("CHANGELOG.md", content)
             revision = self.save()
             subprocess.run(["git", "update-ref", "refs/remotes/origin/main", revision], check=True)
             subprocess.run(["git", "tag", "-f", "v0.106.0-moonbit.6"], check=True, stdout=subprocess.DEVNULL)
@@ -208,7 +212,7 @@ class ArtifactsTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "release notes"):
                     native.prepare_release(456, "v0.106.0-moonbit.6", self.root / "bad-notes")
                 api.assert_not_called()
-        Path("releases/v0.106.0-moonbit.6.md").unlink()
+        Path("CHANGELOG.md").unlink()
         revision = self.save()
         subprocess.run(["git", "update-ref", "refs/remotes/origin/main", revision], check=True)
         subprocess.run(["git", "tag", "-f", "v0.106.0-moonbit.6"], check=True, stdout=subprocess.DEVNULL)
@@ -237,7 +241,7 @@ class ArtifactsTest(unittest.TestCase):
                 patch.object(native, "artifact_map", side_effect=artifacts), \
                 patch.object(native, "download_artifact", side_effect=download):
             # Promotion must ignore edited checkout notes and use the tag's text.
-            self.write("releases/v0.106.0-moonbit.6.md", "unreviewed checkout notes")
+            self.write("CHANGELOG.md", "unreviewed checkout notes")
             output = self.root / "release"
             native.prepare_release(456, "v0.106.0-moonbit.6", output)
             self.assertTrue((output / "release-notes.md").read_text().startswith(

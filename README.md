@@ -221,7 +221,7 @@ integration with the wee8 backend in `moonbitlang/moon`.
 
 ### Release notes
 
-[Versioned release notes](releases/README.md) describe each release's behavior,
-limitations and validation. Add notes with every native release-pin change.
-Publication requires the matching notes from the tagged commit and appends its
-consumer qualification link; documentation updates do not require rebuilding V8.
+[CHANGELOG.md](CHANGELOG.md) records notable changes under `Unreleased` until
+release preparation moves them into a dated version section. Publication uses
+that section from the tagged commit as the GitHub release description and appends
+the consumer qualification link. Documentation updates do not require rebuilding V8.

@@ -321,3 +321,10 @@ call, preserving GC and tiering. Direct host-function exports retain the existin
 callback conversion path. Dynamic/reference calls are unchanged. Both paths keep
 the same memory-borrow and re-entry guards, callback memory selection and error
 handling. These changes require `.7`; `.6` does not provide the new native symbols.
+
+The one-time check followed by raw argument storage is also the approach used by
+[Wasmtime's typed calls](https://docs.rs/wasmtime/48.0.1/wasmtime/struct.Func.html#method.typed).
+The storage formats differ: wee8 follows V8's existing packed C-to-Wasm buffer,
+not Wasmtime's `ValRaw` slots. The private prepared-call descriptor is not a new
+Wasm function kind or a replacement execution engine. Termination likewise uses
+V8's existing mechanism; this interface does not implement Wasmtime epochs or fuel.
