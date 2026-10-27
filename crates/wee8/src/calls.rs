@@ -60,7 +60,16 @@ impl<'store, T> Instance<'store, T> {
         }
         let cached = &self.functions[index];
         if cached.get().is_none() {
-            let _execution = self.store.state.inner.enter()?;
+            let store = &self.store.state.inner;
+            if store.executing.get() {
+                return Err("cannot inspect a function during guest execution".into());
+            }
+            // Inspection cannot run guest code. Protect native access without
+            // clearing the pending exception or changing execution state.
+            let _memory = store
+                .memory_access
+                .try_borrow_mut()
+                .map_err(|_| "cannot inspect a function while guest memory is borrowed")?;
             let signature = unsafe {
                 let raw = NonNull::new(ffi::wasm_extern_as_func(*self.exports.data.add(index)))
                     .ok_or("export is not a function")?;

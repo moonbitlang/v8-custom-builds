@@ -19,6 +19,53 @@
 use wee8::{Error, Extern, Memory, MemoryType, Store, ValType, Value};
 
 #[test]
+fn function_resolution_preserves_pending_exceptions() {
+    let store = Store::new(()).unwrap();
+    let module = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+      (tag $exception (export "exception") (param i32))
+      (memory (export "memory") 1)
+      (func (export "throw") i32.const 42 throw $exception)
+      (func (export "ok") (result i32) i32.const 7)
+      (func (export "multi") (result i32 i32) i32.const 1 i32.const 2))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let instance = module.instantiate(&[]).unwrap();
+    let tag = instance.tag("exception").unwrap();
+    let throw = instance
+        .get_func("throw")
+        .unwrap()
+        .typed::<(), ()>()
+        .unwrap();
+    // Cover a cache miss, a cache hit, and failures before and during inspection.
+    for (name, succeeds) in [
+        ("ok", true),
+        ("ok", true),
+        ("memory", false),
+        ("multi", false),
+        ("missing", false),
+    ] {
+        assert!(matches!(throw.call(()), Err(Error::ThrownException)));
+        assert_eq!(instance.get_func(name).is_ok(), succeeds);
+        let exception = store
+            .take_exception()
+            .unwrap_or_else(|| panic!("resolving {name} discarded the pending exception"));
+        assert_eq!(exception.args(tag).unwrap(), [Value::I32(42)]);
+    }
+    // Actual guest execution must still discard an untaken exception.
+    assert!(matches!(throw.call(()), Err(Error::ThrownException)));
+    assert_eq!(
+        instance.get_func("ok").unwrap().call(&[]).unwrap(),
+        [Value::I32(7)]
+    );
+    assert!(store.take_exception().is_none());
+}
+
+#[test]
 fn cached_and_typed_calls_share_signatures_and_trap_recovery() {
     let store = Store::new(()).unwrap();
     let module = store
@@ -177,6 +224,7 @@ fn cached_calls_refresh_memory_views_and_preserve_borrow_guards() {
       (import "h" "check" (func $check (result i32)))
       (export "memory" (memory 0))
       (func (export "size") (result i32) call $check)
+      (func (export "uncached"))
       (func (export "grow") (result i32) i32.const 1 memory.grow))"#,
             )
             .unwrap(),
@@ -200,8 +248,10 @@ fn cached_calls_refresh_memory_views_and_preserve_borrow_guards() {
         .with_data(store.as_context(), |_| {
             assert!(size.call(()).is_err());
             assert!(grow.call(()).is_err());
+            assert!(instance.get_func("uncached").is_err());
         })
         .unwrap();
+    assert!(instance.get_func("uncached").is_ok());
     assert_eq!(grow.call(()).unwrap(), 1);
     assert_eq!(size.call(()).unwrap(), 2 * 65536);
     assert_eq!(
