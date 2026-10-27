@@ -1625,8 +1625,8 @@ struct FuncData {
   own<FuncType> type;
   enum Kind { kCallback, kCallbackWithEnv } kind;
   union {
-    Func::callback callback;
-    Func::callback_with_env callback_with_env;
+    wasm_func_callback_t callback;
+    wasm_func_callback_with_env_t callback_with_env;
   };
   void (*finalizer)(void*);
   void* env;
@@ -1642,30 +1642,7 @@ struct FuncData {
     if (finalizer) (*finalizer)(env);
   }
 
-  own<Trap> call(const Val args[], Val results[]) {
-    // Direct C API calls do not pass through a typed Wasm wrapper.
-    for (size_t n = 0; n < type->params().size(); ++n) {
-      const auto* parameter = type->params()[n].get();
-      if (parameter->kind() == ANYREF && !IsNullable(parameter) &&
-          (args[n].kind() != ANYREF || !args[n].ref())) {
-        return Trap::make(store, Name::make(std::string(
-            "nonnull externref argument is null")));
-      }
-    }
-    auto trap = kind == kCallback ? callback(args, results)
-                                 : callback_with_env(env, args, results);
-    if (trap) return trap;
-    // A callback must not inject null into a statically non-null guest value.
-    for (size_t n = 0; n < type->results().size(); ++n) {
-      const auto* result = type->results()[n].get();
-      if (result->kind() == ANYREF && !IsNullable(result) &&
-          (results[n].kind() != ANYREF || !results[n].ref())) {
-        return Trap::make(store, Name::make(std::string(
-            "nonnull externref host result is null")));
-      }
-    }
-    return nullptr;
-  }
+  own<Trap> call(const Val args[], Val results[]);
 
   static i::Address v8_callback(i::Address host_data_foreign, i::Address argv);
 };
@@ -1760,23 +1737,6 @@ auto make_func(Store* store_abs, std::shared_ptr<FuncData> data) -> own<Func> {
 }
 
 }  // namespace
-
-auto Func::make(Store* store, const FuncType* type, Func::callback callback)
-    -> own<Func> {
-  auto data = std::make_shared<FuncData>(store, type, FuncData::kCallback);
-  data->callback = callback;
-  return make_func(store, data);
-}
-
-auto Func::make(Store* store, const FuncType* type, callback_with_env callback,
-                void* env, void (*finalizer)(void*)) -> own<Func> {
-  auto data =
-      std::make_shared<FuncData>(store, type, FuncData::kCallbackWithEnv);
-  data->callback_with_env = callback;
-  data->env = env;
-  data->finalizer = finalizer;
-  return make_func(store, data);
-}
 
 auto Func::type() const -> own<FuncType> {
   PtrComprCageAccessScope ptr_compr_cage_access_scope(impl(this)->isolate());
@@ -1968,91 +1928,6 @@ i::Handle<i::JSReceiver> GetProperException(
 }
 
 }  // namespace
-
-auto Func::call(const Val args[], Val results[]) const -> own<Trap> {
-  auto func = impl(this);
-  auto store = func->store();
-  auto isolate = store->i_isolate();
-  v8::Isolate::Scope isolate_scope(store->isolate());
-  i::HandleScope handle_scope(isolate);
-  i::Tagged<i::Object> raw_function_data =
-      func->v8_object()->shared()->GetTrustedData(isolate);
-
-  // WasmCapiFunctions can be called directly.
-  if (IsWasmCapiFunctionData(raw_function_data)) {
-    return CallWasmCapiFunction(
-        i::Cast<i::WasmCapiFunctionData>(raw_function_data), args, results);
-  }
-
-  SBXCHECK(IsWasmExportedFunctionData(raw_function_data));
-  i::DirectHandle<i::WasmExportedFunctionData> function_data{
-      i::Cast<i::WasmExportedFunctionData>(raw_function_data), isolate};
-  i::DirectHandle<i::WasmTrustedInstanceData> instance_data{
-      function_data->instance_data(), isolate};
-  int function_index = function_data->function_index();
-  const i::wasm::WasmModule* module = instance_data->module();
-  // Caching {sig} would give a ~10% reduction in overhead.
-  const i::wasm::FunctionSig* sig = module->functions[function_index].sig;
-  for (size_t n = 0; n < sig->parameter_count(); ++n) {
-    auto parameter = sig->GetParam(n);
-    if (parameter == i::wasm::ValueType::Ref(i::wasm::HeapType::kExtern) &&
-        (args[n].kind() != ANYREF || !args[n].ref())) {
-      return Trap::make(seal<Store>(store), Name::make(std::string(
-          "nonnull externref argument is null")));
-    }
-  }
-  if (!PrepareFunctionData(isolate, function_data, sig, module)) {
-    return Trap::make(seal<Store>(store), Name::make(std::string(
-        "function signature is unsupported by the C API")));
-  }
-  i::DirectHandle<i::Code> wrapper_code(function_data->c_wrapper_code(isolate),
-                                        isolate);
-  i::Address call_target = function_data->internal()->call_target();
-
-  i::wasm::CWasmArgumentsPacker packer(function_data->packed_args_size());
-  PushArgs(sig, args, &packer, store);
-
-  i::DirectHandle<i::Object> object_ref;
-  if (function_index < static_cast<int>(module->num_imported_functions)) {
-    object_ref =
-        i::handle(instance_data->dispatch_table_for_imports()->implicit_arg(
-                      function_index),
-                  isolate);
-    if (IsWasmImportData(*object_ref)) {
-      i::Tagged<i::JSFunction> jsfunc = i::Cast<i::JSFunction>(
-          i::Cast<i::WasmImportData>(*object_ref)->callable());
-      i::Tagged<i::Object> data = jsfunc->shared()->GetTrustedData(isolate);
-      if (IsWasmCapiFunctionData(data)) {
-        return CallWasmCapiFunction(i::Cast<i::WasmCapiFunctionData>(data),
-                                    args, results);
-      }
-      // TODO(jkummerow): Imported and then re-exported JavaScript functions
-      // are not supported yet. If we support C-API + JavaScript, we'll need
-      // to call those here.
-      UNIMPLEMENTED();
-    } else {
-      // A WasmFunction from another module.
-      DCHECK(IsWasmInstanceObject(*object_ref));
-    }
-  } else {
-    // TODO(42204563): Avoid crashing if the instance object is not available.
-    CHECK(instance_data->has_instance_object());
-    object_ref = handle(instance_data->instance_object(), isolate);
-  }
-
-  i::Execution::CallWasm(isolate, wrapper_code, call_target, object_ref,
-                         packer.argv());
-
-  if (isolate->has_exception()) {
-    i::Handle<i::Object> exception(isolate->exception(), isolate);
-    isolate->clear_exception();
-    return implement<Trap>::type::make(store,
-                                       GetProperException(isolate, exception));
-  }
-
-  PopArgs(sig, results, &packer, store);
-  return nullptr;
-}
 
 i::Address FuncData::v8_callback(i::Address host_data_foreign,
                                  i::Address argv) {
@@ -3621,70 +3496,57 @@ wasm_module_t* wasm_module_obtain(wasm_store_t* store,
 WASM_DEFINE_REF(func, wasm::Func)
 
 extern "C++" {
-
-// The C++ implementation still passes plain arrays. Retain arities with each
-// callback so the public C interface can borrow sized views without copying.
-struct wasm_callback_t {
-  wasm_func_callback_t callback;
-  size_t params;
-  size_t results;
-};
-
-auto wasm_callback(void* env, const wasm::Val args[], wasm::Val results[])
-    -> wasm::own<wasm::Trap> {
-  auto t = static_cast<wasm_callback_t*>(env);
+wasm::own<wasm::Trap> wasm::FuncData::call(const Val args[], Val results[]) {
+  // Direct C API calls do not pass through a typed Wasm wrapper.
+  for (size_t n = 0; n < type->params().size(); ++n) {
+    const auto* parameter = type->params()[n].get();
+    if (parameter->kind() == ANYREF && !IsNullable(parameter) &&
+        (args[n].kind() != ANYREF || !args[n].ref())) {
+      return Trap::make(store, Name::make(std::string(
+          "nonnull externref argument is null")));
+    }
+  }
+  // Borrow the public C views directly. FuncData owns the callback, its
+  // signature and its environment; no second trampoline state is needed.
   const wasm_val_vec_t args_view = {
-      t->params, const_cast<wasm_val_t*>(hide_val_vec(args))};
-  wasm_val_vec_t results_view = {t->results, hide_val_vec(results)};
-  return adopt_trap(t->callback(&args_view, &results_view));
-}
-
-void wasm_callback_finalizer(void* env) {
-  delete static_cast<wasm_callback_t*>(env);
-}
-
-struct wasm_callback_env_t {
-  wasm_func_callback_with_env_t callback;
-  void* env;
-  void (*finalizer)(void*);
-  size_t params;
-  size_t results;
-};
-
-auto wasm_callback_with_env(void* env, const wasm::Val args[],
-                            wasm::Val results[]) -> wasm::own<wasm::Trap> {
-  auto t = static_cast<wasm_callback_env_t*>(env);
-  const wasm_val_vec_t args_view = {
-      t->params, const_cast<wasm_val_t*>(hide_val_vec(args))};
-  wasm_val_vec_t results_view = {t->results, hide_val_vec(results)};
-  return adopt_trap(t->callback(t->env, &args_view, &results_view));
-}
-
-void wasm_callback_env_finalizer(void* env) {
-  auto t = static_cast<wasm_callback_env_t*>(env);
-  if (t->finalizer) t->finalizer(t->env);
-  delete t;
+      type->params().size(), const_cast<wasm_val_t*>(hide_val_vec(args))};
+  wasm_val_vec_t results_view = {type->results().size(), hide_val_vec(results)};
+  auto trap = adopt_trap(kind == kCallback
+                            ? callback(&args_view, &results_view)
+                            : callback_with_env(env, &args_view, &results_view));
+  if (trap) return trap;
+  // A callback must not inject null into a statically non-null guest value.
+  for (size_t n = 0; n < type->results().size(); ++n) {
+    const auto* result = type->results()[n].get();
+    if (result->kind() == ANYREF && !IsNullable(result) &&
+        (results[n].kind() != ANYREF || !results[n].ref())) {
+      return Trap::make(store, Name::make(std::string(
+          "nonnull externref host result is null")));
+    }
+  }
+  return nullptr;
 }
 
 }  // extern "C++"
 
 wasm_func_t* wasm_func_new(wasm_store_t* store, const wasm_functype_t* type,
                            wasm_func_callback_t callback) {
-  auto env = new wasm_callback_t{callback, type->params().size(),
-                                type->results().size()};
-  return release_func(wasm::Func::make(store, type, wasm_callback, env,
-                                     wasm_callback_finalizer));
+  auto data = std::make_shared<wasm::FuncData>(
+      store, type, wasm::FuncData::kCallback);
+  data->callback = callback;
+  return release_func(wasm::make_func(store, std::move(data)));
 }
 
 wasm_func_t* wasm_func_new_with_env(wasm_store_t* store,
                                     const wasm_functype_t* type,
                                     wasm_func_callback_with_env_t callback,
                                     void* env, void (*finalizer)(void*)) {
-  auto env2 = new wasm_callback_env_t{callback, env, finalizer,
-                                     type->params().size(),
-                                     type->results().size()};
-  return release_func(wasm::Func::make(store, type, wasm_callback_with_env,
-                                       env2, wasm_callback_env_finalizer));
+  auto data = std::make_shared<wasm::FuncData>(
+      store, type, wasm::FuncData::kCallbackWithEnv);
+  data->callback_with_env = callback;
+  data->env = env;
+  data->finalizer = finalizer;
+  return release_func(wasm::make_func(store, std::move(data)));
 }
 
 wasm_functype_t* wasm_func_type(const wasm_func_t* func) {
@@ -3699,18 +3561,101 @@ size_t wasm_func_result_arity(const wasm_func_t* func) {
   return func->result_arity();
 }
 
-wasm_trap_t* wasm_func_call(const wasm_func_t* func,
-                            const wasm_val_vec_t* args,
-                            wasm_val_vec_t* results) {
-  if (args->size != func->param_arity() ||
-      results->size != func->result_arity()) {
+wasm_trap_t* wasm_func_call(const wasm_func_t* function,
+                            const wasm_val_vec_t* arguments,
+                            wasm_val_vec_t* returns) {
+  using namespace wasm;
+  if (arguments->size != function->param_arity() ||
+      returns->size != function->result_arity()) {
     auto store = wasm::seal<wasm::Store>(
-        wasm::impl(reveal_func(func))->store());
+        wasm::impl(reveal_func(function))->store());
     return release_trap(wasm::Trap::make(
         store, wasm::Name::make(std::string("function arity mismatch"))));
   }
-  return release_trap(
-      func->call(reveal_val_vec(args->data), reveal_val_vec(results->data)));
+  const Val* args = reveal_val_vec(arguments->data);
+  Val* results = reveal_val_vec(returns->data);
+  auto func = impl(reveal_func(function));
+  auto store = func->store();
+  auto isolate = store->i_isolate();
+  v8::Isolate::Scope isolate_scope(store->isolate());
+  i::HandleScope handle_scope(isolate);
+  i::Tagged<i::Object> raw_function_data =
+      func->v8_object()->shared()->GetTrustedData(isolate);
+
+  // WasmCapiFunctions can be called directly.
+  if (IsWasmCapiFunctionData(raw_function_data)) {
+    return release_trap(CallWasmCapiFunction(
+        i::Cast<i::WasmCapiFunctionData>(raw_function_data), args, results));
+  }
+
+  SBXCHECK(IsWasmExportedFunctionData(raw_function_data));
+  i::DirectHandle<i::WasmExportedFunctionData> function_data{
+      i::Cast<i::WasmExportedFunctionData>(raw_function_data), isolate};
+  i::DirectHandle<i::WasmTrustedInstanceData> instance_data{
+      function_data->instance_data(), isolate};
+  int function_index = function_data->function_index();
+  const i::wasm::WasmModule* module = instance_data->module();
+  // Caching {sig} would give a ~10% reduction in overhead.
+  const i::wasm::FunctionSig* sig = module->functions[function_index].sig;
+  for (size_t n = 0; n < sig->parameter_count(); ++n) {
+    auto parameter = sig->GetParam(n);
+    if (parameter == i::wasm::ValueType::Ref(i::wasm::HeapType::kExtern) &&
+        (args[n].kind() != ANYREF || !args[n].ref())) {
+      return release_trap(Trap::make(seal<Store>(store), Name::make(
+          std::string("nonnull externref argument is null"))));
+    }
+  }
+  if (!PrepareFunctionData(isolate, function_data, sig, module)) {
+    return release_trap(Trap::make(seal<Store>(store), Name::make(
+        std::string("function signature is unsupported by the C API"))));
+  }
+  i::DirectHandle<i::Code> wrapper_code(function_data->c_wrapper_code(isolate),
+                                        isolate);
+  i::Address call_target = function_data->internal()->call_target();
+
+  i::wasm::CWasmArgumentsPacker packer(function_data->packed_args_size());
+  PushArgs(sig, args, &packer, store);
+
+  i::DirectHandle<i::Object> object_ref;
+  if (function_index < static_cast<int>(module->num_imported_functions)) {
+    object_ref =
+        i::handle(instance_data->dispatch_table_for_imports()->implicit_arg(
+                      function_index),
+                  isolate);
+    if (IsWasmImportData(*object_ref)) {
+      i::Tagged<i::JSFunction> jsfunc = i::Cast<i::JSFunction>(
+          i::Cast<i::WasmImportData>(*object_ref)->callable());
+      i::Tagged<i::Object> data = jsfunc->shared()->GetTrustedData(isolate);
+      if (IsWasmCapiFunctionData(data)) {
+        return release_trap(CallWasmCapiFunction(
+            i::Cast<i::WasmCapiFunctionData>(data), args, results));
+      }
+      // TODO(jkummerow): Imported and then re-exported JavaScript functions
+      // are not supported yet. If we support C-API + JavaScript, we'll need
+      // to call those here.
+      UNIMPLEMENTED();
+    } else {
+      // A WasmFunction from another module.
+      DCHECK(IsWasmInstanceObject(*object_ref));
+    }
+  } else {
+    // TODO(42204563): Avoid crashing if the instance object is not available.
+    CHECK(instance_data->has_instance_object());
+    object_ref = handle(instance_data->instance_object(), isolate);
+  }
+
+  i::Execution::CallWasm(isolate, wrapper_code, call_target, object_ref,
+                         packer.argv());
+
+  if (isolate->has_exception()) {
+    i::Handle<i::Object> exception(isolate->exception(), isolate);
+    isolate->clear_exception();
+    return release_trap(implement<Trap>::type::make(
+        store, GetProperException(isolate, exception)));
+  }
+
+  PopArgs(sig, results, &packer, store);
+  return nullptr;
 }
 
 // Global Instances
