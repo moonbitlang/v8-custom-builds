@@ -153,12 +153,31 @@ not promise a stable cross-engine ABI or full Wasm conformance.
 
 ## CI and releases
 
-Recipe and published-release Rust-consumer checks run on PRs and pushes to
-`main`; they do not compile V8. If the pinned release is not yet published, the
-published consumer job reports that dependency and skips. Run **Rust crate**
-with `native-run` set to a successful **Build and test** run to validate all five
-produced archives without rebuilding V8. The selected run and current wrapper
-must have matching native inputs; artifact provenance and checksums are verified.
+Recipe and Rust-consumer checks run on PRs and pushes to `main`; they do not
+compile V8. **Rust crate** tests normal downloads from the pinned published
+release when its native inputs match. Otherwise it automatically selects a
+successful **Build and test** run with identical inputs and five retained artifacts. Rust-only changes
+and squash merges reuse the candidate without another native build. Its optional
+`native-run` input selects a particular producer instead of searching the latest
+100 successful runs. If neither a matching release nor a candidate is available,
+CI fails with an
+instruction to build a candidate; an unpublished pin is not a passing test.
+
+A successful native build also starts **Rust crate** for the current tip of its
+branch. This picks up Rust-only follow-ups made while V8 was building. A native
+change made during that build fails the input comparison and needs its own
+candidate. The branch must still exist. Every candidate consumer job checks the
+selected archive and paired headers, runs the C/Rust tests and strict Clippy,
+and records the package checksums. Published-release jobs exercise the Rust
+wrapper's normal download and verification path without archive overrides. Only a successful five-platform matrix produces the
+`wee8-validation` qualification artifact.
+
+[`ci/native_artifacts.py`](ci/native_artifacts.py) defines the shared input
+fingerprint for candidate selection and promotion: native sources, submodule
+pins, headers, build driver/workflow, platform configuration, and native
+validation inputs. Rust and documentation changes do not require rebuilding V8.
+The fingerprint identifies the recipe; artifact and file digests identify the
+actual bytes. It does not claim independently built binaries are identical.
 
 Native **Build and test** is manually triggered for
 one target or all five supported platforms: Linux and macOS x86_64/ARM64, and
@@ -180,12 +199,22 @@ selected archive. Test executables are not release assets. Use `rebuild` to bypa
 the finished-artifact cache while retaining compiler caching; failed matrix jobs
 can otherwise reuse completed builds.
 
-**Publish tested archives** takes a successful full-matrix run and an existing
-`v0.106.0-moonbit.N` tag at that run's commit. It verifies all five platforms and
-publishes those exact artifacts without rebuilding. Use a new immutable tag for
-each release. Build artifacts are retained for 30 days. Update the wrapper's
-release pin deliberately with the native API change; normal downloads require
-that release to be published. Before publication, use the produced artifacts.
+After merge, the automatic `main` consumer run reuses the same native candidate.
+**Publish tested archives** takes that successful consumer `validation_run` and
+an existing `v0.106.0-moonbit.N` tag at its commit. The tag must be on `main` and
+match the wrapper's release pin. Publication verifies the qualification, all five
+original artifact digests, native-input equality and the consumer-tested package
+checksums. The native producer can come from the merged PR branch: publication
+does not require another main-branch native build. Original producer provenance
+is preserved; `promotion.json` records the consumer revision, validation run and
+release tag separately. Publishing remains an explicit main-branch action.
+
+Use a new immutable tag for each native release. Build and qualification
+artifacts are retained for 30 days; caches are only an acceleration mechanism.
+Rust-only changes keep the existing native pin. For a new native API, prepare the
+wrapper against candidate artifacts and coordinate merging and publication so
+normal downloads do not wait on an unpublished pin. Downstream pin changes can
+follow publication. No old-native fallback is needed.
 
 These checks do not replace full Wasm conformance, debug/sanitizer validation or
 integration with the wee8 backend in `moonbitlang/moon`.
