@@ -312,6 +312,7 @@ fn exported_tags_can_be_reimported_and_unsupported_tag_payloads_fail_validation(
             .same(store.as_context(), first)
             .unwrap()
     );
+    #[cfg(not(wee8_native_modules))]
     for source in [
         r#"(module (import "e" "tag" (tag (param v128))))"#,
         r#"(module (type $s (struct)) (tag (export "tag") (param (ref null $s))))"#,
@@ -322,6 +323,7 @@ fn exported_tags_can_be_reimported_and_unsupported_tag_payloads_fail_validation(
 }
 
 #[test]
+#[cfg(not(wee8_native_modules))]
 fn rejects_funcref_tag_imports_and_exports() {
     let store = Store::new(()).unwrap();
     for (source, boundary) in [

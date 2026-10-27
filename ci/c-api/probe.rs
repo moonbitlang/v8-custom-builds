@@ -1,4 +1,11 @@
 unsafe extern "C" {
+    fn wee8_module_probe(
+        store: *mut std::ffi::c_void,
+        bytes: *const u8,
+        len: usize,
+        invalid: *const u8,
+        invalid_len: usize,
+    );
     fn wee8_externref_probe(store: *mut std::ffi::c_void, bytes: *const u8, len: usize);
     fn wee8_exception_trace_probe(store: *mut std::ffi::c_void, bytes: *const u8, len: usize);
     fn wee8_stack_limit_probe(
@@ -136,4 +143,27 @@ unsafe extern "C" fn test_exception_traces(store: *mut std::ffi::c_void) {
 unsafe extern "C" fn test_externref(store: *mut std::ffi::c_void) {
     let bytes = wat::parse_str(include_str!("externref.wat")).unwrap();
     unsafe { wee8_externref_probe(store, bytes.as_ptr(), bytes.len()) };
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn test_modules(store: *mut std::ffi::c_void) {
+    let bytes = wat::parse_str(
+        r#"(module
+        (func (export "vector") (result v128) v128.const i32x4 1 2 3 4)
+        (global (export "global") v128 (v128.const i32x4 0 0 0 0))
+        (tag (export "tag") (param v128))
+        (memory (export "memory") 1 1 shared)
+        (func (export "run") (result i32) i32.const 42))"#,
+    )
+    .unwrap();
+    let invalid = wat::parse_str("(module (func local.get 0 drop))").unwrap();
+    unsafe {
+        wee8_module_probe(
+            store,
+            bytes.as_ptr(),
+            bytes.len(),
+            invalid.as_ptr(),
+            invalid.len(),
+        )
+    };
 }

@@ -19,7 +19,8 @@
 //! Keep boundary type information in Rust, with body validation delegated only
 //! to an archive that explicitly guarantees eager rejection during compilation.
 
-use crate::{Error, Result};
+use crate::{CompileOptions, Error, Module, Result, Store, ffi};
+use std::ptr::{self, NonNull};
 #[cfg(wee8_eager_validation)]
 use wasmparser::{Parser, ValidPayload};
 use wasmparser::{Validator, WasmFeatures, types::Types};
@@ -92,4 +93,131 @@ mod tests {
         assert!(metadata(&invalid).is_ok());
         assert!(store.compile(&invalid).is_err());
     }
+}
+
+// Older archives abort on unsupported metadata conversions and discard native
+// diagnostics. Keep their validation fallback until the minimum release changes.
+pub(super) fn compile_with_options<'store, T: 'static>(
+    store: &'store Store<T>,
+    bytes: &[u8],
+    options: &CompileOptions,
+) -> Result<Module<'store, T>> {
+    if options
+        .imported_string_constants
+        .as_ref()
+        .is_some_and(|name| !name.is_ascii())
+    {
+        return Err("imported string constant namespace must be ASCII in this V8 version".into());
+    }
+    // Match V8's always-enabled proposals plus the custom release's
+    // optional-feature policy. Keep this explicit: wasmparser defaults
+    // include proposals this engine does not implement. C API representation
+    // and memory-borrow restrictions are checked separately below.
+    let types = module_types(bytes)?;
+    let types = types.as_ref();
+    let binary = ffi::wasm_byte_vec_t {
+        size: bytes.len(),
+        data: bytes.as_ptr().cast_mut().cast(),
+    };
+    let constants = options
+        .imported_string_constants
+        .as_ref()
+        .map(|name| ffi::wasm_name_t {
+            size: name.len(),
+            data: name.as_ptr().cast_mut().cast(),
+        });
+    let raw_options = ffi::wee8_compile_options_t {
+        js_string_builtins: options.js_string_builtins,
+        imported_string_constants: constants.as_ref().map_or(ptr::null(), |name| name),
+    };
+    let raw = NonNull::new(unsafe {
+        ffi::wee8_module_new(store.state.inner.raw.as_ptr(), &binary, &raw_options)
+    })
+    .ok_or_else(|| compilation_error(bytes))?;
+    let module = Module {
+        raw,
+        store,
+        options: options.clone(),
+    };
+    // Compilation can handle internal GC types; metadata introspection
+    // cannot. V8's validated classification is authoritative for builtins.
+    // Walk the original declarations: core_imports groups duplicate names
+    // and therefore cannot supply native declaration indices.
+    let mut imports = Vec::new();
+    for payload in wasmparser::Parser::new(0).parse_all(bytes) {
+        if let wasmparser::Payload::ImportSection(section) = payload? {
+            for (index, import) in section.into_imports().enumerate() {
+                let import = import?;
+                if !unsafe { ffi::wee8_module_import_is_builtin(raw.as_ptr(), index) } {
+                    imports.push((
+                        format!("import `{}::{}`", import.module, import.name),
+                        types
+                            .entity_type_from_import(&import)
+                            .ok_or("missing validated import type")?,
+                    ));
+                }
+            }
+        }
+    }
+    let exports = types
+        .core_exports()
+        .unwrap()
+        .map(|(name, ty)| (format!("export `{name}`"), ty));
+    // The .5 extension preserves externref nullability in function types.
+    // Other native external types still require nullable references. Reject
+    // unsupported types before C API introspection, which may abort in V8.
+    let scalar_or_externref = |ty: wasmparser::ValType| {
+        matches!(
+            ty,
+            wasmparser::ValType::I32
+                | wasmparser::ValType::I64
+                | wasmparser::ValType::F32
+                | wasmparser::ValType::F64
+        ) || ty == wasmparser::ValType::EXTERNREF
+    };
+    let supported = |ty| scalar_or_externref(ty) || ty == wasmparser::ValType::FUNCREF;
+    let function_type = |ty| {
+        supported(ty)
+            || matches!(ty, wasmparser::ValType::Ref(r) if r.heap_type() == wasmparser::HeapType::EXTERN)
+    };
+    for (name, ty) in imports.into_iter().chain(exports) {
+        let unsupported = match ty {
+            wasmparser::types::EntityType::Func(id) => {
+                let function = types[id].unwrap_func();
+                function
+                    .params()
+                    .iter()
+                    .chain(function.results())
+                    .copied()
+                    .find(|ty| !function_type(*ty))
+            }
+            wasmparser::types::EntityType::Tag(id) => {
+                // Tag payloads must also pass through Value and the native
+                // exception encoder/decoder, which do not support funcref.
+                types[id]
+                    .unwrap_func()
+                    .params()
+                    .iter()
+                    .copied()
+                    .find(|ty| !scalar_or_externref(*ty))
+            }
+            wasmparser::types::EntityType::Memory(memory) if memory.shared => {
+                // Caller exposes an exclusive, non-atomic slice. Shared
+                // memories may execute internally but cannot cross this API.
+                return Err(format!("shared memory is unsupported in C API {name}").into());
+            }
+            wasmparser::types::EntityType::Global(global) => {
+                (!supported(global.content_type)).then_some(global.content_type)
+            }
+            wasmparser::types::EntityType::Table(table) => {
+                let ty = wasmparser::ValType::Ref(table.element_type);
+                (!supported(ty)).then_some(ty)
+            }
+            _ => None,
+        };
+        if let Some(ty) = unsupported {
+            return Err(format!("{ty} is unsupported in C API {name}").into());
+        }
+    }
+    Ok(module)
 }

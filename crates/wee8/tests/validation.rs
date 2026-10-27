@@ -33,7 +33,14 @@ fn invalid_uncalled_bodies_fail_compilation_with_useful_diagnostics() {
         let Err(Error::Interface(error)) = store.compile(&bytes) else {
             panic!("accepted invalid function body: {source}");
         };
-        assert!(error.contains(diagnostic), "{source}: {error}");
+        if cfg!(wee8_native_modules) {
+            assert!(
+                error.contains("compilation") && error.contains("@+"),
+                "{source}: {error}"
+            );
+        } else {
+            assert!(error.contains(diagnostic), "{source}: {error}");
+        }
     }
 }
 

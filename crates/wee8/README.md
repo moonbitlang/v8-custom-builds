@@ -31,16 +31,28 @@ Guest validation follows the core Wasm proposals enabled by the pinned V8
 revision, rather than the instructions currently emitted by MoonBit. This covers
 Wasm 2.0 (including sign extension), tail calls, extended constants, relaxed SIMD,
 multiple memories, threads/atomics, GC, typed function references, and
-standardized exception handling. The feature set is explicit because newer
-wasmparser defaults include proposals this engine does not implement.
+standardized exception handling.
 
-The Rust validator retains section/type metadata and host-boundary checks.
-Archives exposing `wee8_module_validation_is_eager` can take responsibility for
-instruction-body validation: successful native compilation must reject every
-invalid function, including unexported functions that are never called. Engine
-startup disables experimental lazy validation. Older archives, including the
-default `.5` release, retain full Rust validation. On native compilation failure,
-Rust runs its full validator to preserve detailed invalid-Wasm diagnostics.
+With a matching new native archive, V8 owns validation, import/export metadata
+and compile diagnostics. The Rust wrapper does not parse the binary again.
+Successful compilation validates every body, including uncalled functions;
+experimental lazy validation stays disabled. Valid modules may expose `v128`, GC
+references, tags, tables or shared memory even when the host value API cannot
+represent them. `get_func` and `import_types` report unsupported host types when
+requested, without preventing other exports from running.
+
+`instance.get_export(name)` returns an opaque handle for
+`Extern::Export(&handle)` imports. V8 checks the native types when linking; the
+handle borrows its source instance and imports must belong to the same store.
+The receiving instance retains imported objects after the handle is dropped.
+This permits Wasm-to-Wasm linking without marshalling values through Rust.
+
+Older archives keep their fallback: the default `.5` release uses full Rust
+validation and rejects unsupported external types at compilation. The previous
+eager-validation header skips only instruction-body validation. Header checks
+select these contracts, and new symbols require their matching native archive.
+`wasmparser` remains a dependency solely for this compatibility path and framing
+tests; removing it requires raising the minimum native release separately.
 
 The source of this policy is V8's
 [always-enabled features](https://github.com/denoland/v8/blob/245ce17ed8483e6bc3de7f668635f46c5bfdd8a0/src/wasm/wasm-features.h)
@@ -69,14 +81,14 @@ The C ABI value tags are private; both externref nullabilities use the same C
 value representation. There is no public `Kind` or `Value::kind()` that could
 confuse a representation tag with the full signature type.
 
-Global/table metadata still requires nullable references, and tag payloads permit
-only scalar numbers and nullable externref. Other GC reference types and `v128`
-at host boundaries are rejected before native introspection, which would
-otherwise abort. Shared memories and atomic operations
-may stay inside the guest, but importing or exporting a shared memory is rejected:
-the host memory API lends an exclusive, non-atomic slice. This does not add a host
-thread-spawning or shared-memory interface. Multiple guest memories are allowed;
-`Caller::with_memory` still selects the export named `memory`.
+The host metadata representation for globals/tables requires nullable references;
+tag payload access permits only scalar numbers and nullable externref. Unsupported
+types remain available as opaque native exports. Shared memory and atomics can
+execute and link between guests, but `Caller::with_memory` rejects shared memory
+because its exclusive non-atomic slice would be invalid. This does not add host
+thread spawning. Multiple guest memories are allowed; `Caller::with_memory`
+selects the export named `memory` of the top-level called instance, including
+calls through linked Wasm functions.
 The Rust call interface supports scalar numbers and either externref nullability, with
 at most one result; callable `funcref` handles are not exposed yet.
 
@@ -176,7 +188,8 @@ Export lookup reuses an existing tag slot for the same native identity. This
 tag table is separate from externrefs, whose roots and payloads remain in V8.
 
 `Module::import_types` describes function/tag/memory imports, and
-`instantiate_with_imports` accepts `Extern::Func`, `Extern::Tag` and `Extern::Memory`.
+`instantiate_with_imports` accepts `Extern::Func`, `Extern::Tag`, `Extern::Memory`
+and opaque `Extern::Export` handles.
 `Instance::tag` retrieves an exported tag. Existing function-only `imports` and
 `instantiate` remain available for existing consumers.
 
@@ -193,7 +206,8 @@ let mut instance = module.instantiate_with_imports(&[
 
 `Exception` owns a native root and borrows its store. Payloads may contain scalar
 numbers and nullable externref. Imported/exported tags with other payload types,
-including `funcref`, are rejected at compilation; guest-internal tags may still
+including `funcref`, are rejected on host payload access (at compilation with
+older archives); guest-internal tags may still
 carry function references. `Caller::throw` returns an error marker while
 the store roots the exception until the callback trampoline takes it. Returning
 another outcome discards that pending root. A guest may catch the exception;

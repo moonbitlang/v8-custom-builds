@@ -16,7 +16,9 @@
 //
 // For inquiries, you can contact us via e-mail at jichuruanjian@idea.edu.cn.
 
-use wee8::{Error, Store, ValType, Value};
+#[cfg(not(wee8_native_modules))]
+use wee8::Error;
+use wee8::{Store, ValType, Value};
 
 #[test]
 fn internal_simd_survives_serialization_and_scalar_host_calls() {
@@ -55,6 +57,7 @@ fn internal_simd_survives_serialization_and_scalar_host_calls() {
 }
 
 #[test]
+#[cfg(not(wee8_native_modules))]
 fn vector_imports_and_exports_are_rejected_before_native_introspection() {
     let store = Store::new(()).unwrap();
     for source in [

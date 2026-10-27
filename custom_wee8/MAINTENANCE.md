@@ -101,8 +101,10 @@ Changes must preserve these invariants:
   period in which native code can use them. Store teardown notifies the default
   platform before disposing the isolate. Test cleanup while the engine stays alive.
 - Function types preserve supported reference nullability. Null checks protect
-  direct and callback boundaries; unsupported types are rejected before native
-  conversions. Type changes require matching introspection and call-path tests.
+  direct and callback boundaries. Unsupported host types fail at introspection
+  or value access, not module compilation. Linking and export enumeration use
+  V8's native tables without converting types. Type changes require matching
+  introspection, opaque-linking and call-path tests.
 - Native exceptions retain tag identity and payload ownership. Trap diagnostics
   inspect only Wasm frames; JS-string builtin failures must remain reportable.
 - Compile options survive serialization and module reuse. Native strings remain
@@ -111,6 +113,12 @@ Changes must preserve these invariants:
   uncalled functions. Disable experimental lazy validation at engine startup and
   keep the capability query accurate. Rust may omit its body-validation pass only
   when the linked archive advertises this guarantee; older archives retain it.
+  New module extensions return V8's compile diagnostics and validated metadata,
+  so the Rust wrapper needs no second parser on that path. Compare changes with
+  ordinary V8's `WasmEngine::SyncCompile` and `SyncInstantiate`: the C value
+  representation is not an engine feature policy. In particular, V8's JS API
+  accepts vector signatures and rejects incompatible JS calls at invocation;
+  the C/Rust boundary must likewise avoid rejecting an otherwise valid module.
 - Standard `wasm.h` stays unmodified. Additive declarations belong in `wee8.h`.
   Changing declarations alone cannot enable functionality in an older archive.
 

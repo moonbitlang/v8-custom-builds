@@ -232,6 +232,7 @@ fn cross_store_references_are_rejected_before_native_calls() {
 }
 
 #[test]
+#[cfg(not(wee8_native_modules))]
 fn unsupported_reference_boundary_types_are_rejected() {
     let store = Store::new(()).unwrap();
     for source in [
@@ -384,6 +385,7 @@ fn nonnull_reference_extension_does_not_widen_other_external_types() {
         )
         .is_err()
     );
+    #[cfg(not(wee8_native_modules))]
     for source in [
         r#"(module (import "h" "tag" (tag (param (ref extern)))))"#,
         r#"(module (import "h" "global" (global (ref extern))))"#,

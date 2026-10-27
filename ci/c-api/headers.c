@@ -21,6 +21,17 @@ void check_header_declarations(wasm_store_t* store) {
 #if WEE8_EXTENSIONS
   bool (*eager_validation)(void) = wee8_module_validation_is_eager;
   (void)eager_validation;
+  wasm_module_t* (*compile_with_error)(wasm_store_t*, const wasm_byte_vec_t*,
+      const wee8_compile_options_t*, wasm_byte_vec_t*) = wee8_module_new_with_error;
+  size_t (*import_count)(const wasm_module_t*) = wee8_module_import_count;
+  bool (*export_name)(const wasm_module_t*, size_t, wasm_name_t*) = wee8_module_export_name;
+  bool (*import_types)(const wasm_module_t*, wasm_importtype_vec_t*) = wee8_module_imports;
+  bool (*memory_shared)(const wasm_memory_t*) = wee8_memory_is_shared;
+  (void)compile_with_error;
+  (void)import_count;
+  (void)export_name;
+  (void)import_types;
+  (void)memory_shared;
   wasm_valtype_t* (*ref_type)(bool) = wee8_valtype_new_externref;
   bool (*nullable)(const wasm_valtype_t*) = wee8_valtype_is_nullable;
   (void)ref_type;

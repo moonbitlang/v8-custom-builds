@@ -60,6 +60,7 @@ mod references;
 pub use references::ExternRef;
 mod strings;
 mod types;
+#[cfg(not(wee8_native_modules))]
 mod validation;
 use std::{
     cell::{Cell, OnceCell, RefCell},
@@ -122,6 +123,7 @@ impl From<&str> for Error {
     }
 }
 
+#[cfg(not(wee8_native_modules))]
 impl From<wasmparser::BinaryReaderError> for Error {
     fn from(error: wasmparser::BinaryReaderError) -> Self {
         Self::Interface(error.to_string())
@@ -437,7 +439,8 @@ impl<'a, T> Caller<'a, T> {
         self.as_context().with_data(operation)
     }
 
-    /// Borrow the current instance's exported `memory` for one host call.
+    /// Borrow the top-level called instance's exported `memory` for one host call.
+    /// Calls through linked Wasm functions retain that entry instance's memory.
     /// Fails during start sections, nested memory borrows, or without that export.
     pub fn with_memory<R>(&self, operation: impl FnOnce(&T, &mut [u8]) -> R) -> Result<R> {
         let memory = self.0.inner.memory.get();
@@ -450,8 +453,13 @@ impl<'a, T> Caller<'a, T> {
             .memory_access
             .try_borrow_mut()
             .map_err(|_| "nested guest memory borrow")?;
-        // The mutable state borrow also rejects nested memory views. Boundary
-        // validation excludes shared memory, and callbacks cannot re-enter Wasm.
+        #[cfg(wee8_native_modules)]
+        if unsafe { ffi::wee8_memory_is_shared(memory) } {
+            return Err("shared memory cannot be borrowed as an exclusive host byte slice".into());
+        }
+        // The mutable state borrow also rejects nested memory views. Older
+        // archives exclude shared memory at compilation; new ones check above.
+        // Callbacks cannot re-enter Wasm.
         let data = self
             .0
             .data
@@ -554,139 +562,77 @@ unsafe extern "C" fn call_host<T>(
 }
 
 impl<T: 'static> Store<T> {
-    /// Validate guest proposals and C API boundary types, then compile in this store.
+    /// Compile and validate with V8. New native archives accept all enabled Wasm
+    /// types; host representation is checked when accessing imports or exports.
+    /// Older archives retain their validation and boundary-type fallback.
     pub fn compile<'store>(&'store self, bytes: &[u8]) -> Result<Module<'store, T>> {
         self.compile_with_options(bytes, &CompileOptions::default())
     }
 
     /// Compile with explicit native imports. Host import metadata excludes only
-    /// builtins whose signatures V8 has validated; ordinary boundaries retain
-    /// the same checks as [`Store::compile`]. Options are owned by the module.
+    /// builtins whose signatures V8 has validated. Options are owned by the module.
     pub fn compile_with_options<'store>(
         &'store self,
         bytes: &[u8],
         options: &CompileOptions,
     ) -> Result<Module<'store, T>> {
-        if options
-            .imported_string_constants
-            .as_ref()
-            .is_some_and(|name| !name.is_ascii())
-        {
-            return Err(
-                "imported string constant namespace must be ASCII in this V8 version".into(),
-            );
-        }
-        // Match V8's always-enabled proposals plus the custom release's
-        // optional-feature policy. Keep this explicit: wasmparser defaults
-        // include proposals this engine does not implement. C API representation
-        // and memory-borrow restrictions are checked separately below.
-        let types = validation::module_types(bytes)?;
-        let types = types.as_ref();
-        let binary = ffi::wasm_byte_vec_t {
-            size: bytes.len(),
-            data: bytes.as_ptr().cast_mut().cast(),
-        };
-        let constants = options
-            .imported_string_constants
-            .as_ref()
-            .map(|name| ffi::wasm_name_t {
-                size: name.len(),
-                data: name.as_ptr().cast_mut().cast(),
-            });
-        let raw_options = ffi::wee8_compile_options_t {
-            js_string_builtins: options.js_string_builtins,
-            imported_string_constants: constants.as_ref().map_or(ptr::null(), |name| name),
-        };
-        let raw = NonNull::new(unsafe {
-            ffi::wee8_module_new(self.state.inner.raw.as_ptr(), &binary, &raw_options)
-        })
-        .ok_or_else(|| validation::compilation_error(bytes))?;
-        let module = Module {
-            raw,
-            store: self,
-            options: options.clone(),
-        };
-        // Compilation can handle internal GC types; metadata introspection
-        // cannot. V8's validated classification is authoritative for builtins.
-        // Walk the original declarations: core_imports groups duplicate names
-        // and therefore cannot supply native declaration indices.
-        let mut imports = Vec::new();
-        for payload in wasmparser::Parser::new(0).parse_all(bytes) {
-            if let wasmparser::Payload::ImportSection(section) = payload? {
-                for (index, import) in section.into_imports().enumerate() {
-                    let import = import?;
-                    if !unsafe { ffi::wee8_module_import_is_builtin(raw.as_ptr(), index) } {
-                        imports.push((
-                            format!("import `{}::{}`", import.module, import.name),
-                            types
-                                .entity_type_from_import(&import)
-                                .ok_or("missing validated import type")?,
-                        ));
-                    }
-                }
+        #[cfg(not(wee8_native_modules))]
+        return validation::compile_with_options(self, bytes, options);
+
+        #[cfg(wee8_native_modules)]
+        unsafe {
+            if !ffi::wee8_module_validation_is_eager() {
+                return Err("native module compilation requires eager validation".into());
             }
-        }
-        let exports = types
-            .core_exports()
-            .unwrap()
-            .map(|(name, ty)| (format!("export `{name}`"), ty));
-        // The .5 extension preserves externref nullability in function types.
-        // Other native external types still require nullable references. Reject
-        // unsupported types before C API introspection, which may abort in V8.
-        let scalar_or_externref = |ty: wasmparser::ValType| {
-            matches!(
-                ty,
-                wasmparser::ValType::I32
-                    | wasmparser::ValType::I64
-                    | wasmparser::ValType::F32
-                    | wasmparser::ValType::F64
-            ) || ty == wasmparser::ValType::EXTERNREF
-        };
-        let supported = |ty| scalar_or_externref(ty) || ty == wasmparser::ValType::FUNCREF;
-        let function_type = |ty| {
-            supported(ty)
-                || matches!(ty, wasmparser::ValType::Ref(r) if r.heap_type() == wasmparser::HeapType::EXTERN)
-        };
-        for (name, ty) in imports.into_iter().chain(exports) {
-            let unsupported = match ty {
-                wasmparser::types::EntityType::Func(id) => {
-                    let function = types[id].unwrap_func();
-                    function
-                        .params()
-                        .iter()
-                        .chain(function.results())
-                        .copied()
-                        .find(|ty| !function_type(*ty))
-                }
-                wasmparser::types::EntityType::Tag(id) => {
-                    // Tag payloads must also pass through Value and the native
-                    // exception encoder/decoder, which do not support funcref.
-                    types[id]
-                        .unwrap_func()
-                        .params()
-                        .iter()
-                        .copied()
-                        .find(|ty| !scalar_or_externref(*ty))
-                }
-                wasmparser::types::EntityType::Memory(memory) if memory.shared => {
-                    // Caller exposes an exclusive, non-atomic slice. Shared
-                    // memories may execute internally but cannot cross this API.
-                    return Err(format!("shared memory is unsupported in C API {name}").into());
-                }
-                wasmparser::types::EntityType::Global(global) => {
-                    (!supported(global.content_type)).then_some(global.content_type)
-                }
-                wasmparser::types::EntityType::Table(table) => {
-                    let ty = wasmparser::ValType::Ref(table.element_type);
-                    (!supported(ty)).then_some(ty)
-                }
-                _ => None,
+            let binary = ffi::wasm_byte_vec_t {
+                size: bytes.len(),
+                data: bytes.as_ptr().cast_mut().cast(),
             };
-            if let Some(ty) = unsupported {
-                return Err(format!("{ty} is unsupported in C API {name}").into());
-            }
+            let constants =
+                options
+                    .imported_string_constants
+                    .as_ref()
+                    .map(|name| ffi::wasm_name_t {
+                        size: name.len(),
+                        data: name.as_ptr().cast_mut().cast(),
+                    });
+            let raw_options = ffi::wee8_compile_options_t {
+                js_string_builtins: options.js_string_builtins,
+                imported_string_constants: constants.as_ref().map_or(ptr::null(), |name| name),
+            };
+            let mut error = ffi::wasm_byte_vec_t {
+                size: 0,
+                data: ptr::null_mut(),
+            };
+            let raw = ffi::wee8_module_new_with_error(
+                self.state.inner.raw.as_ptr(),
+                &binary,
+                &raw_options,
+                &mut error,
+            );
+            let result = match NonNull::new(raw) {
+                Some(raw) => Ok(Module {
+                    raw,
+                    store: self,
+                    options: options.clone(),
+                }),
+                None => {
+                    let message = if error.size == 0 {
+                        "module compilation failed".to_owned()
+                    } else {
+                        String::from_utf8_lossy(std::slice::from_raw_parts(
+                            error.data.cast(),
+                            error.size,
+                        ))
+                        .trim_end_matches('\0')
+                        .to_owned()
+                    };
+                    Err(message.into())
+                }
+            };
+            ffi::wasm_byte_vec_delete(&mut error);
+            result
         }
-        Ok(module)
     }
 
     /// Create a numeric or externref host function with at most one result.
@@ -836,6 +782,25 @@ pub enum Extern<'a, T> {
     Func(&'a HostFunc<'a, T>),
     Tag(Tag),
     Memory(Memory),
+    Export(&'a Export<'a, T>),
+}
+
+/// An opaque export borrowed from its instance. Linking preserves its native
+/// Wasm type without converting values through the host API.
+///
+/// ```compile_fail
+/// let store = wee8::Store::new(()).unwrap();
+/// let module = store.compile(&wat::parse_str(
+///     "(module (func (export \"run\")))").unwrap()).unwrap();
+/// let export = {
+///     let instance = module.instantiate(&[]).unwrap();
+///     instance.get_export("run").unwrap()
+/// };
+/// module.instantiate_with_imports(&[wee8::Extern::Export(&export)]).unwrap();
+/// ```
+pub struct Export<'instance, T> {
+    raw: NonNull<ffi::wasm_extern_t>,
+    store: &'instance Store<T>,
 }
 
 impl<T> Module<'_, T> {
@@ -866,6 +831,11 @@ impl<T> Module<'_, T> {
                 size: 0,
                 data: ptr::null_mut(),
             };
+            #[cfg(wee8_native_modules)]
+            if !ffi::wee8_module_imports(self.raw.as_ptr(), &mut imports) {
+                return Err("import types are unsupported by the host API; use opaque exports for Wasm linking".into());
+            }
+            #[cfg(not(wee8_native_modules))]
             ffi::wasm_module_imports(self.raw.as_ptr(), &mut imports);
             let result = (0..imports.size)
                 .map(|index| {
@@ -992,6 +962,12 @@ impl<'store, T> Module<'store, T> {
                     }
                     Ok(unsafe { ffi::wasm_func_as_extern(function.raw.as_ptr()) })
                 }
+                Extern::Export(export) => {
+                    if !ptr::eq(export.store, self.store) {
+                        return Err("imports must belong to the module's store".into());
+                    }
+                    Ok(export.raw.as_ptr())
+                }
                 Extern::Memory(memory) => Ok(unsafe {
                     ffi::wasm_memory_as_extern(memory.raw(&self.store.state.inner)?.as_ptr())
                 }),
@@ -1009,13 +985,19 @@ impl<'store, T> Module<'store, T> {
     ) -> Result<Instance<'store, T>> {
         let _execution = self.store.state.inner.enter()?;
         unsafe {
-            let mut types = ffi::wasm_importtype_vec_t {
-                size: 0,
-                data: ptr::null_mut(),
+            #[cfg(wee8_native_modules)]
+            let count = ffi::wee8_module_import_count(self.raw.as_ptr());
+            #[cfg(not(wee8_native_modules))]
+            let count = {
+                let mut types = ffi::wasm_importtype_vec_t {
+                    size: 0,
+                    data: ptr::null_mut(),
+                };
+                ffi::wasm_module_imports(self.raw.as_ptr(), &mut types);
+                let count = types.size;
+                ffi::wasm_importtype_vec_delete(&mut types);
+                count
             };
-            ffi::wasm_module_imports(self.raw.as_ptr(), &mut types);
-            let count = types.size;
-            ffi::wasm_importtype_vec_delete(&mut types);
             if count != raw_imports.len() {
                 return Err("import count mismatch".into());
             }
@@ -1039,39 +1021,65 @@ impl<'store, T> Module<'store, T> {
                 data: ptr::null_mut(),
             };
             ffi::wasm_instance_exports(raw.as_ptr(), &mut exports);
-            let mut types = ffi::wasm_exporttype_vec_t {
-                size: 0,
-                data: ptr::null_mut(),
+            // Own native roots before any fallible name lookup.
+            let mut instance = Instance {
+                raw,
+                exports,
+                names: Vec::new(),
+                memory: ptr::null_mut(),
+                functions: Vec::new(),
+                store: self.store,
             };
-            ffi::wasm_module_exports(self.raw.as_ptr(), &mut types);
-            let names: Vec<Vec<u8>> = (0..types.size)
-                .map(|index| {
-                    let name = &*ffi::wasm_exporttype_name(*types.data.add(index));
-                    if name.size == 0 {
+            #[cfg(wee8_native_modules)]
+            {
+                for index in 0..instance.exports.size {
+                    let mut name = ffi::wasm_byte_vec_t {
+                        size: 0,
+                        data: ptr::null_mut(),
+                    };
+                    if !ffi::wee8_module_export_name(self.raw.as_ptr(), index, &mut name) {
+                        return Err("export metadata mismatch".into());
+                    }
+                    instance.names.push(if name.size == 0 {
                         Vec::new()
                     } else {
                         std::slice::from_raw_parts(name.data.cast(), name.size).to_vec()
-                    }
-                })
-                .collect();
-            ffi::wasm_exporttype_vec_delete(&mut types);
-            // Export handles own the roots. Cache the memory object, whose data
-            // address is queried afresh for each host borrow after memory.grow.
-            let memory = names
+                    });
+                    ffi::wasm_byte_vec_delete(&mut name);
+                }
+            }
+            #[cfg(not(wee8_native_modules))]
+            {
+                instance.names = {
+                    let mut types = ffi::wasm_exporttype_vec_t {
+                        size: 0,
+                        data: ptr::null_mut(),
+                    };
+                    ffi::wasm_module_exports(self.raw.as_ptr(), &mut types);
+                    let names: Vec<Vec<u8>> = (0..types.size)
+                        .map(|index| {
+                            let name = &*ffi::wasm_exporttype_name(*types.data.add(index));
+                            if name.size == 0 {
+                                Vec::new()
+                            } else {
+                                std::slice::from_raw_parts(name.data.cast(), name.size).to_vec()
+                            }
+                        })
+                        .collect();
+                    ffi::wasm_exporttype_vec_delete(&mut types);
+                    names
+                };
+            }
+            // Cache the object, not its data address, which can change on growth.
+            instance.memory = instance
+                .names
                 .iter()
                 .position(|name| name == b"memory")
-                .filter(|&index| index < exports.size)
-                .map(|index| ffi::wasm_extern_as_memory(*exports.data.add(index)))
+                .filter(|&index| index < instance.exports.size)
+                .map(|index| ffi::wasm_extern_as_memory(*instance.exports.data.add(index)))
                 .unwrap_or(ptr::null_mut());
-            let functions = (0..names.len()).map(|_| OnceCell::new()).collect();
-            Ok(Instance {
-                raw,
-                exports,
-                names,
-                memory,
-                functions,
-                store: self.store,
-            })
+            instance.functions = (0..instance.names.len()).map(|_| OnceCell::new()).collect();
+            Ok(instance)
         }
     }
 }
@@ -1099,6 +1107,16 @@ impl<'store, T> Instance<'store, T> {
     /// Test whether an export exists, regardless of its kind.
     pub fn has_export(&self, name: &str) -> bool {
         self.names.iter().any(|export| export == name.as_bytes())
+    }
+
+    /// Borrow an export for Wasm-to-Wasm linking. The native engine checks its
+    /// type when instantiating the receiving module; no host value conversion
+    /// is required. The handle cannot outlive this instance.
+    pub fn get_export(&self, name: &str) -> Result<Export<'_, T>> {
+        Ok(Export {
+            raw: NonNull::new(self.export(name)?).ok_or("missing export handle")?,
+            store: self.store,
+        })
     }
 
     fn export(&self, name: &str) -> Result<*mut ffi::wasm_extern_t> {

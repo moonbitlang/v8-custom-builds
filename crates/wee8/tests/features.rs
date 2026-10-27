@@ -95,6 +95,7 @@ fn released_v8_features_execute_through_scalar_exports() {
 }
 
 #[test]
+#[cfg(not(wee8_native_modules))]
 fn shared_memory_is_rejected_at_the_host_boundary() {
     let store = Store::new(()).unwrap();
     for source in [
