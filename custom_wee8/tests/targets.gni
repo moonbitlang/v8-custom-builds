@@ -1,0 +1,10 @@
+check_targets = [
+  "wee8-runtime-check",
+  "cpp-entry-contract",
+  "runtime-entry-contract",
+  "generated-builtin-contract",
+  "generated-builtin-catalog",
+  "runtime-catalog",
+  "runtime-boundaries",
+  "store-lifetimes",
+]

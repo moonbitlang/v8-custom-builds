@@ -53,10 +53,19 @@ an importing instance. Rust must not expose a mutable slice of shared memory.
 The present wrapper supports guest shared memory linked within one Store; this
 does not imply a host API for sharing it across Stores or threads.
 
-An adapter compiled separately from the core needs the matching internal SDK:
-source revision and patches, generated headers, compile definitions, C++ ABI
-configuration and toolchain. Public C headers alone cannot establish that match.
-The normal unified GN build supplies these inputs together.
+`wee8_base` builds the engine and snapshot; `wee8_ext` builds the adapter against
+that archive and its generated headers. Both use the same pinned source checkout
+and upstream toolchain setup. The base cache records source identity, compiler
+bytes and GN configuration; extension compilation rejects a mismatch. Public C
+headers alone cannot establish compatibility with V8's internal C++ interfaces.
+
+Keep extension dependencies limited to the prebuilt base and owned adapter/probe
+targets. Generated headers are cached outside Ninja's generator output paths so
+header dependencies cannot trigger engine or snapshot generation. The producer
+saves the base before compiling the extension, then combines the two archives
+for the existing public package. Changes to adapter sources or packaging must
+not require rebuilding an unchanged base. There is no exported source tree,
+compiler, sysroot or relocated GN environment.
 
 To see our complete adapter delta against the recorded baseline:
 

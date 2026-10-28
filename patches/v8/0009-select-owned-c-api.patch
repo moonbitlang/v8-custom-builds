@@ -13,12 +13,33 @@ headers stay unmodified. Preserve the original wasm-c-api.patch linkage:
 configured libc++/libc++abi dependencies and Windows /Zl for consumer CRT choice.
 
 diff --git a/BUILD.gn b/BUILD.gn
-index c4049cf42ead4f5db4ea7ff5a57e0faa14a69afa..b1dbcd63c3303d3f556e6d98b25495d5116da452 100644
+index c4049cf42ead4f5db4ea7ff5a57e0faa14a69afa..2e02e73dc59faf97739c46ff16996f86ad57faf3 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -7350,7 +7350,14 @@ if (v8_monolithic) {
+@@ -7349,8 +7349,35 @@ if (v8_monolithic) {
+ }
  
  if (v8_enable_webassembly) {
++  if (v8_custom_wee8) {
++    # Build the engine and snapshot independently of the C adapter.
++    # Extension builds consume this archive as a prebuilt link input.
++    v8_static_library("wee8_base") {
++      deps = [
++        "//build/config:shared_library_deps",
++        ":v8_base",
++        ":v8_libbase",
++        ":v8_libplatform",
++        ":v8_shared_internal_headers",
++        ":v8_snapshot",
++        "//build/win:default_exe_manifest",
++      ]
++      if (v8_enable_vtunejit) {
++        deps += [ "src/third_party/vtune:v8_vtune" ]
++      }
++      configs = [ ":internal_config" ]
++    }
++  }
++
    v8_static_library("wee8") {
 +    if (is_win) {
 +      # Let the consumer choose its CRT, matching rusty_v8's adapter.
@@ -31,7 +52,7 @@ index c4049cf42ead4f5db4ea7ff5a57e0faa14a69afa..b1dbcd63c3303d3f556e6d98b25495d5
        ":v8_base",
        ":v8_libbase",
        ":v8_libplatform",
-@@ -7366,13 +7373,25 @@ if (v8_enable_webassembly) {
+@@ -7366,13 +7393,25 @@ if (v8_enable_webassembly) {
  
      configs = [ ":internal_config" ]
  

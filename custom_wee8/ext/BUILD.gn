@@ -1,0 +1,80 @@
+# The extension links an existing base archive and compiles no V8 sources.
+# Generated headers are cached inputs, outside Ninja generator output paths.
+import("//v8/gni/v8.gni")
+
+declare_args() {
+  wee8_base_dir = "//../target/wee8-base"
+}
+
+config("ext_config") {
+  configs = v8_add_configs + [
+    "//v8:internal_config",
+    "//v8:external_config",
+    "//third_party/abseil-cpp:absl_include_config",
+    "//third_party/abseil-cpp:absl_define_config",
+    "//third_party/abseil-cpp:absl_public_cflags_cc",
+  ]
+  include_dirs = [
+    "//v8",
+    "//third_party/fp16/src/include",
+    "//custom_wee8/include",
+    "$root_gen_dir/v8/include",
+  ]
+}
+
+source_set("base") {
+  # Static libraries in libs are link inputs, not targets that Ninja can rebuild.
+  if (is_win) {
+    libs = [ "$wee8_base_dir/wee8_base.lib" ]
+  } else {
+    libs = [ "$wee8_base_dir/libwee8_base.a" ]
+  }
+}
+
+static_library("wee8_ext") {
+  complete_static_lib = true
+  sources = [ "//custom_wee8/src/c-api.cc" ]
+  # Resolve generated includes from cached base inputs, not GN output paths:
+  # Ninja's discovered header dependencies must not find generator rules.
+  include_dirs = [
+    "$wee8_base_dir/gen",
+    "$wee8_base_dir/gen/v8",
+    "$wee8_base_dir/gen/v8/include",
+  ]
+  configs -= v8_remove_configs
+  configs -= [ "//build/config/compiler:thin_archive" ]
+  configs += [ ":ext_config" ]
+  if (is_win) {
+    cflags = [ "/Zl" ]
+  }
+}
+
+import("//custom_wee8/tests/targets.gni")
+group("checks") {
+  deps = []
+  foreach(name, check_targets) {
+    deps += [ ":${name}" ]
+  }
+}
+
+foreach(name, check_targets) {
+  executable(name) {
+    output_dir = "$root_out_dir/ext"
+    sources = [ "//custom_wee8/tests/${name}.cc" ]
+    include_dirs = [
+      "$wee8_base_dir/gen",
+      "$wee8_base_dir/gen/v8",
+      "$wee8_base_dir/gen/v8/include",
+    ]
+    # The core already contains the configured libc++/libc++abi. Chromium's
+    # default executable deps would otherwise compile them a second time.
+    no_default_deps = true
+    deps = [ ":wee8_ext", ":base" ]
+    configs += [ ":ext_config" ]
+    defines = [ "LIBWASM_STATIC" ]
+  }
+}
+
+group("build") {
+  deps = [ ":wee8_ext", ":checks" ]
+}

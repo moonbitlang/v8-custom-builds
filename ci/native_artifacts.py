@@ -23,10 +23,10 @@ import zipfile
 NATIVE_INPUTS = [
     ".gitmodules", ".gitattributes", ".cargo", "Cargo.toml", "Cargo.lock",
     "rust-toolchain", "rust-toolchain.toml", ".github/workflows/build.yml", "ci/targets.json",
-    "rusty_v8", "build.sh", "tools/prepare-source.py", "tools/native",
+    "rusty_v8", "build.sh", "tools/prepare-source.py", "tools/native", "tools/base_cache.py",
     "custom_wee8/BUILD.gn", "custom_wee8/upstream.json",
-    "custom_wee8/src", "custom_wee8/include", "custom_wee8/tests",
-    "patches", "licenses", "ci/check-glibc.sh",
+    "custom_wee8/src", "custom_wee8/include", "custom_wee8/tests", "custom_wee8/ext",
+    "patches", "licenses", "ci/check-glibc.sh", "ci/base_artifacts.py",
 ]
 
 

@@ -13,19 +13,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  base-windows:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Prepare pinned GN and helpers
+        run: |
+          git submodule update --init --checkout --depth=1 rusty_v8
+          git -C rusty_v8 submodule update --init --checkout --depth=1 build v8
+          Push-Location rusty_v8
+          python tools/ninja_gn_binaries.py --dir "$env:RUNNER_TEMP/gn-tools" *> "$env:RUNNER_TEMP/gn-tools-download.log"
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content "$env:RUNNER_TEMP/gn-tools-download.log" | ForEach-Object {
+              $_ -replace '(https?://[^?\s]+)\?\S+', '$1?<redacted>'
+            }
+            throw "Pinned GN download failed"
+          }
+          Pop-Location
+      - name: Check base reuse and path handling without compiling V8
+        env:
+          WEE8_TEST_GN: ${{ runner.temp }}/gn-tools/gn/gn.exe
+        run: python -m unittest discover -s ci -p 'test_base_*.py' -v
   check:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Check artifact selection and release promotion
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Prepare pinned build dependencies
+        run: |
+          git submodule update --init --checkout --depth=1 rusty_v8
+          git -C rusty_v8 submodule update --init --checkout --depth=1 build v8
+          if ! (cd rusty_v8 && python3 tools/ninja_gn_binaries.py --dir "$RUNNER_TEMP/gn-tools" > "$RUNNER_TEMP/gn-tools-download.log" 2>&1); then
+            sed -E 's@(https?://[^?[:space:]]+)\?[^[:space:]]+@\1?<redacted>@g' "$RUNNER_TEMP/gn-tools-download.log"
+            exit 1
+          fi
+      - name: Check base reuse, artifact selection and release promotion
+        env:
+          WEE8_TEST_GN: ${{ runner.temp }}/gn-tools/gn/gn
         run: python3 -m unittest discover -s ci -p 'test_*.py' -v
       - name: Check shell scripts and patches
         run: |
           shellcheck build.sh ci/*.sh
           bash -n build.sh
-          git submodule update --init --checkout --depth=1 rusty_v8
-          git -C rusty_v8 submodule update --init --depth=1 build v8
           python3 tools/prepare-source.py
           python3 tools/compare-adapter.py > /dev/null
       - name: Check public headers as C and C++

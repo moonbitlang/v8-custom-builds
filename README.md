@@ -34,6 +34,17 @@ revisions or patches; remove build output when changing compiler or GN settings.
 Move existing `dist/<target>/` aside before rebuilding. Checksums are written
 last; failed packaging may leave incomplete output.
 
+The native build has two targets: `wee8_base` contains the trimmed V8 engine and
+snapshot; `wee8_ext` contains the C adapter. Packaging combines their static
+libraries into the existing `libwee8.a` (`wee8.lib` on Windows), so the Rust
+wrapper and published archive format are unchanged.
+
+`bash build.sh --base-only` prepares sources and builds or verifies the cached
+base. `bash build.sh --ext-only` then compiles the adapter and native probes and
+packages the combined archive. Adapter edits can repeat the extension step in
+that prepared checkout. Both stages use the pinned upstream toolchain setup;
+the base cache contains only its archive, generated headers and build metadata.
+
 Each `dist/<target>/` contains:
 
 - `libwee8_release_<target>.a.gz`, or `wee8_release_<target>.lib.gz` on Windows.
@@ -56,7 +67,7 @@ silently change that pin. Host services such as WASI belong to the embedder.
 
 ## Runtime contract
 
-`//:custom_wee8` builds `//v8:wee8` in an isolated GN toolchain scope with
+The base and extension use an isolated GN toolchain scope with
 `v8_custom_wee8 = true`. That one switch selects the native context, implementation
 lists and JS optimizing-tier restrictions. The same scope supplies capability
 settings to the compiler, Torque, builtin generation and snapshot generation.
@@ -196,8 +207,12 @@ Native archives and test executables are cached before validation. Native cache
 keys cover compiled inputs; runner scripts, fixtures and inventories can be
 rechecked against cached probes. Tests relink packaged consumers against the
 selected archive. Test executables are not release assets. Use `rebuild` to bypass
-the finished-artifact cache while retaining compiler caching; failed matrix jobs
-can otherwise reuse completed builds.
+the finished base and combined-archive caches while retaining compiler caching.
+The base is saved before extension compilation or packaging. Its cache identity
+covers engine sources, patches and bootstrap settings, while compiler bytes,
+GN configuration and generated-header checksums are verified before reuse.
+Adapter, Rust and packaging edits can reuse a matching base, including across
+branches. These edits still rebuild/revalidate the affected extension and consumers.
 
 After merge, the automatic `main` consumer run reuses the same native candidate.
 **Publish tested archives** takes that successful consumer `validation_run` and
