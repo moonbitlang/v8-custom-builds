@@ -210,6 +210,62 @@ fn shared_memory_links_and_executes_but_cannot_be_borrowed_exclusively() {
 }
 
 #[test]
+fn shared_memory_survives_producer_drop_and_growth_across_instances() {
+    use wee8::{Extern, Value::I32};
+
+    let store = Store::new(()).unwrap();
+    let consumer = store
+        .compile(
+            &wat::parse_str(
+                r#"(module
+        (import "p" "memory" (memory 1 3 shared))
+        (func (export "size") (result i32) memory.size)
+        (func (export "grow") (param i32) (result i32) local.get 0 memory.grow)
+        (func (export "read") (param i32) (result i32) local.get 0 i32.atomic.load)
+        (func (export "write") (param i32 i32)
+            local.get 0 local.get 1 i32.atomic.store))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let (mut first, mut second) = {
+        let producer = store
+            .compile(&wat::parse_str(r#"(module (memory (export "memory") 1 3 shared))"#).unwrap())
+            .unwrap();
+        let instance = producer.instantiate(&[]).unwrap();
+        let memory = instance.get_export("memory").unwrap();
+        (
+            consumer
+                .instantiate_with_imports(&[Extern::Export(&memory)])
+                .unwrap(),
+            consumer
+                .instantiate_with_imports(&[Extern::Export(&memory)])
+                .unwrap(),
+        )
+    };
+    // The two importing instances retain the memory after all producer handles
+    // have gone. Growth must update both instances without losing existing data.
+    drop(consumer);
+    first.call("write", &[I32(0), I32(17)]).unwrap();
+    assert_eq!(second.call("read", &[I32(0)]).unwrap(), [I32(17)]);
+    assert_eq!(first.call("grow", &[I32(1)]).unwrap(), [I32(1)]);
+    for instance in [&mut first, &mut second] {
+        assert_eq!(instance.call("size", &[]).unwrap(), [I32(2)]);
+        assert_eq!(instance.call("read", &[I32(0)]).unwrap(), [I32(17)]);
+        assert_eq!(instance.call("read", &[I32(65536)]).unwrap(), [I32(0)]);
+    }
+    second.call("write", &[I32(65536), I32(42)]).unwrap();
+    assert_eq!(first.call("read", &[I32(65536)]).unwrap(), [I32(42)]);
+    drop(first);
+    assert_eq!(second.call("grow", &[I32(1)]).unwrap(), [I32(2)]);
+    assert_eq!(second.call("read", &[I32(65536)]).unwrap(), [I32(42)]);
+    assert_eq!(second.call("read", &[I32(131072)]).unwrap(), [I32(0)]);
+    assert_eq!(second.call("grow", &[I32(1)]).unwrap(), [I32(-1)]);
+    assert_eq!(second.call("size", &[]).unwrap(), [I32(3)]);
+    assert_eq!(second.call("read", &[I32(65536)]).unwrap(), [I32(42)]);
+}
+
+#[test]
 fn unknown_builtin_names_with_gc_signatures_remain_ordinary_imports() {
     let store = Store::new(()).unwrap();
     let module = store

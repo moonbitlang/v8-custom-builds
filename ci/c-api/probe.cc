@@ -69,6 +69,8 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   assert(!wasm_instance_new(store, start_module, &no_imports, &start_trap));
   assert(start_trap);
   wasm_trap_delete(start_trap);
+  // Omitting the trap output must still consume the exception and stay silent.
+  assert(!wasm_instance_new(store, start_module, &no_imports, nullptr));
   wasm_module_delete(start_module);
 
   HostState state;
@@ -87,6 +89,24 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   trap = nullptr;
   wasm_extern_t* imports_data[] = {wasm_func_as_extern(host)};
   wasm_extern_vec_t imports = {1, imports_data};
+  // Let V8 reject the link type, then instantiate successfully in the same
+  // Store. Cover both C error-output modes, not only the adapter's count check.
+  wasm_functype_t* wrong_type = wasm_functype_new_0_0();
+  wasm_func_t* wrong = wasm_func_new(
+      store, wrong_type,
+      [](const wasm_val_vec_t*, wasm_val_vec_t*) -> wasm_trap_t* {
+        assert(false && "mismatched import must never run");
+        return nullptr;
+      });
+  wasm_functype_delete(wrong_type);
+  wasm_extern_t* wrong_data[] = {wasm_func_as_extern(wrong)};
+  wasm_extern_vec_t wrong_imports = {1, wrong_data};
+  assert(!wasm_instance_new(store, module, &wrong_imports, &trap));
+  assert(trap);
+  wasm_trap_delete(trap);
+  trap = nullptr;
+  assert(!wasm_instance_new(store, module, &wrong_imports, nullptr));
+  wasm_func_delete(wrong);
   wasm_instance_t* instance = wasm_instance_new(store, module, &imports, &trap);
   assert(instance && !trap);
   wasm_module_delete(module);

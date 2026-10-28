@@ -148,7 +148,7 @@ python3 custom_wee8/tests/check.py target/native-checks/<target>
 | `runtime-entry-contract` | Actual canonical/inline tables, distinct addresses and pair-return conventions |
 | `generated-builtin-contract` | Deserialized builtin identities, code kind and argument count; every omitted TFJ body and CPP adaptor traps |
 | `runtime-boundaries` guests | Numeric rounding, signed zero, floating-point loads/stores, table operations, bulk memory, guest exceptions, GC roots across native collection, allocation pressure, interrupts, serialization and shared-memory atomics/growth |
-| `store-lifetimes` | Fresh-store teardown releases foreground task runners; repeated deserialization keeps singleton and recursive-group canonical storage bounded |
+| `store-lifetimes` | Fresh-store teardown releases foreground task runners and grown shared-memory backing storage; repeated deserialization keeps singleton and recursive-group canonical storage bounded |
 
 Unsupported invocations run in isolated processes and must reach the named entry
 or generated trap. Null dereferences, ordinary returns and unrelated failures do
