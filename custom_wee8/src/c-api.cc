@@ -1345,14 +1345,6 @@ auto MakeModule(Store* store_abs, const vec<byte_t>& binary,
   return implement<Module>::type::make(store, module);
 }
 
-auto Module::validate(Store* store, const vec<byte_t>& binary) -> bool {
-  return ValidateModule(store, binary, {});
-}
-
-auto Module::make(Store* store, const vec<byte_t>& binary) -> own<Module> {
-  return MakeModule(store, binary, {});
-}
-
 // Use V8's validated classification, rather than maintaining another list of
 // builtin names or signatures in the adapter or its consumers.
 bool IsBuiltinImport(const i::wasm::NativeModule* native_module,
@@ -1497,11 +1489,6 @@ template <>
 struct implement<Shared<Module>> {
   using type = SharedModule;
 };
-
-auto Module::deserialize(Store* store,
-                         const vec<byte_t>& serialized) -> own<Module> {
-  return DeserializeModule(store, serialized, {});
-}
 
 template <>
 Shared<Module>::~Shared() {
@@ -2533,78 +2520,6 @@ Instance::~Instance() = default;
 
 auto Instance::copy() const -> own<Instance> { return impl(this)->copy(); }
 
-own<Instance> Instance::make(Store* store_abs, const Module* module_abs,
-                             const Extern* const imports[], own<Trap>* trap) {
-  StoreImpl* store = impl(store_abs);
-  const implement<Module>::type* module = impl(module_abs);
-  i::Isolate* isolate = store->i_isolate();
-  v8::Isolate::Scope isolate_scope(store->isolate());
-  i::HandleScope handle_scope(isolate);
-  CheckAndHandleInterrupts(isolate);
-
-  DCHECK_EQ(module->v8_object()->GetIsolate(), isolate);
-
-  if (trap) *trap = nullptr;
-  const auto* native = module->v8_object()->native_module();
-  const auto wire_bytes = native->wire_bytes();
-  i::Handle<i::JSObject> imports_obj =
-      isolate->factory()->NewJSObject(isolate->object_function());
-  size_t import_index = 0;
-  for (const auto& import : native->module()->import_table) {
-    if (IsBuiltinImport(native, import)) continue;
-    // Linking needs names and native objects, not host-representable types.
-    i::Handle<i::String> module_str = VecToString(
-        isolate, GetNameFromWireBytes(import.module_name, wire_bytes));
-    i::Handle<i::String> name_str = VecToString(
-        isolate, GetNameFromWireBytes(import.field_name, wire_bytes));
-
-    i::Handle<i::JSObject> module_obj;
-    i::LookupIterator module_it(isolate, imports_obj, module_str,
-                                i::LookupIterator::OWN_SKIP_INTERCEPTOR);
-    if (i::JSObject::HasProperty(&module_it).ToChecked()) {
-      module_obj = i::Cast<i::JSObject>(
-          i::Object::GetProperty(&module_it).ToHandleChecked());
-    } else {
-      module_obj = isolate->factory()->NewJSObject(isolate->object_function());
-      ignore(
-          i::Object::SetProperty(isolate, imports_obj, module_str, module_obj));
-    }
-    ignore(i::Object::SetProperty(isolate, module_obj, name_str,
-                                  impl(imports[import_index++])->v8_object()));
-  }
-  // The embedder receives start-function exceptions through the trap output.
-  // Keep V8's default message handler from also printing them as uncaught.
-  v8::TryCatch catcher(store->isolate());
-  catcher.SetVerbose(false);
-  catcher.SetCaptureMessage(false);
-  i::wasm::ErrorThrower thrower(isolate, "instantiation");
-  i::MaybeHandle<i::WasmInstanceObject> instance_obj =
-      i::wasm::GetWasmEngine()->SyncInstantiate(
-          isolate, &thrower, module->v8_object(), imports_obj,
-          i::MaybeHandle<i::JSArrayBuffer>());
-  if (trap) {
-    if (thrower.error()) {
-      *trap = implement<Trap>::type::make(
-          store, GetProperException(isolate, thrower.Reify()));
-      DCHECK(!thrower.error());                   // Reify() called Reset().
-      DCHECK(!isolate->has_exception());          // Hasn't been thrown yet.
-      return own<Instance>();
-    } else if (isolate->has_exception()) {
-      i::Handle<i::Object> maybe_exception(isolate->exception(), isolate);
-      *trap = implement<Trap>::type::make(
-          store, GetProperException(isolate, maybe_exception));
-      isolate->clear_exception();
-      return own<Instance>();
-    }
-  } else if (instance_obj.is_null()) {
-    // If no {trap} output is specified, silently swallow all errors.
-    thrower.Reset();
-    isolate->clear_exception();
-    return own<Instance>();
-  }
-  return implement<Instance>::type::make(store, instance_obj.ToHandleChecked());
-}
-
 namespace {
 
 own<Instance> GetInstance(StoreImpl* store,
@@ -2614,59 +2529,6 @@ own<Instance> GetInstance(StoreImpl* store,
 
 }  // namespace
 
-auto Instance::exports() const -> ownvec<Extern> {
-  const implement<Instance>::type* instance = impl(this);
-  StoreImpl* store = instance->store();
-  i::Isolate* isolate = store->i_isolate();
-  v8::Isolate::Scope isolate_scope(store->isolate());
-  i::HandleScope handle_scope(isolate);
-  CheckAndHandleInterrupts(isolate);
-  i::DirectHandle<i::WasmInstanceObject> instance_obj = instance->v8_object();
-  i::DirectHandle<i::WasmModuleObject> module_obj(instance_obj->module_object(),
-                                                  isolate);
-  i::Handle<i::JSObject> exports_obj(instance_obj->exports_object(), isolate);
-
-  const auto* native = module_obj->native_module();
-  const auto& export_table = native->module()->export_table;
-  ownvec<Extern> exports =
-      ownvec<Extern>::make_uninitialized(export_table.size());
-  if (!exports) return ownvec<Extern>::invalid();
-
-  for (size_t i = 0; i < export_table.size(); ++i) {
-    const auto& entry = export_table[i];
-    auto name = GetNameFromWireBytes(entry.name, native->wire_bytes());
-    i::Handle<i::String> name_str = VecToString(isolate, name);
-    i::Handle<i::Object> obj =
-        i::Object::GetProperty(isolate, exports_obj, name_str)
-            .ToHandleChecked();
-
-    switch (entry.kind) {
-      case i::wasm::kExternalFunction: {
-        DCHECK(i::WasmExternalFunction::IsWasmExternalFunction(*obj));
-        exports[i] = implement<Func>::type::make(
-            store, i::Cast<i::WasmExternalFunction>(obj));
-      } break;
-      case i::wasm::kExternalGlobal: {
-        exports[i] = implement<Global>::type::make(
-            store, i::Cast<i::WasmGlobalObject>(obj));
-      } break;
-      case i::wasm::kExternalTable: {
-        exports[i] = implement<Table>::type::make(
-            store, i::Cast<i::WasmTableObject>(obj));
-      } break;
-      case i::wasm::kExternalMemory: {
-        exports[i] = implement<Memory>::type::make(
-            store, i::Cast<i::WasmMemoryObject>(obj));
-      } break;
-      case i::wasm::kExternalTag: {
-        exports[i] =
-            implement<Tag>::type::make(store, i::Cast<i::WasmTagObject>(obj));
-      } break;
-    }
-  }
-
-  return exports;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3449,13 +3311,13 @@ WASM_DEFINE_SHARABLE_REF(module, wasm::Module)
 
 bool wasm_module_validate(wasm_store_t* store, const wasm_byte_vec_t* binary) {
   auto binary_ = borrow_byte_vec(binary);
-  return wasm::Module::validate(store, binary_.it);
+  return wasm::ValidateModule(store, binary_.it, {});
 }
 
 wasm_module_t* wasm_module_new(wasm_store_t* store,
                                const wasm_byte_vec_t* binary) {
   auto binary_ = borrow_byte_vec(binary);
-  return release_module(wasm::Module::make(store, binary_.it));
+  return release_module(wasm::MakeModule(store, binary_.it, {}));
 }
 
 void wasm_module_imports(const wasm_module_t* module,
@@ -3479,7 +3341,7 @@ void wasm_module_serialize(const wasm_module_t* module, wasm_byte_vec_t* out) {
 wasm_module_t* wasm_module_deserialize(wasm_store_t* store,
                                        const wasm_byte_vec_t* binary) {
   auto binary_ = borrow_byte_vec(binary);
-  return release_module(wasm::Module::deserialize(store, binary_.it));
+  return release_module(wasm::DeserializeModule(store, binary_.it, {}));
 }
 
 wasm_shared_module_t* wasm_module_share(const wasm_module_t* module) {
@@ -3863,28 +3725,143 @@ const wasm_tag_t* wasm_extern_as_tag_const(const wasm_extern_t* external) {
 
 WASM_DEFINE_REF(instance, wasm::Instance)
 
-wasm_instance_t* wasm_instance_new(wasm_store_t* store,
-                                   const wasm_module_t* module,
+wasm_instance_t* wasm_instance_new(wasm_store_t* store_abs,
+                                   const wasm_module_t* module_abs,
                                    const wasm_extern_vec_t* imports,
                                    wasm_trap_t** trap) {
-  if (imports->size != wee8_module_import_count(module)) {
+  using namespace wasm;
+  if (imports->size != wee8_module_import_count(module_abs)) {
     if (trap) {
       *trap = release_trap(wasm::Trap::make(
-          store, wasm::Name::make(std::string("import count mismatch"))));
+          store_abs, wasm::Name::make(std::string("import count mismatch"))));
     }
     return nullptr;
   }
-  wasm::own<wasm::Trap> error;
-  wasm_instance_t* instance = release_instance(wasm::Instance::make(
-      store, module, reinterpret_cast<const wasm::Extern* const*>(imports->data),
-      &error));
-  if (trap) *trap = hide_trap(error.release());
-  return instance;
+  StoreImpl* store = impl(reveal_store(store_abs));
+  const implement<Module>::type* module = impl(reveal_module(module_abs));
+  i::Isolate* isolate = store->i_isolate();
+  v8::Isolate::Scope isolate_scope(store->isolate());
+  i::HandleScope handle_scope(isolate);
+  CheckAndHandleInterrupts(isolate);
+
+  DCHECK_EQ(module->v8_object()->GetIsolate(), isolate);
+
+  if (trap) *trap = nullptr;
+  const auto* native = module->v8_object()->native_module();
+  const auto wire_bytes = native->wire_bytes();
+  i::Handle<i::JSObject> imports_obj =
+      isolate->factory()->NewJSObject(isolate->object_function());
+  size_t import_index = 0;
+  for (const auto& import : native->module()->import_table) {
+    if (IsBuiltinImport(native, import)) continue;
+    // Linking needs names and native objects, not host-representable types.
+    i::Handle<i::String> module_str = VecToString(
+        isolate, GetNameFromWireBytes(import.module_name, wire_bytes));
+    i::Handle<i::String> name_str = VecToString(
+        isolate, GetNameFromWireBytes(import.field_name, wire_bytes));
+
+    i::Handle<i::JSObject> module_obj;
+    i::LookupIterator module_it(isolate, imports_obj, module_str,
+                                i::LookupIterator::OWN_SKIP_INTERCEPTOR);
+    if (i::JSObject::HasProperty(&module_it).ToChecked()) {
+      module_obj = i::Cast<i::JSObject>(
+          i::Object::GetProperty(&module_it).ToHandleChecked());
+    } else {
+      module_obj = isolate->factory()->NewJSObject(isolate->object_function());
+      ignore(
+          i::Object::SetProperty(isolate, imports_obj, module_str, module_obj));
+    }
+    auto* import_object = impl(reveal_extern(imports->data[import_index++]));
+    ignore(i::Object::SetProperty(isolate, module_obj, name_str,
+                                  import_object->v8_object()));
+  }
+  // The embedder receives start-function exceptions through the trap output.
+  // Keep V8's default message handler from also printing them as uncaught.
+  v8::TryCatch catcher(store->isolate());
+  catcher.SetVerbose(false);
+  catcher.SetCaptureMessage(false);
+  i::wasm::ErrorThrower thrower(isolate, "instantiation");
+  i::MaybeHandle<i::WasmInstanceObject> instance_obj =
+      i::wasm::GetWasmEngine()->SyncInstantiate(
+          isolate, &thrower, module->v8_object(), imports_obj,
+          i::MaybeHandle<i::JSArrayBuffer>());
+  if (thrower.error()) {
+    auto error = implement<Trap>::type::make(
+        store, GetProperException(isolate, thrower.Reify()));
+    DCHECK(!thrower.error());           // Reify() called Reset().
+    DCHECK(!isolate->has_exception());  // Hasn't been thrown yet.
+    if (trap) *trap = release_trap(std::move(error));
+    return nullptr;
+  } else if (isolate->has_exception()) {
+    i::Handle<i::Object> exception(isolate->exception(), isolate);
+    auto error = implement<Trap>::type::make(
+        store, GetProperException(isolate, exception));
+    // Always consume V8's error, including when the caller discards the trap.
+    isolate->clear_exception();
+    if (trap) *trap = release_trap(std::move(error));
+    return nullptr;
+  }
+  return release_instance(
+      implement<Instance>::type::make(store, instance_obj.ToHandleChecked()));
 }
 
-void wasm_instance_exports(const wasm_instance_t* instance,
+void wasm_instance_exports(const wasm_instance_t* instance_abs,
                            wasm_extern_vec_t* out) {
-  *out = release_extern_vec(instance->exports());
+  using namespace wasm;
+  const implement<Instance>::type* instance = impl(reveal_instance(instance_abs));
+  StoreImpl* store = instance->store();
+  i::Isolate* isolate = store->i_isolate();
+  v8::Isolate::Scope isolate_scope(store->isolate());
+  i::HandleScope handle_scope(isolate);
+  CheckAndHandleInterrupts(isolate);
+  i::DirectHandle<i::WasmInstanceObject> instance_obj = instance->v8_object();
+  i::DirectHandle<i::WasmModuleObject> module_obj(instance_obj->module_object(),
+                                                  isolate);
+  i::Handle<i::JSObject> exports_obj(instance_obj->exports_object(), isolate);
+
+  const auto* native = module_obj->native_module();
+  const auto& export_table = native->module()->export_table;
+  ownvec<Extern> exports =
+      ownvec<Extern>::make_uninitialized(export_table.size());
+  if (!exports) {
+    *out = release_extern_vec(ownvec<Extern>::invalid());
+    return;
+  }
+
+  for (size_t i = 0; i < export_table.size(); ++i) {
+    const auto& entry = export_table[i];
+    auto name = GetNameFromWireBytes(entry.name, native->wire_bytes());
+    i::Handle<i::String> name_str = VecToString(isolate, name);
+    i::Handle<i::Object> obj =
+        i::Object::GetProperty(isolate, exports_obj, name_str)
+            .ToHandleChecked();
+
+    switch (entry.kind) {
+      case i::wasm::kExternalFunction: {
+        DCHECK(i::WasmExternalFunction::IsWasmExternalFunction(*obj));
+        exports[i] = implement<Func>::type::make(
+            store, i::Cast<i::WasmExternalFunction>(obj));
+      } break;
+      case i::wasm::kExternalGlobal: {
+        exports[i] = implement<Global>::type::make(
+            store, i::Cast<i::WasmGlobalObject>(obj));
+      } break;
+      case i::wasm::kExternalTable: {
+        exports[i] = implement<Table>::type::make(
+            store, i::Cast<i::WasmTableObject>(obj));
+      } break;
+      case i::wasm::kExternalMemory: {
+        exports[i] = implement<Memory>::type::make(
+            store, i::Cast<i::WasmMemoryObject>(obj));
+      } break;
+      case i::wasm::kExternalTag: {
+        exports[i] =
+            implement<Tag>::type::make(store, i::Cast<i::WasmTagObject>(obj));
+      } break;
+    }
+  }
+
+  *out = release_extern_vec(std::move(exports));
 }
 
 wasm_instance_t* wasm_frame_instance(const wasm_frame_t* frame) {

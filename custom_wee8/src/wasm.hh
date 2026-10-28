@@ -592,8 +592,6 @@ public:
   Module() = delete;
   ~Module();
 
-  static auto validate(Store*, const vec<byte_t>& binary) -> bool;
-  static auto make(Store*, const vec<byte_t>& binary) -> own<Module>;
   auto copy() const -> own<Module>;
 
   auto imports() const -> ownvec<ImportType>;
@@ -603,7 +601,6 @@ public:
   static auto obtain(Store*, const Shared<Module>*) -> own<Module>;
 
   auto serialize() const -> vec<byte_t>;
-  static auto deserialize(Store*, const vec<byte_t>&) -> own<Module>;
 };
 
 
@@ -743,12 +740,7 @@ public:
   Instance() = delete;
   ~Instance();
 
-  static auto make(
-    Store*, const Module*, const Extern* const[], own<Trap>* = nullptr
-  ) -> own<Instance>;
   auto copy() const -> own<Instance>;
-
-  auto exports() const -> ownvec<Extern>;
 };
 
 
