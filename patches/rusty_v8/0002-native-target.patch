@@ -12,10 +12,10 @@ The upstream crate entry point retains its own target; this producer calls
 the same bootstrap with the wee8 build group and does not compile that crate.
 
 diff --git a/BUILD.gn b/BUILD.gn
-index 3de64b8c34d369de9ab549075080ef4166f56295..a217647ab172058af38a6470a23c051964acfd5e 100644
+index 3de64b8c34d369de9ab549075080ef4166f56295..679f5b636a5f64cab1abbdd80ae5fc754e767456 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -48,3 +48,16 @@ config("rusty_v8_config") {
+@@ -48,3 +48,24 @@ config("rusty_v8_config") {
      ]
    }
  }
@@ -32,8 +32,16 @@ index 3de64b8c34d369de9ab549075080ef4166f56295..a217647ab172058af38a6470a23c0519
 +    "//custom_wee8/tests:checks(//custom_wee8:custom_wee8)",
 +  ]
 +}
++
++group("wee8-base-build") {
++  deps = [ "//v8:wee8_base(//custom_wee8:custom_wee8)" ]
++}
++
++group("wee8-ext-build") {
++  deps = [ "//custom_wee8/ext:build(//custom_wee8:custom_wee8)" ]
++}
 diff --git a/build.rs b/build.rs
-index 19a215ad86c85e1067710125e71aa95161be421f..9b9c6d21f7e7c4401b67cceed826c7ff7323ba58 100644
+index 19a215ad86c85e1067710125e71aa95161be421f..2d24eb2591f498345201ff29a8baafc24fa71bff 100644
 --- a/build.rs
 +++ b/build.rs
 @@ -110,7 +110,7 @@ fn main() {
@@ -45,21 +53,27 @@ index 19a215ad86c85e1067710125e71aa95161be421f..9b9c6d21f7e7c4401b67cceed826c7ff
      build_binding();
  
      return;
-@@ -171,7 +171,7 @@ fn build_binding() {
+@@ -171,7 +171,13 @@ fn build_binding() {
      .expect("Couldn't write bindings!");
  }
  
 -fn build_v8(is_asan: bool) {
 +fn build_v8(is_asan: bool, target: &str) {
++  prepare_v8(is_asan);
++  build(target, None);
++}
++
++// Toolchain and GN setup can be reused with a prebuilt engine archive.
++fn prepare_v8(is_asan: bool) -> PathBuf {
    env::set_var("DEPOT_TOOLS_WIN_TOOLCHAIN", "0");
  
    if need_gn_ninja_download() {
-@@ -333,7 +333,7 @@ fn build_v8(is_asan: bool) {
+@@ -333,7 +339,7 @@ fn build_v8(is_asan: bool) {
    if env_bool("PRINT_GN_ARGS") {
      print_gn_args(&gn_out);
    }
 -  build("rusty_v8", None);
-+  build(target, None);
++  gn_out
  }
  
  fn print_gn_args(gn_out_dir: &Path) {

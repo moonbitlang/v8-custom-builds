@@ -95,6 +95,7 @@ print("Custom wee8 context and runtime boundaries passed in four Wasm compilatio
 # detect queued tasks or duplicate type metadata retained by global structures.
 executable = (args.probes / ("store-lifetimes" + suffix)).resolve()
 for check, fixture in [("shutdown", "store-singleton"),
+                       ("shared-memory", "store-shared-memory"),
                        ("types", "store-singleton"),
                        ("types", "store-recursive")]:
     subprocess.run([str(executable), check, str(assets / (fixture + ".wasm"))],

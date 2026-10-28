@@ -28,6 +28,45 @@ GN selects the owned adapter only for `v8_custom_wee8`. V8's original `c-api.cc`
 `c-api.h`, `wasm.h` and `wasm.hh` stay untouched. Exactly one implementation of the
 C API goes into an archive. The two implementations must never be linked together.
 
+### Adapter boundary
+
+Keep the adapter responsible for representation and ownership, and use V8 for
+runtime semantics:
+
+| Layer | Responsibility |
+| --- | --- |
+| V8 | Module validation and compilation, import compatibility, instantiation, execution, GC, memory growth and shared backing storage |
+| Native adapter | C value/object conversion, V8 roots and scopes, callback environment ownership, compile options and error/trap transport |
+| Rust wrapper | Store identity and lifetimes, host type checks, memory borrow and reentry guards, panic containment |
+
+The ordinary and option-bearing module APIs share the same implementation.
+`SyncCompile` is also the entry behind V8's public module compile API; direct
+access preserves compile options that this pinned public API cannot express.
+Instantiation uses V8's `SyncInstantiate` after converting C imports to V8
+objects. Calls use V8's C-entry wrapper and `Execution::CallWasm`. Do not duplicate
+V8's validator, linker or execution machinery in the adapter or Rust wrapper.
+
+A memory object's C handle is Store-local. Shared memory's underlying storage
+is owned by V8 independently of any single handle; growth and last-owner release
+must remain V8's responsibility. Dropping an exporting instance must not invalidate
+an importing instance. Rust must not expose a mutable slice of shared memory.
+The present wrapper supports guest shared memory linked within one Store; this
+does not imply a host API for sharing it across Stores or threads.
+
+`wee8_base` builds the engine and snapshot; `wee8_ext` builds the adapter against
+that archive and its generated headers. Both use the same pinned source checkout
+and upstream toolchain setup. The base cache records source identity, compiler
+bytes and GN configuration; extension compilation rejects a mismatch. Public C
+headers alone cannot establish compatibility with V8's internal C++ interfaces.
+
+Keep extension dependencies limited to the prebuilt base and owned adapter/probe
+targets. Generated headers are cached outside Ninja's generator output paths so
+header dependencies cannot trigger engine or snapshot generation. The producer
+saves the base before compiling the extension, then combines the two archives
+for the existing public package. Changes to adapter sources or packaging must
+not require rebuilding an unchanged base. There is no exported source tree,
+compiler, sysroot or relocated GN environment.
+
 To see our complete adapter delta against the recorded baseline:
 
 ```sh

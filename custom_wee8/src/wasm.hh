@@ -592,8 +592,6 @@ public:
   Module() = delete;
   ~Module();
 
-  static auto validate(Store*, const vec<byte_t>& binary) -> bool;
-  static auto make(Store*, const vec<byte_t>& binary) -> own<Module>;
   auto copy() const -> own<Module>;
 
   auto imports() const -> ownvec<ImportType>;
@@ -603,7 +601,6 @@ public:
   static auto obtain(Store*, const Shared<Module>*) -> own<Module>;
 
   auto serialize() const -> vec<byte_t>;
-  static auto deserialize(Store*, const vec<byte_t>&) -> own<Module>;
 };
 
 
@@ -658,19 +655,11 @@ public:
   Func() = delete;
   ~Func();
 
-  using callback = auto (*)(const Val[], Val[]) -> own<Trap>;
-  using callback_with_env = auto (*)(void*, const Val[], Val[]) -> own<Trap>;
-
-  static auto make(Store*, const FuncType*, callback) -> own<Func>;
-  static auto make(Store*, const FuncType*, callback_with_env,
-    void*, void (*finalizer)(void*) = nullptr) -> own<Func>;
   auto copy() const -> own<Func>;
 
   auto type() const -> own<FuncType>;
   auto param_arity() const -> size_t;
   auto result_arity() const -> size_t;
-
-  auto call(const Val[] = nullptr, Val[] = nullptr) const -> own<Trap>;
 };
 
 
@@ -751,12 +740,7 @@ public:
   Instance() = delete;
   ~Instance();
 
-  static auto make(
-    Store*, const Module*, const Extern* const[], own<Trap>* = nullptr
-  ) -> own<Instance>;
   auto copy() const -> own<Instance>;
-
-  auto exports() const -> ownvec<Extern>;
 };
 
 

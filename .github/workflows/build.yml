@@ -17,12 +17,13 @@ on:
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
       rebuild:
-        description: Rebuild from source, reusing the compiler cache
+        description: Rebuild base and extension, reusing the compiler cache
         type: boolean
         default: false
 
 permissions:
   contents: read
+  actions: read
 
 env:
   RUST_VERSION: 1.95.0
@@ -89,8 +90,14 @@ jobs:
       - name: Native cache key
         id: native-key
         env:
-          RECIPE: ${{ hashFiles('build.sh', 'tools/prepare-source.py', 'tools/native/**', 'custom_wee8/BUILD.gn', 'custom_wee8/src/**', 'custom_wee8/include/**', 'custom_wee8/tests/*.cc', 'custom_wee8/tests/BUILD.gn', 'patches/series', 'patches/**/*.patch', 'licenses/*') }}
-        run: echo "key=native-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$(git rev-parse HEAD:rusty_v8)-$RECIPE" >> "$GITHUB_OUTPUT"
+          RECIPE: ${{ hashFiles('build.sh', 'tools/*.py', 'tools/native/**', 'custom_wee8/BUILD.gn', 'custom_wee8/ext/**', 'custom_wee8/src/**', 'custom_wee8/include/**', 'custom_wee8/tests/*.cc', 'custom_wee8/tests/*.gn', 'custom_wee8/tests/*.gni', 'patches/series', 'patches/**/*.patch', 'licenses/*') }}
+        run: |
+          identity=$(python3 tools/base_cache.py identity)
+          {
+            echo "key=native-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$identity-$RECIPE"
+            echo "base-id=$identity"
+            echo "base=base-v1-$TARGET-${{ matrix.runner }}-$RUST_VERSION-$PYTHON_VERSION-$ARM64_CLANG_VERSION-${ImageVersion}-$identity"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: native
         with:
@@ -104,9 +111,48 @@ jobs:
         uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
         with:
           version: v0.18.0
-      - name: Build native archive
+      - name: Restore base library and generated headers
         if: inputs.rebuild || steps.native.outputs.cache-hit != 'true'
-        run: bash build.sh
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: base
+        with:
+          path: target/wee8-base/${{ matrix.target }}
+          key: ${{ steps.native-key.outputs.base }}
+          lookup-only: ${{ inputs.rebuild }}
+      - name: Reuse a base from another branch
+        if: ${{ !inputs.rebuild && steps.native.outputs.cache-hit != 'true' && steps.base.outputs.cache-hit != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 ci/base_artifacts.py --target "$TARGET"
+      - name: Prepare sources and build or verify base
+        id: base-build
+        if: inputs.rebuild || steps.native.outputs.cache-hit != 'true'
+        run: |
+          bash build.sh --base-only
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          from pathlib import Path
+          base = json.loads((Path('target/wee8-base') / os.environ['TARGET'] / 'base.json').read_text())
+          print('built=' + str(base['producer_run'] == os.environ['GITHUB_RUN_ID']).lower())
+          PY
+      # Preserve the base before extension compilation, packaging or tests.
+      - name: Save base library and generated headers
+        if: steps.base.outputs.cache-hit != 'true' && (inputs.rebuild || steps.native.outputs.cache-hit != 'true')
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/wee8-base/${{ matrix.target }}
+          key: ${{ steps.native-key.outputs.base }}
+      - name: Retain base across branches
+        if: steps.base-build.outputs.built == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: base-${{ matrix.target }}-${{ steps.native-key.outputs.base-id }}
+          path: target/wee8-base/${{ matrix.target }}/*
+          if-no-files-found: error
+          retention-days: 90
+      - name: Build extension and package combined library
+        if: inputs.rebuild || steps.native.outputs.cache-hit != 'true'
+        run: bash build.sh --ext-only
       # Save before validation, so a test failure does not discard hours of work.
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: steps.native.outputs.cache-hit != 'true'
@@ -141,7 +187,8 @@ jobs:
         run: |
           jq -n --arg revision "$GITHUB_SHA" --arg target "$TARGET" \
             --arg run "$GITHUB_RUN_ID" --arg rust "$(rustc --version)" \
-            '{recipe:$revision,target:$target,run:$run,rust:$rust}' \
+            --slurpfile build "target/native-checks/$TARGET/build.json" \
+            '{recipe:$revision,target:$target,run:$run,rust:$rust,build:$build[0]}' \
             > "dist/$TARGET/validation_$TARGET.json"
           (cd "dist/$TARGET"
            if command -v sha256sum >/dev/null; then
