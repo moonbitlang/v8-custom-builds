@@ -122,7 +122,9 @@ jobs:
             ci/c-api -> ../../target/c-api
           # Relink consumers against the archive selected by this native run.
           cache-targets: false
-          shared-key: smoke-registry-${{ steps.native-key.outputs.key }}
+          # rust-cache adds platform, toolchain and dependency hashes. Native
+          # recipe changes do not invalidate Cargo's registry/download cache.
+          shared-key: smoke-registry
       - name: Check custom wee8 context and implementation selections
         run: python3 custom_wee8/tests/check.py "target/native-checks/$TARGET"
       - name: Test packaged Wasm C API archive
