@@ -177,7 +177,8 @@ stores, matching an embedded runtime that reuses compiled modules. They check
 foreground task-runner ownership and V8's canonical-type storage after warmup,
 not RSS thresholds. Each deserialized guest also executes, including GC types
 whose canonical descriptions must remain valid. The native recipe runs these
-checks against the produced archive on all five platforms before publication.
+checks against the produced archive on every release target in
+[`ci/targets.json`](../ci/targets.json) before publication.
 
 For ownership changes, test both returned values and resource lifetime. Include
 repeated operations under the longer-lived owner, not just process shutdown;

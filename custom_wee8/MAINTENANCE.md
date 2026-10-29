@@ -150,7 +150,7 @@ together; testing an older archive cannot validate this initialization path.
    features that became unconditional. Preserve enabled behavior in ordinary V8.
 3. Run the recipe/header checks. Inspect GN's selected adapter and configurations;
    never compile both adapters into the same archive.
-4. Run the native matrix for all five supported targets, including the native
+4. Run the native matrix for every release target in `ci/targets.json`, including the native
    contracts, lifetime checks, packaged C consumer and Rust tests against the
    newly produced archive and matching headers. Published-release Rust CI checks
    wrapper compatibility only; it does not validate changed native source.

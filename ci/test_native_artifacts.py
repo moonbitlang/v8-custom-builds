@@ -24,7 +24,7 @@ class ArtifactsTest(unittest.TestCase):
         self.env.start()
         subprocess.run(["git", "init", "-q", "-b", "main"], check=True)
         self.matrix = [{"target": target, "runner": "test", "python": "x64"} for target in (
-            "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin",
+            "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
             "aarch64-apple-darwin", "x86_64-pc-windows-msvc")]
         self.write("ci/targets.json", json.dumps(self.matrix))
         self.write(".github/workflows/build.yml", "native build configuration\n")
@@ -85,7 +85,7 @@ class ArtifactsTest(unittest.TestCase):
         self.assertEqual(native.fingerprint(self.producer), native.fingerprint(self.revision))
         self.write("README.md", "documentation\n")
         self.assertEqual(native.fingerprint(self.revision), native.fingerprint(self.save()))
-        for name in ("custom_wee8/src/c-api.cc", ".github/workflows/build.yml", "ci/targets.json",
+        for name in ("custom_wee8/src/c-api.cc", ".github/workflows/build.yml",
                      "custom_wee8/upstream.json", "custom_wee8/tests/check.py", "ci/check-glibc.sh",
                      ".cargo/config.toml", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".gitattributes"):
             with self.subTest(path=name):
@@ -99,7 +99,46 @@ class ArtifactsTest(unittest.TestCase):
     def test_candidate_accepts_different_commit_with_identical_native_inputs(self):
         self.assertNotEqual(self.producer, self.revision)
         self.assertEqual(self.selected["producer_revision"], self.producer)
-        self.assertEqual(len(self.selected["artifacts"]), 5)
+        self.assertEqual(len(self.selected["artifacts"]), 4)
+
+    def test_retired_target_does_not_require_rebuilding_or_publishing_its_artifact(self):
+        retired = {"target": "x86_64-apple-darwin", "runner": "test", "python": "x64"}
+        self.write("ci/targets.json", json.dumps(self.matrix + [retired]))
+        producer = self.save()
+        self.write("ci/targets.json", json.dumps(self.matrix))
+        revision = self.save()
+        self.assertTrue(native.matching_inputs(producer, revision))
+        self.assertFalse(native.matching_inputs(revision, producer))
+        with patch.object(native, "artifact_map", return_value=self.artifacts):
+            selected = native.candidate(dict(self.run, head_sha=producer), revision)
+        self.assertEqual(selected["matrix"], self.matrix)
+        self.assertEqual(set(selected["artifacts"]), {row["target"] for row in self.matrix})
+        # Even if retained in the producer, an obsolete artifact is not selected.
+        extra = dict(self.artifacts, **{"native-" + retired["target"]: {"id": 99}})
+        with patch.object(native, "artifact_map", return_value=extra):
+            self.assertEqual(native.candidate(dict(self.run, head_sha=producer), revision), selected)
+
+    def test_target_configuration_changes_or_new_targets_need_matching_producer(self):
+        for matrix in (
+                [dict(self.matrix[0], runner="other-runner"), *self.matrix[1:]],
+                [dict(self.matrix[0], python="arm64"), *self.matrix[1:]],
+                [dict(self.matrix[0], target="new-target"), *self.matrix[1:]],
+                self.matrix + [{"target": "new-target", "runner": "test", "python": "x64"}]):
+            with self.subTest(matrix=matrix):
+                self.write("ci/targets.json", json.dumps(matrix))
+                revision = self.save()
+                with self.assertRaisesRegex(ValueError, "inputs differ"):
+                    native.candidate(self.run, revision)
+                with self.assertRaisesRegex(ValueError, "matching produced"):
+                    native.qualify(self.selected, self.root / "receipts", revision)
+                with self.assertRaisesRegex(ValueError, "inputs differ"):
+                    native.download(self.selected, self.matrix[0]["target"], self.root / "download")
+
+    def test_empty_or_duplicate_target_policy_is_rejected(self):
+        for matrix in ([], [self.matrix[0], self.matrix[0]]):
+            self.write("ci/targets.json", json.dumps(matrix))
+            with self.assertRaisesRegex(ValueError, "distinct native targets"):
+                native.candidate(self.run, self.save())
 
     def test_candidate_rejects_untrusted_failed_or_partial_runs(self):
         for changes in ({"conclusion": "failure"}, {"path": ".github/workflows/other.yml"},
@@ -185,9 +224,9 @@ class ArtifactsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "checksum mismatch"):
             native.verify_package(self.selected, target, directory)
 
-    def test_qualification_requires_matching_receipts_for_all_five_targets(self):
+    def test_qualification_requires_matching_receipts_for_all_release_targets(self):
         proof = self.proof()
-        self.assertEqual(len(proof["targets"]), 5)
+        self.assertEqual(len(proof["targets"]), 4)
         path = self.root / "receipts" / f"{self.matrix[0]['target']}.json"
         receipt = json.loads(path.read_text())
         receipt["consumer_revision"] = self.producer
@@ -247,6 +286,8 @@ class ArtifactsTest(unittest.TestCase):
             self.assertTrue((output / "release-notes.md").read_text().startswith(
                 "# v0.106.0-moonbit.6\n\nTested changes."))
             self.assertIn("/actions/runs/456", (output / "release-notes.md").read_text())
+            self.assertIn("All 4 release targets", (output / "release-notes.md").read_text())
+            self.assertEqual(len(list(output.glob("native-*"))), 4)
             self.assertEqual(json.loads((output / "promotion.json").read_text())["producer_revision"], self.producer)
             for target in proof["targets"]:
                 for original in (self.root / "packages" / target).iterdir():

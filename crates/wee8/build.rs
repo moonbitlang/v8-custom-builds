@@ -112,8 +112,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// origin in the cache identity so changing mirrors cannot reuse another origin.
 fn release_files(out: &Path, target: &str) -> Result<(PathBuf, PathBuf), Box<dyn Error>> {
     let archive_name = match target {
-        "x86_64-unknown-linux-gnu" | "aarch64-unknown-linux-gnu"
-        | "x86_64-apple-darwin" | "aarch64-apple-darwin" => format!("libwee8_release_{target}.a.gz"),
+        "x86_64-unknown-linux-gnu" | "aarch64-unknown-linux-gnu" | "aarch64-apple-darwin" => {
+            format!("libwee8_release_{target}.a.gz")
+        }
         "x86_64-pc-windows-msvc" => format!("wee8_release_{target}.lib.gz"),
         _ => return Err(format!("no wee8 release for {target}; provide WEE8_ARCHIVE and WEE8_HEADER from a matching source build").into()),
     };

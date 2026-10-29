@@ -18,11 +18,13 @@ import zipfile
 
 # Keep the producer workflow itself in this boundary: it sets compilers, SDKs,
 # flags and validation. Rust consumers and documentation can evolve independently.
+# Target membership is checked separately: retiring a platform must not invalidate
+# other platforms, but every retained target's configuration must still match.
 # Include the native probes and their fixtures so old validation is not silently
 # reused after a contract change. The producer's existing cache key is separate.
 NATIVE_INPUTS = [
     ".gitmodules", ".gitattributes", ".cargo", "Cargo.toml", "Cargo.lock",
-    "rust-toolchain", "rust-toolchain.toml", ".github/workflows/build.yml", "ci/targets.json",
+    "rust-toolchain", "rust-toolchain.toml", ".github/workflows/build.yml",
     "rusty_v8", "build.sh", "tools/prepare-source.py", "tools/native",
     "custom_wee8/BUILD.gn", "custom_wee8/upstream.json",
     "custom_wee8/src", "custom_wee8/include", "custom_wee8/tests",
@@ -63,7 +65,17 @@ def fingerprint(revision):
 
 
 def targets(revision):
-    return json.loads(command("git", "show", f"{revision}:ci/targets.json"))
+    matrix = json.loads(command("git", "show", f"{revision}:ci/targets.json"))
+    names = [row["target"] for row in matrix]
+    if not names or len(set(names)) != len(names):
+        raise ValueError("expected a nonempty list of distinct native targets")
+    return matrix
+
+
+def matching_inputs(producer, revision):
+    producer_targets = targets(producer)
+    return (fingerprint(producer) == fingerprint(revision)
+            and all(row in producer_targets for row in targets(revision)))
 
 
 def checked_run(run, workflow):
@@ -92,15 +104,13 @@ def candidate(run, revision):
     if run["event"] != "workflow_dispatch":
         raise ValueError("native producer must be explicitly dispatched")
     identity = fingerprint(revision)
-    if fingerprint(run["head_sha"]) != identity:
+    if not matching_inputs(run["head_sha"], revision):
         raise ValueError("producer native inputs differ from this revision")
     matrix = targets(revision)
     names = [row["target"] for row in matrix]
-    if len(names) != 5 or len(set(names)) != 5:
-        raise ValueError("expected five distinct native targets")
     artifacts = artifact_map(run["id"])
     if any(f"native-{target}" not in artifacts for target in names):
-        raise ValueError("producer must retain all five native artifacts")
+        raise ValueError("producer must retain every required native artifact")
     return {
         "schema": 1, "source": "run", "producer_run": run["id"],
         "producer_revision": run["head_sha"], "native_fingerprint": identity,
@@ -119,7 +129,7 @@ def select(native_run, revision):
                                   f"repos/{repo}/releases?per_page=100"))
     if any(r["tag_name"] == release and not r["draft"] for page in releases for r in page):
         published = command("git", "rev-parse", f"refs/tags/{release}^{{commit}}").decode().strip()
-        if fingerprint(published) == fingerprint(revision):
+        if matching_inputs(published, revision):
             return {"schema": 1, "source": "release", "release": release,
                     "native_fingerprint": fingerprint(revision), "matrix": targets(revision)}
     # Search completed producers automatically after Rust-only edits or squash
@@ -189,14 +199,19 @@ def verify_package(selected, target, directory):
 def download(selected, target, directory):
     if selected["source"] != "run":
         raise ValueError("published releases use the Rust wrapper's normal download path")
-    if selected["native_fingerprint"] != fingerprint(command("git", "rev-parse", "HEAD").decode().strip()):
+    revision = command("git", "rev-parse", "HEAD").decode().strip()
+    if (selected["native_fingerprint"] != fingerprint(revision)
+            or selected["matrix"] != targets(revision)
+            or not matching_inputs(selected["producer_revision"], revision)):
         raise ValueError("candidate native inputs differ from this checkout")
     download_artifact(selected["artifacts"][target], directory)
     return verify_package(selected, target, directory)
 
 
 def qualify(selected, receipts, revision):
-    if selected["source"] != "run" or selected["native_fingerprint"] != fingerprint(revision):
+    if (selected["source"] != "run" or selected["native_fingerprint"] != fingerprint(revision)
+            or selected["matrix"] != targets(revision)
+            or not matching_inputs(selected["producer_revision"], revision)):
         raise ValueError("qualification requires matching produced archives")
     result = dict(selected, consumer_revision=revision, targets={})
     for row in selected["matrix"]:
@@ -237,7 +252,7 @@ def prepare_release(validation_run, tag, output):
     if any(proof[key] != value for key, value in selected.items()):
         raise ValueError("producer identity or artifact digests changed after consumer validation")
     if set(proof["targets"]) != set(selected["artifacts"]):
-        raise ValueError("qualification must cover all five targets")
+        raise ValueError("qualification must cover every required target")
     for target, artifact in selected["artifacts"].items():
         directory = output / f"native-{target}"
         download_artifact(artifact, directory)
@@ -245,7 +260,7 @@ def prepare_release(validation_run, tag, output):
             raise ValueError("release bytes differ from the consumer-tested package")
     (output / "release-notes.md").write_text(notes.rstrip() +
         f"\n\nConsumer qualification: https://github.com/{os.environ['GITHUB_REPOSITORY']}"
-        f"/actions/runs/{validation_run}. All five platforms passed native and consumer "
+        f"/actions/runs/{validation_run}. All {len(selected['matrix'])} release targets passed native and consumer "
         "validation. Original producer provenance is preserved in the assets and promotion.json.\n")
     # Preserve each producer's validation file; add promotion metadata separately.
     (output / "promotion.json").write_text(json.dumps(dict(proof, tag=tag,

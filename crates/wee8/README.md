@@ -16,7 +16,9 @@ from `v0.106.0-moonbit.7`. It verifies the release SHA-256 manifest and separate
 pinned header hashes, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
-Published targets are Linux and macOS x64/ARM64, plus Windows x64 MSVC. V8 itself
+Release targets are Linux x64/ARM64, macOS ARM64, and Windows x64 MSVC.
+macOS x64 archives are temporarily disabled starting with `.7`; existing release
+assets remain available. V8 itself
 is not rebuilt by this crate. `WEE8_MIRROR` replaces the release-download base URL;
 the build script appends the pinned release tag. Set both `WEE8_ARCHIVE` and
 `WEE8_HEADER` to use a matching decompressed source-build or offline archive and

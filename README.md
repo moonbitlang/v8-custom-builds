@@ -156,7 +156,7 @@ not promise a stable cross-engine ABI or full Wasm conformance.
 Recipe and Rust-consumer checks run on PRs and pushes to `main`; they do not
 compile V8. **Rust crate** tests normal downloads from the pinned published
 release when its native inputs match. Otherwise it automatically selects a
-successful **Build and test** run with identical inputs and five retained artifacts. Rust-only changes
+successful **Build and test** run with identical inputs for every release target and retained artifacts. Rust-only changes
 and squash merges reuse the candidate without another native build. Its optional
 `native-run` input selects a particular producer instead of searching the latest
 100 successful runs. If neither a matching release nor a candidate is available,
@@ -169,19 +169,26 @@ change made during that build fails the input comparison and needs its own
 candidate. The branch must still exist. Every candidate consumer job checks the
 selected archive and paired headers, runs the C/Rust tests and strict Clippy,
 and records the package checksums. Published-release jobs exercise the Rust
-wrapper's normal download and verification path without archive overrides. Only a successful five-platform matrix produces the
+wrapper's normal download and verification path without archive overrides. Only a successful matrix covering every release target produces the
 `wee8-validation` qualification artifact.
 
 [`ci/native_artifacts.py`](ci/native_artifacts.py) defines the shared input
 fingerprint for candidate selection and promotion: native sources, submodule
-pins, headers, build driver/workflow, platform configuration, and native
-validation inputs. Rust and documentation changes do not require rebuilding V8.
+pins, headers, build driver/workflow, and native validation inputs. Each retained
+target's full configuration must also match the producer. Removing a target from
+[`ci/targets.json`](ci/targets.json) permits reuse of the remaining artifacts;
+adding a target or changing its configuration requires matching producer coverage.
+Rust and documentation changes do not require rebuilding V8.
 The fingerprint identifies the recipe; artifact and file digests identify the
 actual bytes. It does not claim independently built binaries are identical.
 
 Native **Build and test** is manually triggered for
-one target or all five supported platforms: Linux and macOS x86_64/ARM64, and
-Windows x86_64. It validates the freshly built archive with:
+one target or all four supported platforms: Linux x86_64/ARM64, macOS ARM64, and
+Windows x86_64. macOS x86_64 is temporarily disabled in `ci/targets.json`, which
+controls both the build matrix and release qualification. The legacy manual
+dispatch choice cannot schedule a build while its target is absent from that
+file. Existing releases retain their original macOS x86_64 assets.
+The workflow validates the freshly built archive with:
 
 - The [`custom_wee8` checks](custom_wee8/README.md#validation), including snapshot
   initialization, implementation tables and native Wasm execution in four modes.
@@ -202,7 +209,7 @@ can otherwise reuse completed builds.
 After merge, the automatic `main` consumer run reuses the same native candidate.
 **Publish tested archives** takes that successful consumer `validation_run` and
 an existing `v0.106.0-moonbit.N` tag at its commit. The tag must be on `main` and
-match the wrapper's release pin. Publication verifies the qualification, all five
+match the wrapper's release pin. Publication verifies the qualification, every required
 original artifact digests, native-input equality and the consumer-tested package
 checksums. The native producer can come from the merged PR branch: publication
 does not require another main-branch native build. Original producer provenance
