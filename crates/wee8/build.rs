@@ -34,7 +34,7 @@ use std::{
     time::Duration,
 };
 
-const RELEASE: &str = "v0.106.0-moonbit.6";
+const RELEASE: &str = "v0.106.0-moonbit.7";
 const RELEASE_HEADER_SHA256: &str =
     "08f2234e526e688cb2326382943ec40d429267be9035ec311796a5bb105d215a";
 
@@ -112,8 +112,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// origin in the cache identity so changing mirrors cannot reuse another origin.
 fn release_files(out: &Path, target: &str) -> Result<(PathBuf, PathBuf), Box<dyn Error>> {
     let archive_name = match target {
-        "x86_64-unknown-linux-gnu" | "aarch64-unknown-linux-gnu"
-        | "x86_64-apple-darwin" | "aarch64-apple-darwin" => format!("libwee8_release_{target}.a.gz"),
+        "x86_64-unknown-linux-gnu" | "aarch64-unknown-linux-gnu" | "aarch64-apple-darwin" => {
+            format!("libwee8_release_{target}.a.gz")
+        }
         "x86_64-pc-windows-msvc" => format!("wee8_release_{target}.lib.gz"),
         _ => return Err(format!("no wee8 release for {target}; provide WEE8_ARCHIVE and WEE8_HEADER from a matching source build").into()),
     };

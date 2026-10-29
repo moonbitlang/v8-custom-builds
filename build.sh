@@ -26,7 +26,7 @@ mkdir -p "$out"
 gzip -9nc "$gn_out/custom_wee8/obj/v8/$c_api.$ext" > "$out/${c_api}_release_$target.$ext.gz"
 mkdir -p "$root/target/native-checks/$target"
 for probe in wee8-runtime-check cpp-entry-contract runtime-entry-contract generated-builtin-contract \
-             generated-builtin-catalog runtime-catalog runtime-boundaries store-lifetimes; do
+             generated-builtin-catalog runtime-catalog runtime-boundaries store-lifetimes module-sharing; do
   cp "$gn_out/custom_wee8/$probe$exe" "$root/target/native-checks/$target/"
 done
 cp custom_wee8/include/wasm.h "$out/wasm_c_api_$target.h"

@@ -8,8 +8,20 @@ Unreleased changes are not available through normal downloads until the matching
 
 ### Changed
 
+- In-process module sharing now uses V8's `CompiledWasmModule` instead of
+  serializing optimized code. Sharing preserves lazy compilation and normal
+  hotspot tier-up; explicit serialization still eagerly optimizes all functions.
+- The Rust API adds `Module::share()`, `SharedModule` and `Store::obtain()`.
+  Shared code can outlive its source store and cross threads; destination stores
+  retain separate module objects, instances, memories and host imports.
+- The wrapper pins the upcoming `.7` native archive, with no older-release
+  fallback. The standard C ABI, public headers, V8 revision and feature policy
+  are unchanged. Normal downloads require `.7` publication.
 - Release publication now requires a dated changelog section and copies it into
   the GitHub Release notes, alongside consumer qualification and provenance.
+- macOS x86_64 CI and release archives are temporarily disabled. Linux
+  x86_64/ARM64, macOS ARM64 and Windows x86_64 remain supported; previously
+  published macOS x86_64 assets are unchanged.
 
 ## [0.106.0-moonbit.6] - 2026-10-27
 

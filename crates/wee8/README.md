@@ -12,11 +12,13 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and two headers
-from `v0.106.0-moonbit.6`. It verifies the release SHA-256 manifest and separately
+from `v0.106.0-moonbit.7`. It verifies the release SHA-256 manifest and separately
 pinned header hashes, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
-Published targets are Linux and macOS x64/ARM64, plus Windows x64 MSVC. V8 itself
+Release targets are Linux x64/ARM64, macOS ARM64, and Windows x64 MSVC.
+macOS x64 archives are temporarily disabled starting with `.7`; existing release
+assets remain available. V8 itself
 is not rebuilt by this crate. `WEE8_MIRROR` replaces the release-download base URL;
 the build script appends the pinned release tag. Set both `WEE8_ARCHIVE` and
 `WEE8_HEADER` to use a matching decompressed source-build or offline archive and
@@ -46,10 +48,12 @@ handle borrows its source instance and imports must belong to the same store.
 The receiving instance retains imported objects after the handle is dropped.
 This permits Wasm-to-Wasm linking without marshalling values through Rust.
 
-The Rust revision and native release are pinned together. Only that native API
-is supported: mismatched headers fail the build, and required symbols prevent
-linking an older archive. There is no older-release validator or parser fallback.
-The `.6` pin requires publication of the matching native artifacts; until then,
+The Rust revision and native release are pinned together. Normal downloads use
+that release; explicit archive/header overrides must come from its validated
+producer. Header checks and successful linking cannot detect every older native
+implementation, including the old serialized-sharing behavior. There is no
+older-release validator or parser fallback.
+The `.7` pin requires publication of the matching native artifacts; until then,
 validation uses the produced CI archives through the paired overrides above.
 
 The source of this policy is V8's
@@ -130,8 +134,13 @@ by compile options. Repeated module/name imports share a native binding; differe
 bindings under one name remain unsupported by this adapter.
 
 A store owns its native objects; native-root handles borrow the store and stay on
-its creating thread. `Compiled` may move between threads and create modules in
-fresh stores, but its serialized bytes are private. A process-wide V8 engine is
+its creating thread. For in-process reuse, `Module::share()` returns a
+`SharedModule` that can outlive the source store and cross threads;
+`Store::obtain(&shared)` creates a destination module object using V8's existing
+native code and tiering state. Instances keep separate memories and host imports.
+Explicit `Module::serialize()` returns private `Compiled` bytes and eagerly
+optimizes all functions; it is not the preferred path for in-process sharing.
+A process-wide V8 engine is
 retained for the lifetime of the process because V8 cannot be reinitialized after
 engine disposal. Host callback panics become host errors; a captured destructor
 that panics during native finalization aborts instead of unwinding through C++.
@@ -238,8 +247,9 @@ retain the boundary restrictions described above.
 Some("_".into()) }` selects MoonBit's native string convention. `None` disables
 constants; `Some(String::new())` selects the empty namespace. The pinned V8
 supports ASCII namespace names, including embedded NUL. Literal values can
-contain Unicode. Options are owned by the module and its `Compiled` result,
-including reuse in another store; they never change process-wide defaults.
+contain Unicode. Options are owned by the module and its `SharedModule` or
+`Compiled` result, including reuse in another store; they never change
+process-wide defaults.
 
 `StringRef::from_utf8(context, text)` copies a Rust `&str` into V8;
 `StringRef::from_utf16(context, units)` preserves every UTF-16 code unit, including

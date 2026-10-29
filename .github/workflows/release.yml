@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       validation_run:
-        description: Successful five-platform Rust crate run validating the tagged main commit
+        description: Successful Rust crate run validating every release target at the tagged main commit
         required: true
         type: string
       tag:
