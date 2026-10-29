@@ -9,6 +9,7 @@ check_targets = [
   "runtime-catalog",
   "runtime-boundaries",
   "store-lifetimes",
+  "module-sharing",
 ]
 
 group("checks") {

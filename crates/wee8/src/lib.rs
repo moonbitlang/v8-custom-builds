@@ -669,9 +669,9 @@ impl<T: 'static> Store<T> {
     }
 }
 
-/// V8's C API shares compiled modules by serialization. Keep those bytes private:
-/// deserializing arbitrary input as compiled code would be unsafe. This permits
-/// Module reuse across fresh stores; it does not promise a zero-copy code cache.
+/// Serialized compiled code. Keep these bytes private: deserializing arbitrary
+/// input as compiled code would be unsafe. Serialization eagerly optimizes all
+/// functions; prefer [`Module::share`] for reuse within this process.
 #[derive(Debug)]
 pub struct Compiled {
     bytes: Vec<u8>,
@@ -679,7 +679,8 @@ pub struct Compiled {
 }
 
 impl<T> Module<'_, T> {
-    /// Retain compiled code for reuse in fresh stores of this process.
+    /// Serialize optimized code, eagerly compiling all functions with TurboFan.
+    /// Use [`Self::share`] to preserve V8's lazy compilation and tiering state.
     pub fn serialize(&self) -> Compiled {
         unsafe {
             let mut bytes = ffi::wasm_byte_vec_t {
@@ -701,8 +702,58 @@ impl<T> Module<'_, T> {
     }
 }
 
+/// V8's compiled module, independent of the source store and shareable across
+/// threads. Each destination store obtains its own module object and instances;
+/// only native code and V8-managed compilation state are shared.
+#[derive(Debug)]
+pub struct SharedModule {
+    raw: NonNull<ffi::wasm_shared_module_t>,
+    options: CompileOptions,
+}
+
+// The native handle owns a v8::CompiledWasmModule (shared native code), not an
+// isolate-bound V8 handle. V8 synchronizes its compilation state and registers
+// each importing isolate itself. Rust owns this handle until its final drop;
+// concurrent obtains only borrow it and create separate store-bound objects.
+unsafe impl Send for SharedModule {}
+unsafe impl Sync for SharedModule {}
+
+impl Drop for SharedModule {
+    fn drop(&mut self) {
+        unsafe { ffi::wasm_shared_module_delete(self.raw.as_ptr()) }
+    }
+}
+
+impl<T> Module<'_, T> {
+    /// Share V8's native compilation state without serializing or forcing tier-up.
+    /// The returned handle remains valid after this module and store are dropped.
+    pub fn share(&self) -> Result<SharedModule> {
+        let raw = NonNull::new(unsafe { ffi::wasm_module_share(self.raw.as_ptr()) })
+            .ok_or("failed to share compiled module")?;
+        Ok(SharedModule {
+            raw,
+            options: self.options.clone(),
+        })
+    }
+}
+
 impl<T> Store<T> {
-    /// Obtain a module from code previously compiled through this crate.
+    /// Create a store-bound module object from shared native code, preserving
+    /// compile options and V8's current tiering state. Instances remain separate.
+    pub fn obtain(&self, shared: &SharedModule) -> Result<Module<'_, T>> {
+        let raw = NonNull::new(unsafe {
+            ffi::wasm_module_obtain(self.state.inner.raw.as_ptr(), shared.raw.as_ptr())
+        })
+        .ok_or("failed to obtain shared module in store")?;
+        Ok(Module {
+            raw,
+            store: self,
+            options: shared.options.clone(),
+        })
+    }
+
+    /// Deserialize code previously serialized through this crate. Use
+    /// [`Self::obtain`] for in-process sharing without serialization.
     pub fn module(&self, compiled: &Compiled) -> Result<Module<'_, T>> {
         let bytes = ffi::wasm_byte_vec_t {
             size: compiled.bytes.len(),

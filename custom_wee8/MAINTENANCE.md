@@ -109,6 +109,11 @@ Changes must preserve these invariants:
   inspect only Wasm frames; JS-string builtin failures must remain reportable.
 - Compile options survive serialization and module reuse. Native strings remain
   V8 values; they do not become an embedder-side replacement for V8 builtins.
+- In-process module sharing uses V8's `CompiledWasmModule` and preserves its
+  native identity, compile options and tiering state without retaining the
+  source isolate. Do not route sharing through serialization: the latter
+  explicitly optimizes all functions. Keep lazy-code and lifetime regressions
+  alongside the real cross-store consumer tests.
 - Successful module compilation validates all bodies before returning, including
   uncalled functions. Disable experimental lazy validation at engine startup and
   keep the capability query accurate. The pinned Rust wrapper requires this

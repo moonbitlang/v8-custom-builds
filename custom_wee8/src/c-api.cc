@@ -1487,15 +1487,11 @@ auto DeserializeModule(Store* store_abs, const vec<byte_t>& serialized,
   return implement<Module>::type::make(store, module_obj);
 }
 
-// TODO(v8): do better when V8 can do better.
-struct SharedModule {
-  vec<byte_t> bytes;
-  i::wasm::CompileTimeImports imports;
-};
-
+// In-process sharing retains V8's native code and compilation state. Using
+// serialize() here would force all functions through TurboFan before execution.
 template <>
 struct implement<Shared<Module>> {
-  using type = SharedModule;
+  using type = v8::CompiledWasmModule;
 };
 
 auto Module::deserialize(Store* store,
@@ -1505,7 +1501,7 @@ auto Module::deserialize(Store* store,
 
 template <>
 Shared<Module>::~Shared() {
-  impl(this)->~SharedModule();
+  impl(this)->~CompiledWasmModule();
 }
 
 template <>
@@ -1514,15 +1510,24 @@ void Shared<Module>::operator delete(void* p) {
 }
 
 auto Module::share() const -> own<Shared<Module>> {
-  PtrComprCageAccessScope cage_scope(impl(this)->isolate());
-  auto shared = seal<Shared<Module>>(new SharedModule{
-      serialize(),
-      impl(this)->v8_object()->native_module()->compile_imports()});
+  auto* store = impl(this)->store();
+  v8::Isolate::Scope isolate_scope(store->isolate());
+  v8::HandleScope handle_scope(store->isolate());
+  auto module = v8::Utils::ToLocal(impl(this)->v8_object());
+  auto shared = seal<Shared<Module>>(
+      new v8::CompiledWasmModule(module->GetCompiledModule()));
   return make_own(shared);
 }
 
-auto Module::obtain(Store* store, const Shared<Module>* shared) -> own<Module> {
-  return DeserializeModule(store, impl(shared)->bytes, impl(shared)->imports);
+auto Module::obtain(Store* store_abs, const Shared<Module>* shared) -> own<Module> {
+  auto* store = impl(store_abs);
+  v8::Isolate::Scope isolate_scope(store->isolate());
+  v8::HandleScope handle_scope(store->isolate());
+  v8::Local<v8::WasmModuleObject> module;
+  if (!v8::WasmModuleObject::FromCompiledModule(store->isolate(), *impl(shared))
+           .ToLocal(&module)) return nullptr;
+  return implement<Module>::type::make(
+      store, i::Cast<i::WasmModuleObject>(v8::Utils::OpenHandle(*module)));
 }
 
 // Externals

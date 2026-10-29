@@ -99,3 +99,8 @@ for check, fixture in [("shutdown", "store-singleton"),
                        ("types", "store-recursive")]:
     subprocess.run([str(executable), check, str(assets / (fixture + ".wasm"))],
                    check=True, timeout=120)
+
+executable = (args.probes / ("module-sharing" + suffix)).resolve()
+for mode in [[], ["tiering"]]:
+    subprocess.run([str(executable), str(assets / "module-sharing.wasm"), *mode],
+                   check=True, timeout=60)
