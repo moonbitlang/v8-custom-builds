@@ -217,6 +217,13 @@ def prepare_release(validation_run, tag, output):
     build_rs = command("git", "show", f"{revision}:crates/wee8/build.rs")
     if re.search(rb'const RELEASE: &str = "([^"]+)";', build_rs)[1].decode() != tag:
         raise ValueError("tag does not match the wrapper's release pin")
+    changelog = command("git", "show", f"{revision}:CHANGELOG.md").decode()
+    version = re.escape(tag.removeprefix("v"))
+    sections = re.findall(rf"^## \[{version}\] - \d{{4}}-\d{{2}}-\d{{2}}\n"
+                          r"(.*?)(?=^## |\Z)", changelog, re.MULTILINE | re.DOTALL)
+    if len(sections) != 1 or not re.sub(r"^### .*", "", sections[0], flags=re.MULTILINE).strip():
+        raise ValueError("release notes require one dated changelog section with a description")
+    notes = f"# {tag}\n\n" + sections[0].strip() + "\n"
     run = api(f"actions/runs/{validation_run}")
     checked_run(run, ".github/workflows/rust-crate.yml")
     if (run["head_sha"] != revision or run["head_branch"] != "main"
@@ -236,6 +243,10 @@ def prepare_release(validation_run, tag, output):
         download_artifact(artifact, directory)
         if verify_package(selected, target, directory) != proof["targets"][target]:
             raise ValueError("release bytes differ from the consumer-tested package")
+    (output / "release-notes.md").write_text(notes.rstrip() +
+        f"\n\nConsumer qualification: https://github.com/{os.environ['GITHUB_REPOSITORY']}"
+        f"/actions/runs/{validation_run}. All five platforms passed native and consumer "
+        "validation. Original producer provenance is preserved in the assets and promotion.json.\n")
     # Preserve each producer's validation file; add promotion metadata separately.
     (output / "promotion.json").write_text(json.dumps(dict(proof, tag=tag,
         validation_run=validation_run), indent=2) + "\n")
