@@ -41,5 +41,5 @@ jobs:
       - name: Publish release
         run: |
           gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" \
-            --notes "Trimmed wee8 Wasm C API archives. All five platforms passed native and consumer validation. Consumer qualification: https://github.com/$GITHUB_REPOSITORY/actions/runs/$VALIDATION_RUN. Original producer provenance is preserved in the assets and promotion.json." \
+            --notes-file artifacts/release-notes.md \
             artifacts/native-*/* artifacts/promotion.json

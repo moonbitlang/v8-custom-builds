@@ -32,6 +32,7 @@ class ArtifactsTest(unittest.TestCase):
         self.write("crates/wee8/build.rs", 'const RELEASE: &str = "v0.106.0-moonbit.6";\n')
         self.producer = self.save()
         self.write("crates/wee8/src/lib.rs", "new Rust wrapper\n")
+        self.write("CHANGELOG.md", "## [0.106.0-moonbit.6] - 2026-10-27\n\nTested changes.\n")
         self.revision = self.save()
         subprocess.run(["git", "update-ref", "refs/remotes/origin/main", self.revision], check=True)
         subprocess.run(["git", "tag", "v0.106.0-moonbit.6"], check=True)
@@ -197,6 +198,29 @@ class ArtifactsTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             native.qualify(self.selected, path.parent, self.revision)
 
+    def test_promotion_requires_nonempty_matching_tagged_notes(self):
+        for content in (
+                "## [0.106.0-moonbit.6] - 2026-10-27\n### Changed\n",
+                "## [Unreleased]\n\nDescription.\n",
+                "## [0.106.0-moonbit.5] - 2026-10-23\n\nDescription.\n",
+                "## [0.106.0-moonbit.6] - 2026-10-27\nA\n## [0.106.0-moonbit.6] - 2026-10-27\nB\n"):
+            self.write("CHANGELOG.md", content)
+            revision = self.save()
+            subprocess.run(["git", "update-ref", "refs/remotes/origin/main", revision], check=True)
+            subprocess.run(["git", "tag", "-f", "v0.106.0-moonbit.6"], check=True, stdout=subprocess.DEVNULL)
+            with self.subTest(content=content), patch.object(native, "api") as api:
+                with self.assertRaisesRegex(ValueError, "release notes"):
+                    native.prepare_release(456, "v0.106.0-moonbit.6", self.root / "bad-notes")
+                api.assert_not_called()
+        Path("CHANGELOG.md").unlink()
+        revision = self.save()
+        subprocess.run(["git", "update-ref", "refs/remotes/origin/main", revision], check=True)
+        subprocess.run(["git", "tag", "-f", "v0.106.0-moonbit.6"], check=True, stdout=subprocess.DEVNULL)
+        with patch.object(native, "api") as api:
+            with self.assertRaises(subprocess.CalledProcessError):
+                native.prepare_release(456, "v0.106.0-moonbit.6", self.root / "missing-notes")
+            api.assert_not_called()
+
     def test_promotion_preserves_pr_producer_bytes_and_requires_tagged_main_validation(self):
         proof = self.proof()
         validation = dict(self.run, id=456, head_sha=self.revision, head_branch="main",
@@ -216,8 +240,13 @@ class ArtifactsTest(unittest.TestCase):
         with patch.object(native, "api", side_effect=api), \
                 patch.object(native, "artifact_map", side_effect=artifacts), \
                 patch.object(native, "download_artifact", side_effect=download):
+            # Promotion must ignore edited checkout notes and use the tag's text.
+            self.write("CHANGELOG.md", "unreviewed checkout notes")
             output = self.root / "release"
             native.prepare_release(456, "v0.106.0-moonbit.6", output)
+            self.assertTrue((output / "release-notes.md").read_text().startswith(
+                "# v0.106.0-moonbit.6\n\nTested changes."))
+            self.assertIn("/actions/runs/456", (output / "release-notes.md").read_text())
             self.assertEqual(json.loads((output / "promotion.json").read_text())["producer_revision"], self.producer)
             for target in proof["targets"]:
                 for original in (self.root / "packages" / target).iterdir():
