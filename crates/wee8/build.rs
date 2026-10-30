@@ -34,9 +34,9 @@ use std::{
     time::Duration,
 };
 
-const RELEASE: &str = "v0.106.0-moonbit.7";
+const RELEASE: &str = "v0.106.0-moonbit.8";
 const RELEASE_HEADER_SHA256: &str =
-    "08f2234e526e688cb2326382943ec40d429267be9035ec311796a5bb105d215a";
+    "e766da8202c77b4ce194e50c05751e75a870acc4eab86ab753c87dcf4c592efe";
 
 const WASM_HEADER_SHA256: &str = "7b6414f525d503a27609f0dfc3a33fa135f5cdf22d8b03f9e20a948ee8e62301";
 

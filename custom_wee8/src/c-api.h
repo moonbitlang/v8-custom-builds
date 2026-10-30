@@ -11,6 +11,9 @@
 #ifndef V8_WASM_C_API_H_
 #define V8_WASM_C_API_H_
 
+#include <memory>
+#include <mutex>
+
 #include "include/v8-isolate.h"
 #include "include/v8-local-handle.h"
 #include "src/common/globals.h"
@@ -26,6 +29,13 @@ class JSWeakMap;
 }  // namespace v8
 
 namespace wasm {
+
+// Interrupt requests and disposal share this lock. The handle may outlive the
+// store, but does not keep its isolate (or any host state) alive.
+struct IsolateControl {
+  std::mutex mutex;
+  v8::Isolate* isolate = nullptr;
+};
 
 class StoreImpl {
  public:
@@ -47,6 +57,13 @@ class StoreImpl {
                    void (*finalizer)(void*));
   void* GetHostInfo(i::Handle<i::Object> key);
 
+  std::shared_ptr<IsolateControl> isolate_control() const { return control_; }
+  i::Handle<i::JSReceiver> TerminationException();
+  bool IsTerminationException(i::Tagged<i::Object> exception) const {
+    return !termination_exception_.is_null() &&
+           *termination_exception_ == exception;
+  }
+
  private:
   friend own<Store> Store::make(Engine*);
 
@@ -56,6 +73,8 @@ class StoreImpl {
   v8::Isolate* isolate_ = nullptr;
   v8::Eternal<v8::Context> context_;
   i::Handle<i::JSWeakMap> host_info_map_;
+  std::shared_ptr<IsolateControl> control_ = std::make_shared<IsolateControl>();
+  i::Handle<i::JSReceiver> termination_exception_;
 };
 
 }  // namespace wasm

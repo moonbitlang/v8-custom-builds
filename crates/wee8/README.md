@@ -12,7 +12,7 @@ Depend on this repository with a pinned Git `rev` and `package = "wee8"`.
 The repository disables automatic checkout of its native-source submodule for
 Cargo consumers; `build.sh` opts into that checkout for native builds.
 Cargo runs this crate's build script to download the target's archive and two headers
-from `v0.106.0-moonbit.7`. It verifies the release SHA-256 manifest and separately
+from `v0.106.0-moonbit.8`. It verifies the release SHA-256 manifest and separately
 pinned header hashes, caches verified downloads in Cargo's private `OUT_DIR`, and
 links the static library. Building requires Rust 1.95 and libclang for bindgen.
 
@@ -53,7 +53,7 @@ that release; explicit archive/header overrides must come from its validated
 producer. Header checks and successful linking cannot detect every older native
 implementation, including the old serialized-sharing behavior. There is no
 older-release validator or parser fallback.
-The `.7` pin requires publication of the matching native artifacts; until then,
+The `.8` pin requires publication of the matching native artifacts; until then,
 validation uses the produced CI archives through the paired overrides above.
 
 The source of this policy is V8's
@@ -232,6 +232,35 @@ Wasm-defined start functions may throw or call throwing host callbacks. Using a
 host import directly as the start function remains unsupported by the pinned
 V8 C API: that entry goes through a JS call and aborts. This patch does not change
 that separate entry-path limitation.
+
+## Execution termination
+
+`Store::isolate_handle()` returns a cloneable `IsolateHandle` that is `Send + Sync`.
+The store, guest values and Rust host state remain on their owning thread. Another
+thread can call `terminate_execution()` to request V8 termination, including for
+pure Wasm loops. An interrupted call or start function returns `Error::Terminated`;
+Wasm exception handlers cannot catch termination. The normal call, memory-borrow
+and re-entry guards still apply.
+
+The handle does not keep its store alive. Termination and
+`cancel_terminate_execution()` return `false` after disposal, and synchronize
+with disposal so a racing request cannot access a freed isolate. A `true` return
+means the request reached V8, not that a racing call necessarily observed it.
+Cancellation delegates to V8 as well: normally let the interrupted invocation
+unwind first, then cancel before reusing the store. Cancellation during execution
+can allow the invocation to continue. No custom cancellation flag is maintained.
+
+V8 cannot preempt Rust code blocked in a host callback. Embedders must unblock
+their host waits independently; termination is handled when guest execution
+resumes. This interface adds execution control, not host I/O cancellation, a
+scheduler, fuel accounting or an execution deadline.
+
+The native adapter postpones only termination while servicing non-executing C API
+housekeeping. V8 continues handling GC interrupts and restores the termination
+request for guest entry. The adapter represents the termination sentinel with a
+store-owned, uncatchable trap identity at the standard C boundary, so it cannot be
+confused with a matching trap message. C callers use the additive handle functions
+and `wee8_trap_is_termination` in `wee8.h`; the standard `wasm.h` is unchanged.
 
 ## Native strings
 

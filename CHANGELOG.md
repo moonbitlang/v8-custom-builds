@@ -6,6 +6,22 @@ Unreleased changes are not available through normal downloads until the matching
 
 ## [Unreleased]
 
+### Added
+
+- `Store::isolate_handle()` returns a cloneable, thread-safe `IsolateHandle`.
+  Its termination and cancellation requests delegate to V8's existing mechanism,
+  without retaining the store or introducing another scheduler. Handles safely
+  become inactive when the store is destroyed.
+- Interrupted Wasm calls and start functions return `Error::Terminated`, distinct
+  from ordinary traps and catchable Wasm exceptions. Blocking host operations
+  still need to be unblocked by the embedder.
+
+### Changed
+
+- The Rust wrapper requires the upcoming `.8` archive for the additive control
+  declarations in `wee8.h`. There is no older-release fallback. V8's revision,
+  guest feature policy, standard `wasm.h`, compilation and call paths are unchanged.
+
 ## [0.106.0-moonbit.7] - 2026-10-29
 
 ### Changed
