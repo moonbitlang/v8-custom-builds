@@ -6,6 +6,8 @@ Unreleased changes are not available through normal downloads until the matching
 
 ## [Unreleased]
 
+## [0.106.0-moonbit.8] - 2026-10-30
+
 ### Added
 
 - `Store::isolate_handle()` returns a cloneable, thread-safe `IsolateHandle`.
@@ -15,12 +17,27 @@ Unreleased changes are not available through normal downloads until the matching
 - Interrupted Wasm calls and start functions return `Error::Terminated`, distinct
   from ordinary traps and catchable Wasm exceptions. Blocking host operations
   still need to be unblocked by the embedder.
+- Termination requests return whether the isolate was still alive and accepted
+  the request, not an acknowledgement that a racing invocation has stopped.
+  Non-executing housekeeping preserves pending termination for guest entry;
+  cancellation allows the isolate to be reused.
 
 ### Changed
 
-- The Rust wrapper requires the upcoming `.8` archive for the additive control
+- The Rust wrapper requires the matching `.8` archive for the additive control
   declarations in `wee8.h`. There is no older-release fallback. V8's revision,
   guest feature policy, standard `wasm.h`, compilation and call paths are unchanged.
+
+The [native producer](https://github.com/moonbitlang/v8-custom-builds/actions/runs/40996586907)
+passed on Linux x86_64/ARM64, macOS ARM64 and Windows x86_64, including termination
+regressions, the packaged C consumer, all 74 Rust tests/doctests per target and
+Linux x86_64 glibc 2.23 compatibility. Publication reuses those archives without
+rebuilding V8; the qualification linked in the GitHub Release identifies the
+tested wrapper revision and exact package bytes.
+
+Moon's default backend is unchanged. This release does not include prepared
+native calls or the paused core/adapter build split. macOS x86_64 remains
+temporarily disabled for new releases.
 
 ## [0.106.0-moonbit.7] - 2026-10-29
 
