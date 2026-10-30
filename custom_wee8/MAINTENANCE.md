@@ -126,6 +126,14 @@ Changes must preserve these invariants:
   the C/Rust boundary must likewise avoid rejecting an otherwise valid module.
 - Standard `wasm.h` stays unmodified. Additive declarations belong in `wee8.h`.
   Changing declarations alone cannot enable functionality in an older archive.
+- Cross-thread termination delegates to public V8 termination/cancellation.
+  Serialize control requests with isolate disposal, without retaining the store.
+  Match rusty_v8's `IsolateHandle` lifetime rules; never expose ordinary store
+  operations through it. Guest execution and start functions must preserve
+  termination identity separately from catchable exceptions and ordinary traps.
+  Non-executing C API housekeeping postpones only V8's termination interrupt;
+  it must neither discard the request nor stop servicing GC interrupts. Blocking
+  host callbacks still require embedder-owned cancellation of their waits.
 
 Every native correctness fix needs a focused regression that fails before the
 fix and passes afterward through the real consumer path. Prefer the existing

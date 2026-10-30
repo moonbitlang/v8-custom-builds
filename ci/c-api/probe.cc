@@ -55,6 +55,10 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   assert(wee8_module_validation_is_eager());
   wasm_store_t* store = wasm_store_new(engine);
   assert(store);
+  wee8_isolate_handle_t* control = wee8_store_isolate_handle(store);
+  assert(control);
+  assert(wee8_isolate_handle_terminate_execution(control));
+  assert(wee8_isolate_handle_cancel_terminate_execution(control));
   wasm_byte_vec_t binary = {len, reinterpret_cast<char*>(const_cast<uint8_t*>(bytes))};
   wasm_module_t* module = wasm_module_new(store, &binary);
   assert(module);
@@ -68,6 +72,7 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   wasm_trap_t* start_trap = nullptr;
   assert(!wasm_instance_new(store, start_module, &no_imports, &start_trap));
   assert(start_trap);
+  assert(!wee8_trap_is_termination(start_trap));
   wasm_trap_delete(start_trap);
   wasm_module_delete(start_module);
 
@@ -176,6 +181,9 @@ extern "C" void wee8_probe(const uint8_t* bytes, size_t len,
   test_exception_traces(store);
   test_stack_limit(engine, store);
   wasm_store_delete(store);
+  assert(!wee8_isolate_handle_terminate_execution(control));
+  assert(!wee8_isolate_handle_cancel_terminate_execution(control));
+  wee8_isolate_handle_delete(control);
   assert(state.finalized == 1);
   wasm_engine_delete(engine);
 }

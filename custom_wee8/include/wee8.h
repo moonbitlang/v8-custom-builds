@@ -32,6 +32,25 @@ WASM_API_EXTERN bool wee8_valtype_is_nullable(const wasm_valtype_t*);
 // Keep the store on that thread and do not change the limit while Wasm runs.
 WASM_API_EXTERN uintptr_t wee8_store_set_stack_limit(wasm_store_t*, uintptr_t);
 
+// Thread-safe control of V8 execution. Acquire on the store's owning thread;
+// the owned handle does not retain the store. Requests may race store disposal
+// and return false after disposal. They may run concurrently on a live handle;
+// delete only after all requests using that handle have returned.
+typedef struct wee8_isolate_handle_t wee8_isolate_handle_t;
+WASM_API_EXTERN wee8_isolate_handle_t* wee8_store_isolate_handle(wasm_store_t*);
+WASM_API_EXTERN void wee8_isolate_handle_delete(wee8_isolate_handle_t*);
+// Uses V8's interrupt mechanism, including pure Wasm loops. It cannot preempt a
+// blocking host callback; the embedder must unblock its own host operations.
+WASM_API_EXTERN bool wee8_isolate_handle_terminate_execution(
+  const wee8_isolate_handle_t*);
+// Normally wait for the interrupted invocation to unwind before cancellation.
+// Cancellation racing execution can allow that invocation to continue.
+WASM_API_EXTERN bool wee8_isolate_handle_cancel_terminate_execution(
+  const wee8_isolate_handle_t*);
+// Owner-thread trap inspection. Termination is distinct from a normal trap or
+// catchable Wasm exception, including when a start function is interrupted.
+WASM_API_EXTERN bool wee8_trap_is_termination(const wasm_trap_t*);
+
 // Native string extensions. All returned references are owned, store-bound
 // roots, deleted with wasm_ref_delete. Host-info attachment requires a receiver
 // object and must not be used on primitive strings; lookup returns NULL.

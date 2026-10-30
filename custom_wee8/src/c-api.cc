@@ -32,6 +32,7 @@
 #include "src/api/api-inl.h"
 #include "src/builtins/builtins.h"
 #include "src/compiler/wasm-compiler.h"
+#include "src/execution/interrupts-scope.h"
 #include "src/flags/flags.h"
 #include "src/init/v8.h"
 #include "src/objects/call-site-info-inl.h"
@@ -486,6 +487,11 @@ auto Engine::make(own<Config>&& config) -> own<Engine> {
 // points that heap-allocate but don't call into generated code.
 // For example, finalization of incremental marking is relying on it.
 void CheckAndHandleInterrupts(i::Isolate* isolate) {
+  // These entries allocate without executing guest code or handling an
+  // execution exception. Service GC while leaving termination for guest entry.
+  // V8 restores a postponed request (including concurrent requests) on exit.
+  i::PostponeInterruptsScope postpone_termination(
+      isolate, i::StackGuard::TERMINATE_EXECUTION);
   i::StackLimitCheck check(isolate);
   if (check.InterruptRequested()) {
     isolate->stack_guard()->HandleInterrupts();
@@ -495,6 +501,10 @@ void CheckAndHandleInterrupts(i::Isolate* isolate) {
 // Stores
 
 StoreImpl::~StoreImpl() {
+  {
+    std::lock_guard<std::mutex> lock(control_->mutex);
+    control_->isolate = nullptr;
+  }
   {
 #ifdef DEBUG
     i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate_);
@@ -577,6 +587,7 @@ auto Store::make(Engine*) -> own<Store> {
   v8::Isolate* isolate = v8::Isolate::New(store->create_params_);
   if (!isolate) return own<Store>();
   store->isolate_ = isolate;
+  store->control_->isolate = isolate;
   isolate->SetData(0, store.get());
   // We intentionally do not call isolate->Enter() here, because that would
   // prevent embedders from using stores with overlapping but non-nested
@@ -1201,6 +1212,19 @@ auto Trap::make(Store* store_abs, const Message& message) -> own<Trap> {
                            isolate->factory()->wasm_uncatchable_symbol(),
                            isolate->factory()->true_value(), i::NONE);
   return implement<Trap>::type::make(store, exception);
+}
+
+i::Handle<i::JSReceiver> StoreImpl::TerminationException() {
+  // The standard C trap representation requires a receiver. Preserve V8's
+  // uncatchable termination as a distinct per-store identity, never by matching
+  // a message that an ordinary guest or host trap could also produce.
+  if (termination_exception_.is_null()) {
+    auto trap = Trap::make(seal<Store>(this), Name::make(std::string(
+        "execution terminated")));
+    termination_exception_ = i_isolate()->global_handles()->Create(
+        *impl(trap.get())->v8_object());
+  }
+  return termination_exception_;
 }
 
 auto Trap::message() const -> Message {
@@ -1954,9 +1978,7 @@ i::Handle<i::JSReceiver> GetProperException(
     return i::Cast<i::JSReceiver>(maybe_exception);
   }
   if (v8::internal::IsTerminationException(*maybe_exception)) {
-    i::DirectHandle<i::String> string =
-        isolate->factory()->NewStringFromAsciiChecked("TerminationException");
-    return isolate->factory()->NewError(isolate->error_function(), string);
+    return StoreImpl::get(isolate)->TerminationException();
   }
   i::MaybeHandle<i::String> maybe_string =
       i::Object::ToString(isolate, maybe_exception);
@@ -2713,7 +2735,11 @@ own<Instance> Instance::make(Store* store_abs, const Module* module_abs,
           isolate, &thrower, module->v8_object(), imports_obj,
           i::MaybeHandle<i::JSArrayBuffer>());
   if (trap) {
-    if (thrower.error()) {
+    if (catcher.HasTerminated()) {
+      isolate->clear_exception();
+      *trap = implement<Trap>::type::make(store, store->TerminationException());
+      return own<Instance>();
+    } else if (thrower.error()) {
       *trap = implement<Trap>::type::make(
           store, GetProperException(isolate, thrower.Reify()));
       DCHECK(!thrower.error());                   // Reify() called Reset().
@@ -2803,6 +2829,10 @@ auto Instance::exports() const -> ownvec<Extern> {
 }  // namespace wasm
 
 // BEGIN FILE wasm-c.cc
+
+struct wee8_isolate_handle_t {
+  std::shared_ptr<wasm::IsolateControl> control;
+};
 
 extern "C" {
 
@@ -3018,6 +3048,30 @@ WASM_DEFINE_OWN(store, wasm::Store)
 
 wasm_store_t* wasm_store_new(wasm_engine_t* engine) {
   return release_store(wasm::Store::make(engine));
+}
+
+wee8_isolate_handle_t* wee8_store_isolate_handle(wasm_store_t* store) {
+  return new wee8_isolate_handle_t{
+      wasm::impl(reveal_store(store))->isolate_control()};
+}
+
+void wee8_isolate_handle_delete(wee8_isolate_handle_t* handle) { delete handle; }
+
+bool wee8_isolate_handle_terminate_execution(const wee8_isolate_handle_t* handle) {
+  std::lock_guard<std::mutex> lock(handle->control->mutex);
+  auto isolate = handle->control->isolate;
+  if (!isolate) return false;
+  isolate->TerminateExecution();
+  return true;
+}
+
+bool wee8_isolate_handle_cancel_terminate_execution(
+    const wee8_isolate_handle_t* handle) {
+  std::lock_guard<std::mutex> lock(handle->control->mutex);
+  auto isolate = handle->control->isolate;
+  if (!isolate) return false;
+  isolate->CancelTerminateExecution();
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3547,6 +3601,12 @@ size_t wasm_frame_module_offset(const wasm_frame_t* frame) {
 // Traps
 
 WASM_DEFINE_REF(trap, wasm::Trap)
+
+bool wee8_trap_is_termination(const wasm_trap_t* trap) {
+  auto value = wasm::impl(reveal_trap(trap));
+  wasm::PtrComprCageAccessScope scope(value->isolate());
+  return value->store()->IsTerminationException(*value->v8_object());
+}
 
 wasm_trap_t* wasm_trap_new(wasm_store_t* store, const wasm_message_t* message) {
   auto message_ = borrow_byte_vec(message);

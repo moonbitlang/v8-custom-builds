@@ -51,6 +51,8 @@
 
 mod calls;
 pub use calls::{Func, TypedFunc, WasmParams, WasmResult};
+mod termination;
+pub use termination::IsolateHandle;
 mod memory;
 pub use memory::{Memory, MemoryType};
 mod exceptions;
@@ -75,6 +77,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// Execution stopped by V8 termination, not a catchable Wasm exception.
+    #[error("execution terminated")]
+    Terminated,
     #[error("{0}")]
     Interface(String),
     #[error("{0}")]
@@ -382,6 +387,11 @@ impl<T> Store<T> {
     }
 
     fn take_trap(&self, trap: *mut ffi::wasm_trap_t) -> Error {
+        if unsafe { ffi::wee8_trap_is_termination(trap) } {
+            unsafe { ffi::wasm_trap_delete(trap) };
+            self.state.inner.host_error.borrow_mut().take();
+            return Error::Terminated;
+        }
         if unsafe { ffi::wee8_trap_is_exception(trap) } {
             *self.state.inner.exceptions.pending.borrow_mut() =
                 Some(exceptions::ExceptionRoot(NonNull::new(trap).unwrap()));
